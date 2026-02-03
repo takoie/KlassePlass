@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+*.db
+venv/
+
+# Node / Electron
+node_modules/
+dist/
+out/
+.DS_Store
+.env
