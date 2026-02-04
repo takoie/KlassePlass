@@ -1,393 +1,909 @@
 <!DOCTYPE html>
 <html lang="no">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KlasseModul Pro</title>
-    <link rel="icon" type="image/x-icon" href="assets/icon.ico">
-    
+    <title>KlassePlass</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
     <style>
         :root {
             --bg-app: #0f111a;
             --glass-bg: rgba(30, 35, 50, 0.6);
             --glass-border: 1px solid rgba(255, 255, 255, 0.15);
-            --accent: #3b82f6; 
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
             --text-main: #ffffff;
-            --text-muted: #e2e8f0; 
-            --snap-color: #48bb78; 
+            --header-height: 40px;
         }
 
-        body { 
-            background-color: var(--bg-app); color: var(--text-main); font-family: 'Inter', sans-serif;
-            overflow: hidden; display: flex; height: 100vh;
-            background-image: radial-gradient(#2d3748 1px, transparent 1px); background-size: 30px 30px;
+        html {
+            background: transparent;
+        }
+
+        body {
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+            background-image: radial-gradient(#2d3748 1px, transparent 1px);
+            background-size: 30px 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             user-select: none;
         }
 
-        /* SIDEBAR */
-        .sidebar { width: 260px; background: var(--glass-bg); backdrop-filter: blur(12px); border-right: var(--glass-border); padding: 25px; display: flex; flex-direction: column; z-index: 10; }
-        
-        /* --- NY CSS LOGO STYLING --- */
-        .brand { 
-            margin-bottom: 40px; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
+        /* SKJUL SCROLLBAR HELT */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* HEADER */
+        .title-bar-drag-region {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: var(--header-height);
+            z-index: 50;
+            -webkit-app-region: drag;
+        }
+
+        .window-controls-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            height: 32px;
+            display: flex;
+            z-index: 2000;
+            -webkit-app-region: no-drag;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .win-btn {
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            width: 40px;
+            height: 100%;
+            cursor: pointer;
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .win-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .win-btn.close-btn:hover {
+            background: #dc2626;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 260px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-right: var(--glass-border);
+            padding: 25px;
+            padding-top: 40px;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            -webkit-app-region: no-drag;
         }
 
         .logo-container {
-            font-family: 'Inter', sans-serif;
             font-size: 1.8rem;
-            font-weight: 800; 
-            text-transform: uppercase; 
-            letter-spacing: 1px;
-            line-height: 1;
-            white-space: nowrap; 
+            font-weight: 800;
+            text-transform: uppercase;
             font-style: italic;
-            padding: 10px 0;
-            cursor: default;
         }
 
         .neon-blue {
-            color: #e0f2fe; 
-            text-shadow: 
-                0 0 5px  rgba(59, 130, 246, 0.8),
-                0 0 15px rgba(59, 130, 246, 0.5),
-                0 0 30px rgba(37, 99, 235, 0.3);
+            color: #e0f2fe;
+            text-shadow: 0 0 5px rgba(59, 130, 246, 0.8);
         }
 
         .neon-orange {
-            color: #fef3c7; 
-            text-shadow: 
-                0 0 5px  rgba(245, 158, 11, 0.8),
-                0 0 15px rgba(245, 158, 11, 0.5),
-                0 0 30px rgba(217, 119, 6, 0.3);
+            color: #fffbeb;
+            text-shadow: 0 0 5px #f59e0b;
         }
 
-        .nav-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; color: #cbd5e1; display: flex; align-items: center; gap: 15px; transition: all 0.2s; margin-bottom: 8px; font-weight: 500; }
-        .nav-item:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-        .nav-item.active { background: rgba(59, 130, 246, 0.2); color: white; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .sidebar-header {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 700;
+            margin: 20px 0 10px 0;
+            letter-spacing: 1px;
+            text-align: center;
+        }
 
-        /* MAIN CONTENT */
-        .main-content { flex: 1; padding: 30px 40px; overflow-y: auto; position: relative; }
-        .view-section { display: none; animation: fadeIn 0.3s ease-out; }
-        .view-section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .nav-item {
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+            font-weight: 500;
+            transition: 0.2s;
+            font-size: 0.95rem;
+        }
 
-        h2 { font-weight: 600; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.8); color: white; }
-        #roomEditorTitle, #seatingTitle, #setupTitle { margin-bottom: 15px; }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
 
-        /* CARDS */
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; }
-        .info-card { background: rgba(45, 50, 65, 0.6); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 25px; cursor: pointer; transition: transform 0.2s, background 0.2s, border-color 0.2s; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; min-height: 140px; }
-        .info-card:hover { transform: translateY(-4px); border-color: var(--accent); background: rgba(60, 65, 90, 0.9); box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
-        .info-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent); }
-        
-        .card-label-small { font-size: 0.85rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .card-title-large { font-size: 2.2rem; font-weight: 800; color: white; line-height: 1.1; margin-bottom: 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-info-text { font-size: 1rem; color: #e2e8f0; font-weight: 500; }
-        .icon-edit { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.5); font-size: 1rem; transition: 0.2s; }
-        .info-card:hover .icon-edit { color: var(--accent); opacity: 1; }
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: white;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
 
-        /* EDITOR UI */
-        .glass-panel { background: rgba(30, 35, 50, 0.7); backdrop-filter: blur(10px); border: var(--glass-border); border-radius: 12px; padding: 25px; max-width: 900px; }
-        .glass-panel.full-width { max-width: 100%; }
-        .dark-input { background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; border-radius: 6px; width: 100%; transition: 0.3s; font-size: 0.9rem; }
-        .dark-input:focus { outline: none; border-color: var(--accent); background: rgba(0, 0, 0, 0.6); }
-        .form-label { color: #e2e8f0; font-size: 0.85rem; margin-bottom: 5px; display: block; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+        .nav-drawer {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease-out;
+            margin-left: 10px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-        /* CANVAS */
-        .room-canvas { height: 450px; width: 100%; background-color: #1a202c; border: 2px dashed rgba(255,255,255,0.2); border-radius: 10px; position: relative; margin-bottom: 20px; overflow: auto; background-image: radial-gradient(#4a5568 1px, transparent 1px); background-size: 20px 20px; }
-        
-        /* PRESENTATION CANVAS (ZOOM SUPPORT) */
-        .presentation-canvas-container {
-            height: 80vh; width: 100%; background-color: #1a202c; border: 4px solid #334155; border-radius: 10px; 
-            overflow: hidden; /* Skjuler overflow ved zoom */
+        .nav-drawer.open {
+            max-height: 200px;
+        }
+
+        .nav-sub-item {
+            padding: 8px 15px;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        .nav-sub-item:hover {
+            color: white;
+            padding-left: 20px;
+        }
+
+        .rotate-icon {
+            transform: rotate(180deg);
+            transition: transform 0.3s;
+        }
+
+        /* CONTENT */
+        .main-content {
+            flex: 1;
+            padding: 20px 40px;
+            overflow-y: auto;
+            padding-top: 60px;
             position: relative;
-            display: flex; justify-content: center; align-items: center; /* Sentrer innhold */
         }
-        .presentation-canvas-content {
-            width: 900px; /* Base size */
-            height: 600px; 
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* CARDS & FORMS */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .info-card {
+            background: rgba(45, 50, 65, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: 0.2s;
             position: relative;
-            transition: transform 0.2s ease;
-            transform-origin: center center;
+            overflow: hidden;
         }
 
-        .front-board { width: 50%; height: 25px; background: #4a5568; border: 1px solid #718096; border-top: none; border-radius: 0 0 10px 10px; position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: flex; justify-content: center; align-items: center; font-size: 0.7rem; color: #a0aec0; letter-spacing: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 5; }
-        .front-board::after { content: 'TAVLE / LÆRER'; }
+        .info-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent);
+            background: rgba(50, 55, 75, 0.8);
+        }
 
-        /* DESK STYLES */
-        .desk { position: absolute; background: #2d3748; border: 2px solid #718096; border-radius: 6px; display: flex; align-items: center; justify-content: center; text-align: center; color: white; font-size: 0.8rem; font-weight: 600; cursor: grab; user-select: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: transform 0.1s, box-shadow 0.1s; z-index: 10; padding: 5px; line-height: 1.1; }
-        .desk:active { cursor: grabbing; z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .desk.is-snapped { border-color: var(--snap-color); background: #2f3d4e; }
-        .desk.drag-source { opacity: 0.4; border: 2px dashed rgba(255, 255, 255, 0.5); background: #1a202c; }
-        
-        /* LOCKED STATE */
-        .lock-icon { position: absolute; bottom: 2px; right: 4px; color: #ef4444; font-size: 0.7rem; z-index: 20; }
+        .card-label-small {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-        /* NOTE INDICATOR */
-        .note-icon { position: absolute; top: -8px; right: -8px; color: #fcd34d; font-size: 1rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.8)); z-index: 20; }
+        .card-title-large {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: white;
+            margin: 5px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-        /* COLORS & GROUPS */
-        .bg-default { background: #2d3748; }
-        .bg-red { background: #7f1d1d; border-color: #ef4444; }
-        .bg-yellow { background: #78350f; border-color: #f59e0b; }
-        .bg-green { background: #064e3b; border-color: #10b981; }
-        .bg-blue { background: #1e3a8a; border-color: #3b82f6; }
-        .desk.selected-for-group { border-color: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
-        
+        .card-info-text {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .glass-panel {
+            background: rgba(30, 35, 50, 0.7);
+            backdrop-filter: blur(10px);
+            border: var(--glass-border);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .glass-panel.full-width {
+            max-width: 100%;
+        }
+
+        .dark-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            width: 100%;
+            transition: 0.2s;
+        }
+
+        .form-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: block;
+            font-weight: 600;
+        }
+
         /* BUTTONS */
-        .btn-action { padding: 10px 25px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .btn-sm-action { padding: 8px 15px; font-size: 0.8rem; height: 38px;}
-        .fixed-width-btn { min-width: 150px; text-align: center; } 
-        .btn-primary { background: #3b82f6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4); }
-        .btn-primary:hover { background: #2563eb; transform: translateY(-2px); }
-        .btn-secondary { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); }
-        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
-        .btn-danger { background: rgba(220, 38, 38, 0.2); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.4); }
-        .btn-danger:hover { background: rgba(220, 38, 38, 0.4); color: white; }
-        .btn-group-mode { background: #f59e0b; color: black; }
+        .btn-action {
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            margin-right: 10px;
+        }
 
-        #toast { position: fixed; bottom: 30px; right: 30px; background: #1e293b; color: white; padding: 15px 25px; border-radius: 8px; border-left: 5px solid var(--accent); opacity: 0; transition: 0.3s; transform: translateY(20px); z-index: 2000; }
-        #toast.show { opacity: 1; transform: translateY(0); }
-        .empty-state { color: #94a3b8; font-size: 1.1rem; font-style: italic; }
-        .tool-group { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 10px; display: flex; align-items: flex-end; gap: 15px; }
-        .badge-info { background: rgba(59, 130, 246, 0.2); color: #93c5fd; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .btn-sm-action {
+            padding: 5px 10px;
+            font-size: 0.75rem;
+            margin-right: 0;
+        }
 
-        /* MENUS */
-        #deskContextMenu, #seatingContextMenu { display: none; position: fixed; z-index: 3000; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px; min-width: 200px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); }
-        .ctx-header { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; padding: 5px 10px; margin-bottom: 5px; border-bottom: 1px solid #334155; }
-        .ctx-item { padding: 8px 12px; cursor: pointer; color: white; border-radius: 4px; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
-        .ctx-item:hover { background: rgba(255,255,255,0.1); }
-        .ctx-colors { display: flex; gap: 5px; padding: 5px 10px; }
-        .color-dot { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); }
-        .color-dot:hover { transform: scale(1.2); }
-        .history-list { padding: 5px 10px; font-size: 0.85rem; color: #cbd5e1; }
-        .history-item { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .note-display { padding: 10px; background: #fffbeb; color: #78350f; font-size: 0.85rem; border-radius: 4px; margin: 5px 10px; display: none; }
-        .note-display.has-note { display: block; }
-        
-        /* ZOOM CONTROLS */
-        .zoom-controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 20px; z-index: 100; }
-        .btn-zoom { width: 35px; height: 35px; border-radius: 50%; border: none; background: rgba(255,255,255,0.1); color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .btn-zoom:hover { background: var(--accent); }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: rgba(220, 38, 38, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-purple {
+            background: rgba(124, 58, 237, 0.2);
+            color: #ddd6fe;
+            border: 1px solid rgba(124, 58, 237, 0.4);
+        }
+
+        .btn-purple:hover {
+            background: #7c3aed;
+            color: white;
+        }
+
+        .btn-group-mode {
+            background: #d97706 !important;
+            color: white !important;
+            border: 1px solid #f59e0b !important;
+            box-shadow: 0 0 10px #f59e0b;
+        }
+
+        /* CANVAS AREA - CONTAINER TILPASSET */
+        .room-canvas-container {
+            height: 520px;
+            width: 100%;
+            /* Fyller tilgjengelig bredde i main-content */
+            max-width: 950px;
+            /* Begrenser bredden for å matche canvas + litt padding */
+            background: #1a202c;
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            position: relative;
+            overflow: auto;
+            /* Scrollbar skjult men funksjonell */
+            margin: 20px auto 0 auto;
+        }
+
+        /* SELVE LERRETET */
+        .room-canvas-content {
+            width: 900px;
+            /* FAST BREDDE SOM ØNSKET */
+            height: 100%;
+            min-height: 520px;
+            position: relative;
+            background-image: radial-gradient(#4a5568 1px, transparent 1px);
+            background-size: 20px 20px;
+            margin: 0 auto;
+            /* Sentrer innholdet */
+        }
+
+        .room-canvas-content.flipped {
+            transform: rotate(180deg);
+        }
+
+        .room-canvas-content.flipped .desk {
+            transform: rotate(180deg);
+        }
+
+        /* DESK STYLING */
+        .desk {
+            position: absolute;
+            background: #2d3748;
+            border: 2px solid #64748b;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            cursor: grab;
+            box-sizing: border-box;
+        }
+
+        .desk:active {
+            cursor: grabbing;
+        }
+
+        .desk.is-snapped {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 5px #10b981;
+        }
+
+        /* FLERVALG & GRUPPER */
+        .desk.selected-for-group {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 15px #f59e0b, inset 0 0 10px #f59e0b !important;
+        }
+
+        .desk.is-selected {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent) !important;
+            z-index: 20;
+        }
+
+        /* SELECTION BOX (Den blå firkanten når du drar) */
+        .selection-box {
+            position: absolute;
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            z-index: 100;
+            pointer-events: none;
+            /* Lar musa gå gjennom */
+        }
+
+        .desk-number {
+            position: absolute;
+            bottom: 2px;
+            left: 4px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        .front-board {
+            width: 400px;
+            height: 30px;
+            background: #4a5568;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 0 0 8px 8px;
+            z-index: 5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.7rem;
+            color: #cbd5e1;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .note-icon {
+            position: absolute;
+            top: 2px;
+            right: 3px;
+            color: #fcd34d;
+            font-size: 0.65rem;
+        }
+
+        .lock-icon {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            color: #ef4444;
+            font-size: 0.7rem;
+        }
+
+        /* FARGESYSTEM - MØRKERE TONER */
+        .bg-default {
+            background: #2d3748;
+            border-color: #64748b;
+        }
+
+        .bg-red {
+            background: #7f1d1d;
+            border-color: #991b1b;
+        }
+
+        .bg-yellow {
+            background: #78350f;
+            border-color: #92400e;
+        }
+
+        .bg-green {
+            background: #064e3b;
+            border-color: #065f46;
+        }
+
+        .bg-blue {
+            background: #1e3a8a;
+            border-color: #1e40af;
+        }
+
+        /* MODALS & TOAST */
+        .app-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 5000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            width: 400px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #1e293b;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            border-left: 5px solid var(--accent);
+            opacity: 0;
+            transition: 0.3s;
+            transform: translateY(20px);
+            z-index: 6000;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .tool-bar {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .header-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* CONTEXT MENU */
+        #deskContextMenu,
+        #seatingContextMenu {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+        }
+
+        .ctx-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ctx-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .ctx-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #94a3b8;
+            padding: 5px 10px;
+            border-bottom: 1px solid #334155;
+            margin-bottom: 5px;
+        }
+
+        .ctx-colors {
+            display: flex;
+            gap: 5px;
+            padding: 5px 10px;
+        }
+
+        .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        @media print {
+
+            .sidebar,
+            .window-controls-container,
+            .title-bar-drag-region,
+            .btn-action {
+                display: none !important;
+            }
+
+            body,
+            .main-content {
+                background: white !important;
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            .room-canvas-container {
+                border: none !important;
+                background: white !important;
+                height: 100vh !important;
+            }
+
+            .room-canvas-content {
+                background: none !important;
+                border: none !important;
+                margin: 0 !important;
+            }
+
+            .desk {
+                border: 2px solid black !important;
+                color: black !important;
+                background: white !important;
+                box-shadow: none !important;
+            }
+
+            .front-board {
+                background: #ccc !important;
+                color: black !important;
+            }
+        }
     </style>
 </head>
+
 <body>
-
-<div class="sidebar">
-    <div class="brand logo-container">
-        <span class="neon-blue">Klasse</span><span class="neon-orange">Plass</span>
-    </div>
-    
-    <div id="nav-classes" class="nav-item active" onclick="navTo('view-classes')"><i class="fas fa-users"></i> Mine klasser</div>
-    <div id="nav-class-create" class="nav-item" onclick="openClassCreate()"><i class="fas fa-plus-circle"></i> Opprett klasse</div>
-    <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-    <div id="nav-rooms" class="nav-item" onclick="navTo('view-rooms')"><i class="fas fa-couch"></i> Mine rom</div>
-    <div id="nav-room-create" class="nav-item" onclick="openRoomCreate()"><i class="fas fa-pencil-ruler"></i> Opprett rom</div>
-    <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-    <div id="nav-charts" class="nav-item" onclick="navTo('view-charts-dashboard')"><i class="fas fa-folder-open"></i> Mine klassekart</div>
-    <div id="nav-seating-create" class="nav-item" onclick="openSeatingSetup()"><i class="fas fa-plus-square"></i> Opprett klassekart</div>
-    <div id="nav-seating-edit" class="nav-item" onclick="navTo('view-charts-dashboard')"><i class="fas fa-edit"></i> Rediger klassekart</div>
-</div>
-
-<div class="main-content">
-    
-    <div id="view-classes" class="view-section active">
-        <h2>Mine klasser</h2>
-        <div id="classGrid" class="card-grid"></div>
+    <div class="title-bar-drag-region"></div>
+    <div class="window-controls-container">
+        <button class="win-btn" onclick="minimizeApp()"><i class="fas fa-minus"></i></button>
+        <button class="win-btn" onclick="maximizeApp()"><i class="far fa-square"></i></button>
+        <button class="win-btn close-btn" onclick="closeApp()"><i class="fas fa-times"></i></button>
     </div>
 
-    <div id="view-class-editor" class="view-section">
-        <h2 id="classEditorTitle">Opprett klasse</h2>
-        <div class="glass-panel">
-            <div class="mb-4">
-                <label class="form-label">Klassenavn</label>
-                <input type="text" id="classNameInput" class="dark-input" placeholder="Eks: 1ST1">
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Elever (ett navn per linje)</label>
-                <textarea id="studentListInput" class="dark-input" rows="10" placeholder="Ola Nordmann&#10;Kari Hansen&#10;Per Olsen"></textarea>
-            </div>
-            <div class="d-flex gap-3 pt-2">
-                <button class="btn-action btn-primary" onclick="saveClass()">Lagre</button>
-                <button class="btn-action btn-secondary" onclick="navTo('view-classes')">Avbryt</button>
-                <div class="ms-auto"><button id="btnClassDelete" class="btn-action btn-danger" onclick="deleteClass()">Slett</button></div>
-            </div>
+    <div class="sidebar">
+        <div class="brand logo-container"><span class="neon-blue">Klasse</span><span class="neon-orange">Plass</span>
+        </div>
+        <div class="sidebar-header">MENY</div>
+        <div id="nav-classes" class="nav-item active" onclick="navTo('view-classes')"><i class="fas fa-users"></i> Mine
+            klasser</div>
+        <div id="nav-rooms" class="nav-item" onclick="navTo('view-rooms')"><i class="fas fa-couch"></i> Mine rom</div>
+        <div id="nav-charts" class="nav-item" onclick="navTo('view-charts-dashboard')"><i
+                class="fas fa-folder-open"></i> Mine klassekart</div>
+        <div class="sidebar-header">ADMIN</div>
+        <div class="nav-item" onclick="toggleDrawer()"><i class="fas fa-plus-circle"></i> Opprett... <i
+                class="fas fa-chevron-down ms-auto" id="drawerIcon"></i></div>
+        <div id="createDrawer" class="nav-drawer">
+            <div class="nav-sub-item" onclick="navTo('view-class-create')">Klasse</div>
+            <div class="nav-sub-item" onclick="navTo('view-room-create')">Rom</div>
+            <div class="nav-sub-item" onclick="navTo('view-seating-create')">Klassekart</div>
         </div>
     </div>
 
-    <div id="view-rooms" class="view-section">
-        <h2>Mine rom</h2>
-        <div id="roomGrid" class="card-grid"></div>
-    </div>
-
-    <div id="view-room-editor" class="view-section">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h2 id="roomEditorTitle" class="m-0">Opprett rom</h2>
-            <span class="badge-info"><i class="fas fa-mouse"></i> Høyreklikk på bord for å slette</span>
+    <div class="main-content">
+        <div id="view-classes" class="view-section active">
+            <h2>Mine klasser</h2>
+            <div id="classGrid" class="card-grid"></div>
         </div>
-        <div class="glass-panel full-width">
-            <div class="d-flex flex-wrap gap-4 mb-4 align-items-end">
-                <div style="flex: 1; min-width: 150px;">
-                    <label class="form-label">Navn på rom</label>
-                    <input type="text" id="roomNameInput" class="dark-input" placeholder="Eks: A204">
+        <div id="view-class-editor" class="view-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 id="classEditorTitle" class="m-0">Opprett klasse</h2>
+                <div class="d-flex gap-2">
+                    <button class="btn-action btn-danger" id="btnClassDelete" style="display:none;"
+                        onclick="openDeleteModal(deleteClass)">Slett</button>
+                    <button class="btn-action btn-secondary" onclick="navTo('view-classes')">Avbryt</button>
+                    <button class="btn-action btn-primary" onclick="saveClass()">Lagre</button>
                 </div>
-                <div class="tool-group">
-                    <div>
-                        <label class="form-label">Presets</label>
-                        <select id="configPreset" class="dark-input" onchange="applyPreset(this.value)" style="width: 120px;">
+            </div>
+            <div class="glass-panel">
+                <input type="hidden" id="classIdInput">
+                <div class="mb-3"><label class="form-label">Klassenavn</label><input type="text" id="classNameInput"
+                        class="dark-input" spellcheck="false"></div>
+                <div class="mb-3"><label class="form-label">Elever (En per linje)</label><textarea id="studentListInput"
+                        class="dark-input" rows="15" spellcheck="false"></textarea></div>
+            </div>
+        </div>
+
+        <div id="view-rooms" class="view-section">
+            <h2>Mine rom</h2>
+            <div id="roomGrid" class="card-grid"></div>
+        </div>
+        <div id="view-room-editor" class="view-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 id="roomEditorTitle" class="m-0">Opprett rom</h2>
+                <div class="d-flex gap-2">
+                    <button class="btn-action btn-danger" id="btnRoomDelete" style="display:none;"
+                        onclick="openDeleteModal(deleteRoom)">Slett</button>
+                    <button class="btn-action btn-primary" onclick="saveRoom()">Lagre</button>
+                </div>
+            </div>
+            <div class="glass-panel full-width">
+                <div class="tool-bar">
+                    <div><label class="form-label">Navn</label><input type="text" id="roomNameInput" class="dark-input"
+                            style="width:150px;" spellcheck="false"></div>
+                    <div><label class="form-label">Struktur</label>
+                        <select id="roomPreset" class="dark-input">
                             <option value="">Velg...</option>
-                            <option value="2,2">2 - 2 (Par)</option>
+                            <option value="2,2">2 - 2</option>
                             <option value="2,2,2">2 - 2 - 2</option>
                             <option value="2,3,2">2 - 3 - 2</option>
+                            <option value="3,3,3">3 - 3 - 3</option>
                             <option value="4,4">4 - 4</option>
-                            <option value="1,1,1,1">Eksamen (1)</option>
+                            <option value="1,1,1,1">Eksamen</option>
                         </select>
                     </div>
-                    <div><label class="form-label">Konfig</label><input type="text" id="rowConfigInput" class="dark-input" style="width: 80px;" value="2,2,2"></div>
-                    <div><label class="form-label">Rader</label><input type="number" id="rowCountInput" class="dark-input" style="width: 60px;" value="4"></div>
-                    <div><label class="form-label">Plasser</label><input type="number" id="limitCountInput" class="dark-input" style="width: 60px;" value="30"></div>
-                    <button class="btn-action btn-sm-action btn-secondary" onclick="generateLayoutFromConfig()">Generer</button>
+                    <div><label class="form-label">Rader</label><input type="number" id="roomRows" class="dark-input"
+                            style="width:60px;" value="4"></div>
+                    <button class="btn-action btn-secondary btn-sm-action" onclick="generateLayout()">Generer</button>
+                    <button class="btn-action btn-secondary btn-sm-action" onclick="centerTables()">Sentrer
+                        bord</button>
+                    <div class="ms-auto" style="display:flex; align-items:flex-end; gap:5px;"><button
+                            class="btn-action btn-secondary btn-sm-action" onclick="addDesk()">+ Bord</button><button
+                            class="btn-action btn-danger btn-sm-action" onclick="clearCanvas()">Tøm</button></div>
+                </div>
+                <div class="room-canvas-container" id="roomContainer">
+                    <div id="roomCanvas" class="room-canvas-content">
+                        <div class="front-board">TAVLE</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-charts-dashboard" class="view-section">
+            <h2>Mine klassekart</h2>
+            <div id="chartGrid" class="card-grid"></div>
+        </div>
+
+        <div id="view-seating-setup" class="view-section">
+            <h2>Nytt klassekart</h2>
+            <div class="glass-panel" style="max-width:500px">
+                <div class="mb-3"><label class="form-label">NAVN (1ST5, Psykologi 1, Biologi 2)</label><input
+                        type="text" id="chartNameInput" class="dark-input" spellcheck="false"></div>
+                <div class="mb-3"><label class="form-label">Klasse</label><select id="setupClassSelect"
+                        class="dark-input"></select></div>
+                <div class="mb-3"><label class="form-label">Rom</label><select id="setupRoomSelect"
+                        class="dark-input"></select></div>
+                <button class="btn-action btn-primary" onclick="createChart()">Opprett</button>
+            </div>
+        </div>
+
+        <div id="view-seating-editor" class="view-section">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex gap-3 align-items-center">
+                    <div class="header-input-group">
+                        <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">NAVN:</span>
+                        <input type="text" id="editChartName"
+                            style="background:transparent; border:none; color:white; outline:none; width:180px;"
+                            spellcheck="false">
+                    </div>
+                    <div class="header-input-group">
+                        <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">INFO:</span>
+                        <input type="text" id="editChartComment" placeholder="Kommentar..."
+                            style="background:transparent; border:none; color:white; outline:none; width:200px;"
+                            spellcheck="false">
+                    </div>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn-action btn-sm-action btn-secondary" onclick="addTableSmart()">+ Bord</button>
-                    <button class="btn-action btn-sm-action btn-danger" onclick="clearRoomCanvas()">Tøm</button>
-                </div>
-            </div>
-            <div id="roomCanvas" class="room-canvas"><div class="front-board"></div></div>
-            <div class="d-flex gap-3 mt-4">
-                <button class="btn-action btn-primary" onclick="saveRoom()">Lagre Rom</button>
-                <button class="btn-action btn-secondary" onclick="navTo('view-rooms')">Avbryt</button>
-                <div class="ms-auto"><button id="btnRoomDelete" class="btn-action btn-danger" onclick="deleteRoom()">Slett</button></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-charts-dashboard" class="view-section">
-        <h2>Mine klassekart</h2>
-        <div id="chartGrid" class="card-grid"></div>
-    </div>
-
-    <div id="view-seating-setup" class="view-section">
-        <h2 id="setupTitle">Opprett nytt klassekart</h2>
-        <div class="glass-panel" style="max-width: 600px;">
-            <div class="mb-4">
-                <label class="form-label">Navn på klassekart</label>
-                <input type="text" id="chartNameInput" class="dark-input" placeholder="Eks: 1ST5">
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Kommentar (Valgfritt)</label>
-                <input type="text" id="chartCommentInput" class="dark-input" placeholder="Eks: Uke 3-7">
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Velg Klasse</label>
-                <select id="setupClassSelect" class="dark-input"></select>
-            </div>
-            <div class="mb-4">
-                <label class="form-label">Velg Rom</label>
-                <select id="setupRoomSelect" class="dark-input"></select>
-            </div>
-            <button class="btn-action btn-primary w-100" onclick="startNewChart()">Opprett & Gå til redigering</button>
-        </div>
-    </div>
-
-    <div id="view-seating-editor" class="view-section">
-        <h2 id="seatingTitle">Redigerer Klassekart</h2>
-        
-        <div class="glass-panel full-width mb-3" style="padding: 15px;">
-            <div class="d-flex gap-3 align-items-end">
-                <div style="flex: 1;">
-                    <label class="form-label">Navn</label>
-                    <input type="text" id="editChartName" class="dark-input">
-                </div>
-                <div style="flex: 1;">
-                    <label class="form-label">Kommentar</label>
-                    <input type="text" id="editChartComment" class="dark-input">
-                </div>
-                
-                <div class="tool-group ms-auto">
-                    <button id="btnGroupMode" class="btn-action btn-sm-action btn-secondary fixed-width-btn" onclick="toggleGroupMode()">
+                    <button id="btnGroupMode" class="btn-action btn-secondary btn-sm-action"
+                        onclick="toggleGroupMode()">
                         <i class="fas fa-object-group"></i> Lag Grupper
                     </button>
-                    <button class="btn-action btn-sm-action btn-secondary" onclick="generateSeating(true)">
-                        <i class="fas fa-random"></i> Shuffle på nytt
+                    <button class="btn-action btn-purple btn-sm-action" onclick="startNewPeriod()">
+                        <i class="fas fa-code-branch"></i> Ny Periode
                     </button>
-                    <button class="btn-action btn-sm-action btn-primary" onclick="saveCurrentChart()">
-                        <i class="fas fa-save"></i> Lagre Endringer
+                    <button class="btn-action btn-secondary btn-sm-action" onclick="generateSeating()">
+                        <i class="fas fa-random"></i> Shuffle
                     </button>
+                    <button class="btn-action btn-primary" onclick="saveChart()">Lagre</button>
+                    <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
+                </div>
+            </div>
+            <div class="room-canvas-container" id="seatingContainer">
+                <div id="seatingCanvas" class="room-canvas-content">
+                    <div class="front-board">TAVLE</div>
                 </div>
             </div>
         </div>
 
-        <div id="seatingCanvas" class="room-canvas" style="height: 450px;">
-            <div class="front-board"></div>
-        </div>
-    </div>
-
-    <div id="view-chart-display" class="view-section">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h2 id="displayTitle" class="m-0">Visning</h2>
-                <div id="displaySubtitle" style="color:#94a3b8; font-size:1.1rem;"></div>
+        <div id="view-chart-display" class="view-section">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <h2 id="displayTitle" class="m-0">Visning</h2>
+                    <div id="displaySubtitle" style="color:#94a3b8"></div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn-action btn-secondary" onclick="flipView()">Snu Visning</button>
+                    <button class="btn-action btn-secondary" onclick="window.print()">Print / PDF</button>
+                    <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
+                </div>
             </div>
-            <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">
-                <i class="fas fa-arrow-left"></i> Tilbake
-            </button>
-        </div>
-        
-        <div class="presentation-canvas-container">
-            <div id="displayCanvas" class="presentation-canvas-content">
-                <div class="front-board"></div>
-            </div>
-            
-            <div class="zoom-controls">
-                <button class="btn-zoom" onclick="changeZoom(-0.1)"><i class="fas fa-minus"></i></button>
-                <button class="btn-zoom" onclick="changeZoom(0.1)"><i class="fas fa-plus"></i></button>
+            <div class="room-canvas-container" id="displayContainer">
+                <div id="displayCanvas" class="room-canvas-content">
+                    <div class="front-board">TAVLE</div>
+                </div>
             </div>
         </div>
     </div>
 
-</div>
-
-<div id="seatingContextMenu">
-    <div id="ctxLockAction" style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px;">
-        <div class="ctx-item" onclick="toggleDeskLock()">
-            <i class="fas fa-lock"></i> <span id="ctxLockText">Lås plass</span>
+    <div id="customModal" class="app-modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">Tittel</div>
+            <input type="text" id="modalInput" class="dark-input mb-3" spellcheck="false">
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn-action btn-secondary" onclick="closeModal(false)">Avbryt</button>
+                <button class="btn-action btn-primary" onclick="closeModal(true)">OK</button>
+            </div>
         </div>
     </div>
-    <div id="ctxGroupActions" style="display:none; border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px;">
-        <div class="ctx-item" onclick="ungroupDesk()"><i class="fas fa-unlink"></i> Fjern fra gruppe</div>
+
+    <div id="deleteModal" class="app-modal">
+        <div class="modal-content" style="border: 1px solid #ef4444;">
+            <div class="modal-title" style="color:#fca5a5;">Er du sikker?</div>
+            <p style="color:#cbd5e1; margin-bottom:20px;">Dette vil slette elementet permanent.</p>
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn-action btn-secondary" onclick="closeDeleteModal()">Avbryt</button>
+                <button class="btn-action btn-danger" onclick="confirmDeleteAction()">Slett</button>
+            </div>
+        </div>
     </div>
-    <div id="ctxStudentActions">
-        <div class="ctx-header">Elev handlinger</div>
+
+    <div id="deskContextMenu">
+        <div class="ctx-item danger" onclick="deleteSelectedDesk()"><i class="fas fa-trash"></i> Slett bord</div>
+    </div>
+    <div id="seatingContextMenu">
+        <div id="ctxLockAction" style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px;">
+            <div class="ctx-item" onclick="toggleDeskLock()"><i class="fas fa-lock"></i> <span id="ctxLockText">Lås
+                    plass</span></div>
+        </div>
+        <div id="ctxUngroupAction"
+            style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px; display:none;">
+            <div class="ctx-item" onclick="ungroupDesk()"><i class="fas fa-unlink"></i> Fjern fra gruppe</div>
+        </div>
+        <div class="ctx-header">Elev</div>
         <div class="ctx-item" onclick="editStudentNote()"><i class="fas fa-sticky-note"></i> Rediger notat</div>
-        <div id="ctxNoteDisplay" class="note-display"></div>
-        <div class="ctx-header mt-2">Fargekode (Dette kartet)</div>
+        <div class="ctx-header mt-2">Farge</div>
         <div class="ctx-colors">
             <div class="color-dot" style="background:#2d3748" onclick="setDeskColor('bg-default')"></div>
-            <div class="color-dot" style="background:#ef4444" onclick="setDeskColor('bg-red')"></div>
-            <div class="color-dot" style="background:#f59e0b" onclick="setDeskColor('bg-yellow')"></div>
-            <div class="color-dot" style="background:#10b981" onclick="setDeskColor('bg-green')"></div>
-            <div class="color-dot" style="background:#3b82f6" onclick="setDeskColor('bg-blue')"></div>
+            <div class="color-dot" style="background:#7f1d1d" onclick="setDeskColor('bg-red')"></div>
+            <div class="color-dot" style="background:#78350f" onclick="setDeskColor('bg-yellow')"></div>
+            <div class="color-dot" style="background:#064e3b" onclick="setDeskColor('bg-green')"></div>
+            <div class="color-dot" style="background:#1e3a8a" onclick="setDeskColor('bg-blue')"></div>
         </div>
-        <div class="ctx-header mt-2">Historikk (5 siste)</div>
-        <div id="ctxHistoryList" class="history-list"></div>
     </div>
-</div>
 
-<div id="deskContextMenu">
-    <div class="ctx-item danger" onclick="deleteSelectedDesk()"><i class="fas fa-trash"></i> Slett bord</div>
-</div>
-
-<div id="toast">Handlingen ble utført</div>
-
-<script src="renderer.js"></script>
+    <div id="toast">Lagret</div>
+    <script src="renderer.js"></script>
 </body>
+
 </html>

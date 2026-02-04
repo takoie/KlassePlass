@@ -10,10 +10,14 @@
     "appId": "com.takoie.klasseplass",
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico" 
+      "icon": "assets/icon.ico"
     }
   },
   "dependencies": {
-    "electron": "^25.0.0" 
+    "electron": "^25.0.0"
+  },
+  "devDependencies": {
+    "electron-rebuild": "^3.2.9",
+    "sqlite3": "^5.1.7"
   }
 }
