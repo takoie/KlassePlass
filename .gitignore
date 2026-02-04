@@ -10,3 +10,6 @@ dist/
 out/
 .DS_Store
 .env
+
+assets/ikonconvert.py
+assets/app-icon.png
