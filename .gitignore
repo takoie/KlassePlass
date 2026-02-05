@@ -13,3 +13,5 @@ out/
 
 assets/ikonconvert.py
 assets/app-icon.png
+backend/app.py
+backend/requirements.txt

@@ -2,8 +2,12 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
-const dbPath = path.join(__dirname, 'klassekart_database.db');
+// --- VIKTIG ENDRING: Databasen lagres nå i brukerens AppData-mappe ---
+// Dette sikrer at programmet har skrivetilgang selv om det er installert i Program Files.
+const dbPath = path.join(app.getPath('userData'), 'klassekart_database.db');
 const db = new sqlite3.Database(dbPath);
+
+console.log("Databasen ligger her:", dbPath); // Viser stien i terminalen ved oppstart
 
 function initDatabase() {
   db.serialize(() => {
@@ -24,7 +28,7 @@ function initDatabase() {
 let win;
 function createWindow() {
   win = new BrowserWindow({
-    width: 1400, height: 830,
+    width: 1400, height: 820,
     icon: path.join(__dirname, 'assets/icon.ico'),
     frame: false,
     transparent: true,
@@ -78,6 +82,11 @@ ipcMain.handle('save-seating', async (e, id, name, classId, roomId, placements, 
 
 ipcMain.handle('delete-seating', async (e, id) => new Promise((res, rej) => db.run("DELETE FROM seatings WHERE id = ?", [id], (err) => err ? rej(err) : res(true))));
 
+// NY: Slett all historikk for en kombinasjon
+ipcMain.handle('delete-seating-history', async (e, classId, roomId) => new Promise((res, rej) => {
+  db.run("DELETE FROM seatings WHERE class_id = ? AND room_id = ?", [classId, roomId], (err) => err ? rej(err) : res(true));
+}));
+
 // BRANCHING / DUPLISERING
 ipcMain.handle('duplicate-seating', async (e, originalId, newName) => new Promise((res, rej) => {
   if (!originalId) return rej(new Error("Missing ID"));
@@ -93,6 +102,28 @@ ipcMain.handle('duplicate-seating', async (e, originalId, newName) => new Promis
       });
   });
 }));
+
+// --- PRESENTATION WINDOW HANDLER ---
+ipcMain.on('open-presentation-window', (event, layoutData) => {
+  let presentationWin = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    title: "KlassePlass Presentasjon",
+    frame: false,           // Rammeløst vindu
+    transparent: true,      // Gjennomsiktig bakgrunn (krever at backgroundColor ikke er satt)
+    icon: path.join(__dirname, 'assets/icon.ico'),
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  presentationWin.loadFile('presentation.html');
+
+  presentationWin.webContents.on('did-finish-load', () => {
+    presentationWin.webContents.send('render-layout', JSON.parse(layoutData));
+  });
+});
 
 app.whenReady().then(() => { initDatabase(); createWindow(); });
 app.on('window-all-closed', () => { db.close(); app.quit(); });

@@ -1,23 +1,45 @@
 {
   "name": "klasseplass",
   "version": "1.0.0",
+  "description": "Verktøy for organisering av klassekart",
+  "author": "Stian Taknes",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId": "com.takoie.klasseplass",
+    "appId": "com.klasseplass.app",
+    "productName": "KlassePlass",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico"
-    }
-  },
-  "dependencies": {
-    "electron": "^25.0.0"
-  },
-  "devDependencies": {
-    "electron-rebuild": "^3.2.9",
-    "sqlite3": "^5.1.7"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "KlassePlass"
+    },
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!src/*"
+    ]
   }
 }

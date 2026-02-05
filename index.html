@@ -26,17 +26,28 @@
         }
 
         body {
-            background-color: var(--bg-app);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: transparent;
             color: var(--text-main);
             font-family: 'Inter', sans-serif;
             overflow: hidden;
+            user-select: none;
+        }
+
+        /* WRAPPER */
+        .app-wrapper {
             display: flex;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-app);
             background-image: radial-gradient(#2d3748 1px, transparent 1px);
             background-size: 30px 30px;
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            user-select: none;
+            overflow: hidden;
+            position: relative;
         }
 
         /* SKJUL SCROLLBAR HELT */
@@ -104,13 +115,15 @@
             padding-top: 40px;
             display: flex;
             flex-direction: column;
-            z-index: 10;
+            z-index: 2000;
+            border-bottom-left-radius: 12px;
         }
 
         .brand {
             display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
             -webkit-app-region: no-drag;
         }
 
@@ -119,16 +132,17 @@
             font-weight: 800;
             text-transform: uppercase;
             font-style: italic;
+            margin-bottom: 5px;
         }
 
         .neon-blue {
             color: #e0f2fe;
-            text-shadow: 0 0 5px rgba(59, 130, 246, 0.8);
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
         }
 
         .neon-orange {
-            color: #fffbeb;
-            text-shadow: 0 0 5px #f59e0b;
+            color: #fbbf24;
+            text-shadow: 0 0 15px #f59e0b, 0 0 25px #d97706;
         }
 
         .sidebar-header {
@@ -195,6 +209,32 @@
             transition: transform 0.3s;
         }
 
+        /* OM KNAPP STIL */
+        .about-btn-container {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item-small {
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            font-weight: 400;
+            transition: 0.2s;
+            font-size: 0.8rem;
+            justify-content: center;
+        }
+
+        .nav-item-small:hover {
+            color: white;
+        }
+
         /* CONTENT */
         .main-content {
             flex: 1;
@@ -225,7 +265,7 @@
             }
         }
 
-        /* CARDS & FORMS */
+        /* CARDS */
         .card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -260,15 +300,24 @@
             font-size: 1.4rem;
             font-weight: 700;
             color: white;
-            margin: 5px 0;
+            margin: 2px 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .card-info-text {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: #cbd5e1;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .card-week-text {
+            font-size: 0.85rem;
+            color: #f59e0b;
+            font-weight: 600;
         }
 
         .glass-panel {
@@ -360,52 +409,137 @@
             box-shadow: 0 0 10px #f59e0b;
         }
 
-        /* CANVAS AREA - CONTAINER TILPASSET */
+        #btnConfirmGroup {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            background: #10b981;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            pointer-events: auto;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #btnConfirmGroup:hover {
+            background: #059669;
+            transform: translateX(-50%) scale(1.05);
+            transition: 0.2s;
+        }
+
+        /* DOCK */
+        #unplacedDock {
+            position: absolute;
+            top: 10px;
+            right: 0px;
+            width: 180px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1500;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: -5px 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .dock-header {
+            font-size: 0.75rem;
+            color: #f59e0b;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .student-chip {
+            background: #475569;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: white;
+            cursor: grab;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .student-chip:active {
+            cursor: grabbing;
+            background: #3b82f6;
+        }
+
+        /* TOOLBAR */
+        .tool-bar {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tool-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* CANVAS AREA */
         .room-canvas-container {
-            height: 520px;
+            height: 500px;
             width: 100%;
-            /* Fyller tilgjengelig bredde i main-content */
             max-width: 950px;
-            /* Begrenser bredden for å matche canvas + litt padding */
             background: #1a202c;
             border: 2px dashed rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             position: relative;
             overflow: auto;
-            /* Scrollbar skjult men funksjonell */
             margin: 20px auto 0 auto;
         }
 
-        /* SELVE LERRETET */
         .room-canvas-content {
-            width: 900px;
-            /* FAST BREDDE SOM ØNSKET */
+            width: 920px;
             height: 100%;
-            min-height: 520px;
+            min-height: 500px;
             position: relative;
             background-image: radial-gradient(#4a5568 1px, transparent 1px);
             background-size: 20px 20px;
             margin: 0 auto;
-            /* Sentrer innholdet */
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.5s ease;
         }
 
         .room-canvas-content.flipped {
             transform: rotate(180deg);
         }
 
-        .room-canvas-content.flipped .desk {
+        .room-canvas-content.flipped .desk,
+        .room-canvas-content.flipped .front-board {
             transform: rotate(180deg);
         }
 
-        /* DESK STYLING */
+        /* DESK */
         .desk {
             position: absolute;
             background: #2d3748;
             border: 2px solid #64748b;
             border-radius: 6px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            text-align: center;
             color: white;
             font-weight: 600;
             font-size: 0.85rem;
@@ -413,6 +547,11 @@
             z-index: 10;
             cursor: grab;
             box-sizing: border-box;
+            overflow: hidden;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.1;
+            padding: 2px;
         }
 
         .desk:active {
@@ -424,7 +563,11 @@
             box-shadow: 0 0 5px #10b981;
         }
 
-        /* FLERVALG & GRUPPER */
+        .desk.drag-origin {
+            border: 2px dashed #f59e0b !important;
+            opacity: 0.5;
+        }
+
         .desk.selected-for-group {
             border-color: #f59e0b !important;
             box-shadow: 0 0 15px #f59e0b, inset 0 0 10px #f59e0b !important;
@@ -436,14 +579,12 @@
             z-index: 20;
         }
 
-        /* SELECTION BOX (Den blå firkanten når du drar) */
         .selection-box {
             position: absolute;
             background: rgba(59, 130, 246, 0.2);
             border: 1px solid #3b82f6;
             z-index: 100;
             pointer-events: none;
-            /* Lar musa gå gjennom */
         }
 
         .desk-number {
@@ -462,7 +603,7 @@
             position: absolute;
             top: 0;
             left: 50%;
-            transform: translateX(-50%);
+            margin-left: -200px;
             border-radius: 0 0 8px 8px;
             z-index: 5;
             display: flex;
@@ -472,6 +613,7 @@
             color: #cbd5e1;
             letter-spacing: 2px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.5s ease;
         }
 
         .note-icon {
@@ -490,7 +632,6 @@
             font-size: 0.7rem;
         }
 
-        /* FARGESYSTEM - MØRKERE TONER */
         .bg-default {
             background: #2d3748;
             border-color: #64748b;
@@ -516,7 +657,7 @@
             border-color: #1e40af;
         }
 
-        /* MODALS & TOAST */
+        /* MODALS */
         .app-modal {
             display: none;
             position: fixed;
@@ -567,17 +708,6 @@
             transform: translateY(0);
         }
 
-        .tool-bar {
-            display: flex;
-            gap: 15px;
-            align-items: flex-end;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
-        }
-
         .header-input-group {
             display: flex;
             align-items: center;
@@ -588,7 +718,54 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* CONTEXT MENU */
+        .history-list {
+            max-height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent);
+        }
+
+        .history-weeks {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #f59e0b;
+        }
+
+        .history-date {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .btn-history-del {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+
+        .btn-history-del:hover {
+            color: #ef4444;
+        }
+
         #deskContextMenu,
         #seatingContextMenu {
             display: none;
@@ -640,219 +817,415 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
+        /* PRINT STYLES */
+        .print-logo {
+            display: none;
+        }
+
+        .print-header {
+            display: none;
+        }
+
         @media print {
+            @page {
+                size: landscape;
+                margin: 0;
+            }
+
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                background: white !important;
+                color: black !important;
+                height: 100vh;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                overflow: visible !important;
+            }
 
             .sidebar,
             .window-controls-container,
             .title-bar-drag-region,
-            .btn-action {
+            .btn-action,
+            #btnConfirmGroup,
+            .header-input-group,
+            #unplacedDock {
                 display: none !important;
             }
 
-            body,
-            .main-content {
+            /* SKJULER VIEW HEADER FOR Å UNNGÅ DOBBEL TITTEL */
+            .view-section h2,
+            .view-section #displaySubtitle {
+                display: none !important;
+            }
+
+            .app-wrapper {
+                border: none !important;
                 background: white !important;
-                color: black !important;
-                height: auto !important;
-                overflow: visible !important;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                width: 100vw !important;
+                height: 100vh !important;
+            }
+
+            .main-content,
+            .view-section.active {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
             }
 
             .room-canvas-container {
                 border: none !important;
                 background: white !important;
-                height: 100vh !important;
-            }
-
-            .room-canvas-content {
-                background: none !important;
-                border: none !important;
+                height: auto !important;
+                width: 100% !important;
+                max-width: none !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
                 margin: 0 !important;
             }
 
+            .room-canvas-content {
+                border: none !important;
+                background: none !important;
+                margin: 0 auto !important;
+                transform: none !important;
+                transform-origin: center center;
+            }
+
             .desk {
-                border: 2px solid black !important;
+                background: #f8fafc !important;
                 color: black !important;
-                background: white !important;
+                border-width: 2px !important;
+                border-style: solid !important;
                 box-shadow: none !important;
             }
 
             .front-board {
-                background: #ccc !important;
+                background: #e2e8f0 !important;
                 color: black !important;
+                border: 1px solid #000;
+                box-shadow: none !important;
+            }
+
+            /* PRINT HEADER TOP LEFT */
+            .print-header {
+                display: block !important;
+                position: fixed;
+                top: 30px;
+                left: 30px;
+                z-index: 9999;
+                text-align: left;
+            }
+
+            .print-header h1 {
+                font-size: 2rem;
+                margin: 0;
+                color: black;
+                text-transform: uppercase;
+                font-weight: 800;
+            }
+
+            .print-header h3 {
+                font-size: 1.2rem;
+                margin: 5px 0 0 0;
+                color: #64748b;
+                font-weight: 500;
+            }
+
+            /* PRINT LOGO BOTTOM LEFT */
+            .print-logo {
+                display: block !important;
+                position: fixed;
+                bottom: 20px;
+                left: 30px;
+                font-family: 'Inter', sans-serif;
+                font-size: 0.9rem;
+                font-weight: 800;
+                font-style: italic;
+                text-transform: uppercase;
+                z-index: 9999;
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="title-bar-drag-region"></div>
-    <div class="window-controls-container">
-        <button class="win-btn" onclick="minimizeApp()"><i class="fas fa-minus"></i></button>
-        <button class="win-btn" onclick="maximizeApp()"><i class="far fa-square"></i></button>
-        <button class="win-btn close-btn" onclick="closeApp()"><i class="fas fa-times"></i></button>
-    </div>
+    <div class="app-wrapper">
+        <div class="print-header">
+            <h1 id="printTitle"></h1>
+            <h3 id="printSubtitle"></h3>
+        </div>
+        <div class="print-logo">
+            <span style="color:#0ea5e9;">Klasse</span><span style="color:#f59e0b;">Plass</span>
+        </div>
 
-    <div class="sidebar">
-        <div class="brand logo-container"><span class="neon-blue">Klasse</span><span class="neon-orange">Plass</span>
+        <div class="title-bar-drag-region"></div>
+        <div class="window-controls-container">
+            <button class="win-btn" onclick="minimizeApp()"><i class="fas fa-minus"></i></button>
+            <button class="win-btn" onclick="maximizeApp()"><i class="far fa-square"></i></button>
+            <button class="win-btn close-btn" onclick="closeApp()"><i class="fas fa-times"></i></button>
         </div>
-        <div class="sidebar-header">MENY</div>
-        <div id="nav-classes" class="nav-item active" onclick="navTo('view-classes')"><i class="fas fa-users"></i> Mine
-            klasser</div>
-        <div id="nav-rooms" class="nav-item" onclick="navTo('view-rooms')"><i class="fas fa-couch"></i> Mine rom</div>
-        <div id="nav-charts" class="nav-item" onclick="navTo('view-charts-dashboard')"><i
-                class="fas fa-folder-open"></i> Mine klassekart</div>
-        <div class="sidebar-header">ADMIN</div>
-        <div class="nav-item" onclick="toggleDrawer()"><i class="fas fa-plus-circle"></i> Opprett... <i
-                class="fas fa-chevron-down ms-auto" id="drawerIcon"></i></div>
-        <div id="createDrawer" class="nav-drawer">
-            <div class="nav-sub-item" onclick="navTo('view-class-create')">Klasse</div>
-            <div class="nav-sub-item" onclick="navTo('view-room-create')">Rom</div>
-            <div class="nav-sub-item" onclick="navTo('view-seating-create')">Klassekart</div>
-        </div>
-    </div>
 
-    <div class="main-content">
-        <div id="view-classes" class="view-section active">
-            <h2>Mine klasser</h2>
-            <div id="classGrid" class="card-grid"></div>
-        </div>
-        <div id="view-class-editor" class="view-section">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 id="classEditorTitle" class="m-0">Opprett klasse</h2>
-                <div class="d-flex gap-2">
-                    <button class="btn-action btn-danger" id="btnClassDelete" style="display:none;"
-                        onclick="openDeleteModal(deleteClass)">Slett</button>
-                    <button class="btn-action btn-secondary" onclick="navTo('view-classes')">Avbryt</button>
-                    <button class="btn-action btn-primary" onclick="saveClass()">Lagre</button>
+        <button id="btnConfirmGroup" onclick="commitGroup()"><i class="fas fa-check"></i> Opprett gruppe
+            (Enter)</button>
+
+        <div class="sidebar">
+            <div class="brand">
+                <div class="logo-container"><span class="neon-blue">Klasse</span><span class="neon-orange">Plass</span>
                 </div>
             </div>
-            <div class="glass-panel">
-                <input type="hidden" id="classIdInput">
-                <div class="mb-3"><label class="form-label">Klassenavn</label><input type="text" id="classNameInput"
-                        class="dark-input" spellcheck="false"></div>
-                <div class="mb-3"><label class="form-label">Elever (En per linje)</label><textarea id="studentListInput"
-                        class="dark-input" rows="15" spellcheck="false"></textarea></div>
+
+            <div class="sidebar-header">MENY</div>
+            <div id="nav-charts" class="nav-item active" onclick="navTo('view-charts-dashboard')"><i
+                    class="fas fa-folder-open"></i> Mine klassekart</div>
+            <div id="nav-groups" class="nav-item" onclick="navTo('view-groups')"><i class="fas fa-users"></i> Mine
+                grupper</div>
+            <div id="nav-rooms" class="nav-item" onclick="navTo('view-rooms')"><i class="fas fa-couch"></i> Mine rom
+            </div>
+
+            <div class="sidebar-header">ADMIN</div>
+            <div id="nav-create" class="nav-item" onclick="toggleDrawer()"><i class="fas fa-plus-circle"></i> Opprett...
+                <i class="fas fa-chevron-down ms-auto" id="drawerIcon"></i>
+            </div>
+            <div id="createDrawer" class="nav-drawer">
+                <div class="nav-sub-item" onclick="navTo('view-group-create')">Gruppe</div>
+                <div class="nav-sub-item" onclick="navTo('view-room-create')">Rom</div>
+                <div class="nav-sub-item" onclick="navTo('view-seating-create')">Klassekart</div>
+            </div>
+
+            <div class="about-btn-container">
+                <div class="nav-item-small" onclick="openAboutModal()"><i class="fas fa-info-circle"></i> Om KlassePlass
+                </div>
             </div>
         </div>
 
-        <div id="view-rooms" class="view-section">
-            <h2>Mine rom</h2>
-            <div id="roomGrid" class="card-grid"></div>
-        </div>
-        <div id="view-room-editor" class="view-section">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 id="roomEditorTitle" class="m-0">Opprett rom</h2>
-                <div class="d-flex gap-2">
-                    <button class="btn-action btn-danger" id="btnRoomDelete" style="display:none;"
-                        onclick="openDeleteModal(deleteRoom)">Slett</button>
-                    <button class="btn-action btn-primary" onclick="saveRoom()">Lagre</button>
-                </div>
+        <div class="main-content">
+            <div id="view-groups" class="view-section">
+                <h2>Mine grupper</h2>
+                <div id="classGrid" class="card-grid"></div>
             </div>
-            <div class="glass-panel full-width">
-                <div class="tool-bar">
-                    <div><label class="form-label">Navn</label><input type="text" id="roomNameInput" class="dark-input"
-                            style="width:150px;" spellcheck="false"></div>
-                    <div><label class="form-label">Struktur</label>
-                        <select id="roomPreset" class="dark-input">
-                            <option value="">Velg...</option>
-                            <option value="2,2">2 - 2</option>
-                            <option value="2,2,2">2 - 2 - 2</option>
-                            <option value="2,3,2">2 - 3 - 2</option>
-                            <option value="3,3,3">3 - 3 - 3</option>
-                            <option value="4,4">4 - 4</option>
-                            <option value="1,1,1,1">Eksamen</option>
-                        </select>
+            <div id="view-group-editor" class="view-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 id="classEditorTitle" class="m-0">Opprett gruppe</h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn-action btn-danger" id="btnClassDelete" style="display:none;"
+                            onclick="openDeleteModal(deleteClass)">Slett</button>
+                        <button class="btn-action btn-secondary" onclick="navTo('view-groups')">Avbryt</button>
+                        <button class="btn-action btn-primary" onclick="saveClass()">Lagre</button>
                     </div>
-                    <div><label class="form-label">Rader</label><input type="number" id="roomRows" class="dark-input"
-                            style="width:60px;" value="4"></div>
-                    <button class="btn-action btn-secondary btn-sm-action" onclick="generateLayout()">Generer</button>
-                    <button class="btn-action btn-secondary btn-sm-action" onclick="centerTables()">Sentrer
-                        bord</button>
-                    <div class="ms-auto" style="display:flex; align-items:flex-end; gap:5px;"><button
-                            class="btn-action btn-secondary btn-sm-action" onclick="addDesk()">+ Bord</button><button
-                            class="btn-action btn-danger btn-sm-action" onclick="clearCanvas()">Tøm</button></div>
                 </div>
-                <div class="room-canvas-container" id="roomContainer">
-                    <div id="roomCanvas" class="room-canvas-content">
+                <div class="glass-panel">
+                    <input type="hidden" id="classIdInput">
+                    <div class="mb-3"><label class="form-label">Gruppenavn</label><input type="text" id="classNameInput"
+                            class="dark-input" spellcheck="false"></div>
+                    <div class="mb-3"><label class="form-label">Elever (En per linje)</label><textarea
+                            id="studentListInput" class="dark-input" rows="15" spellcheck="false"></textarea></div>
+                </div>
+            </div>
+
+            <div id="view-rooms" class="view-section">
+                <h2>Mine rom</h2>
+                <div id="roomGrid" class="card-grid"></div>
+            </div>
+            <div id="view-room-editor" class="view-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 id="roomEditorTitle" class="m-0">Opprett rom</h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn-action btn-danger" id="btnRoomDelete" style="display:none;"
+                            onclick="openDeleteModal(deleteRoom)">Slett</button>
+                        <button class="btn-action btn-primary" onclick="saveRoom()">Lagre</button>
+                    </div>
+                </div>
+                <div class="glass-panel full-width">
+                    <div class="tool-bar">
+                        <div class="tool-group">
+                            <label class="form-label">Navn</label>
+                            <input type="text" id="roomNameInput" class="dark-input" style="width:150px;"
+                                spellcheck="false">
+                        </div>
+                        <div class="tool-group">
+                            <label class="form-label">Struktur</label>
+                            <select id="roomPreset" class="dark-input" style="width:120px;">
+                                <option value="">Velg...</option>
+                                <option value="2,2">2 - 2</option>
+                                <option value="2,2,2">2 - 2 - 2</option>
+                                <option value="2,2,2,2">2 - 2 - 2 - 2</option>
+                                <option value="2,3,2">2 - 3 - 2</option>
+                                <option value="3,3,3">3 - 3 - 3</option>
+                                <option value="4,4">4 - 4</option>
+                                <option value="4,2,4">4 - 2 - 4</option>
+                                <option value="1,1,1,1">Eksamen</option>
+                            </select>
+                        </div>
+                        <div class="tool-group">
+                            <label class="form-label">Rader</label>
+                            <input type="number" id="roomRows" class="dark-input" style="width:60px;" value="4">
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn-action btn-secondary btn-sm-action"
+                                onclick="generateLayout()">Generer</button>
+                            <button class="btn-action btn-secondary btn-sm-action" onclick="centerTables()">Sentrer
+                                bord</button>
+                        </div>
+                        <div class="ms-auto" style="display:flex; align-items:flex-end; gap:5px;">
+                            <button class="btn-action btn-secondary btn-sm-action" onclick="addDesk()">+ Bord</button>
+                            <button class="btn-action btn-danger btn-sm-action" onclick="clearCanvas()">Tøm</button>
+                        </div>
+                    </div>
+                    <div class="room-canvas-container" id="roomContainer">
+                        <div id="roomCanvas" class="room-canvas-content">
+                            <div class="front-board">TAVLE</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-charts-dashboard" class="view-section active">
+                <h2>Mine klassekart</h2>
+                <div id="chartGrid" class="card-grid"></div>
+            </div>
+
+            <div id="view-seating-setup" class="view-section">
+                <h2>Nytt klassekart</h2>
+                <div class="glass-panel" style="max-width:500px">
+                    <div class="mb-3"><label class="form-label">NAVN (1ST5, Psykologi 1, Biologi 2)</label><input
+                            type="text" id="chartNameInput" class="dark-input" spellcheck="false"></div>
+                    <div class="mb-3"><label class="form-label">Gruppe</label><select id="setupClassSelect"
+                            class="dark-input"></select></div>
+                    <div class="mb-3"><label class="form-label">Rom</label><select id="setupRoomSelect"
+                            class="dark-input"></select></div>
+                    <button class="btn-action btn-primary" onclick="createChart()">Opprett</button>
+                </div>
+            </div>
+
+            <div id="view-seating-editor" class="view-section">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex gap-3 align-items-center">
+                        <div class="header-input-group">
+                            <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">NAVN:</span>
+                            <input type="text" id="editChartName"
+                                style="background:transparent; border:none; color:white; outline:none; width:120px;"
+                                spellcheck="false">
+                        </div>
+                        <div class="header-input-group">
+                            <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">INFO:</span>
+                            <input type="text" id="editChartComment" placeholder="Kommentar..."
+                                style="background:transparent; border:none; color:white; outline:none; width:150px;"
+                                spellcheck="false">
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <button class="btn-action btn-secondary btn-sm-action" onclick="openPresentationWindow()">
+                            <i class="fas fa-desktop"></i> Vis på storskjerm
+                        </button>
+                        <button class="btn-action btn-secondary btn-sm-action" onclick="syncRoomLayout()"
+                            title="Hent oppdatert layout fra Rom">
+                            <i class="fas fa-sync-alt"></i> Oppdater layout
+                        </button>
+                        <button id="btnGroupMode" class="btn-action btn-secondary btn-sm-action"
+                            onclick="toggleGroupMode()">
+                            <i class="fas fa-object-group"></i> Lag Grupper
+                        </button>
+                        <button class="btn-action btn-purple btn-sm-action" onclick="startNewPeriod()">
+                            <i class="fas fa-code-branch"></i> Ny Periode
+                        </button>
+                        <button class="btn-action btn-secondary btn-sm-action" onclick="generateSeating()">
+                            <i class="fas fa-random"></i> Shuffle
+                        </button>
+                        <button class="btn-action btn-primary" onclick="saveChart()">Lagre</button>
+                        <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
+                    </div>
+                </div>
+                <div style="position:relative; width:100%; height:100%;">
+                    <div class="room-canvas-container" id="seatingContainer">
+                        <div id="seatingCanvas" class="room-canvas-content">
+                            <div class="front-board">TAVLE</div>
+                        </div>
+                    </div>
+                    <div id="unplacedDock">
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-chart-display" class="view-section">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h2 id="displayTitle" class="m-0">Visning</h2>
+                        <div id="displaySubtitle" style="color:#94a3b8"></div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-action btn-secondary" onclick="openPresentationWindow()">
+                            <i class="fas fa-desktop"></i> Vis på storskjerm
+                        </button>
+                        <button class="btn-action btn-secondary" onclick="flipView()">Snu Visning</button>
+                        <button class="btn-action btn-secondary" onclick="window.print()">Print / PDF</button>
+                        <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
+                    </div>
+                </div>
+                <div class="room-canvas-container" id="displayContainer">
+                    <div id="displayCanvas" class="room-canvas-content">
                         <div class="front-board">TAVLE</div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div id="view-charts-dashboard" class="view-section">
-            <h2>Mine klassekart</h2>
-            <div id="chartGrid" class="card-grid"></div>
-        </div>
-
-        <div id="view-seating-setup" class="view-section">
-            <h2>Nytt klassekart</h2>
-            <div class="glass-panel" style="max-width:500px">
-                <div class="mb-3"><label class="form-label">NAVN (1ST5, Psykologi 1, Biologi 2)</label><input
-                        type="text" id="chartNameInput" class="dark-input" spellcheck="false"></div>
-                <div class="mb-3"><label class="form-label">Klasse</label><select id="setupClassSelect"
-                        class="dark-input"></select></div>
-                <div class="mb-3"><label class="form-label">Rom</label><select id="setupRoomSelect"
-                        class="dark-input"></select></div>
-                <button class="btn-action btn-primary" onclick="createChart()">Opprett</button>
+    </div>
+    <div id="historyModal" class="app-modal">
+        <div class="modal-content" style="width: 500px;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="modal-title m-0" id="historyModalTitle">Historikk</div>
+                <button class="win-btn" onclick="closeHistoryModal()" style="border:none;"><i
+                        class="fas fa-times"></i></button>
             </div>
+            <div id="historyListContent" class="history-list"></div>
         </div>
+    </div>
 
-        <div id="view-seating-editor" class="view-section">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex gap-3 align-items-center">
-                    <div class="header-input-group">
-                        <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">NAVN:</span>
-                        <input type="text" id="editChartName"
-                            style="background:transparent; border:none; color:white; outline:none; width:180px;"
-                            spellcheck="false">
-                    </div>
-                    <div class="header-input-group">
-                        <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">INFO:</span>
-                        <input type="text" id="editChartComment" placeholder="Kommentar..."
-                            style="background:transparent; border:none; color:white; outline:none; width:200px;"
-                            spellcheck="false">
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button id="btnGroupMode" class="btn-action btn-secondary btn-sm-action"
-                        onclick="toggleGroupMode()">
-                        <i class="fas fa-object-group"></i> Lag Grupper
-                    </button>
-                    <button class="btn-action btn-purple btn-sm-action" onclick="startNewPeriod()">
-                        <i class="fas fa-code-branch"></i> Ny Periode
-                    </button>
-                    <button class="btn-action btn-secondary btn-sm-action" onclick="generateSeating()">
-                        <i class="fas fa-random"></i> Shuffle
-                    </button>
-                    <button class="btn-action btn-primary" onclick="saveChart()">Lagre</button>
-                    <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
-                </div>
+    <div id="newPeriodModal" class="app-modal">
+        <div class="modal-content">
+            <div class="modal-title">Start Ny Periode</div>
+            <div class="d-flex gap-2 mb-3">
+                <div style="flex:1"><label class="form-label">Fra Uke</label><input type="number" id="npStartWeek"
+                        class="dark-input"></div>
+                <div style="flex:1"><label class="form-label">Til Uke</label><input type="number" id="npEndWeek"
+                        class="dark-input"></div>
             </div>
-            <div class="room-canvas-container" id="seatingContainer">
-                <div id="seatingCanvas" class="room-canvas-content">
-                    <div class="front-board">TAVLE</div>
-                </div>
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn-action btn-secondary" onclick="closeNewPeriodModal()">Avbryt</button>
+                <button class="btn-action btn-purple" onclick="confirmNewPeriod()">Opprett</button>
             </div>
         </div>
+    </div>
 
-        <div id="view-chart-display" class="view-section">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <div>
-                    <h2 id="displayTitle" class="m-0">Visning</h2>
-                    <div id="displaySubtitle" style="color:#94a3b8"></div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn-action btn-secondary" onclick="flipView()">Snu Visning</button>
-                    <button class="btn-action btn-secondary" onclick="window.print()">Print / PDF</button>
-                    <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
-                </div>
+    <div id="confirmModal" class="app-modal">
+        <div class="modal-content">
+            <div class="modal-title" id="confirmTitle">Bekreft</div>
+            <p id="confirmMessage" style="color:#cbd5e1; margin-bottom:20px;">Er du sikker?</p>
+            <div class="d-flex justify-content-end gap-2">
+                <button class="btn-action btn-secondary" onclick="closeConfirmModal(false)">Avbryt</button>
+                <button class="btn-action btn-primary" onclick="closeConfirmModal(true)">OK</button>
             </div>
-            <div class="room-canvas-container" id="displayContainer">
-                <div id="displayCanvas" class="room-canvas-content">
-                    <div class="front-board">TAVLE</div>
-                </div>
+        </div>
+    </div>
+
+    <div id="aboutModal" class="app-modal">
+        <div class="modal-content" style="text-align: center;">
+            <div class="logo-container" style="margin-bottom: 10px;">
+                <span class="neon-blue">Klasse</span><span class="neon-orange">Plass</span>
             </div>
+            <p style="color: #cbd5e1; font-size: 0.9rem;">
+                ❤️
+            </p>
+            <p style="color: #64748b; font-size: 0.8rem; margin-top: 20px;">
+                Laget av Stian Taknæs
+            </p>
+            <button class="btn-action btn-primary" onclick="closeAboutModal()" style="margin-top: 15px;">Lukk</button>
         </div>
     </div>
 

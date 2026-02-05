@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="no">
+
+<head>
+    <meta charset="UTF-8">
+    <title>KlassePlass Presentasjon</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-app: #0f111a;
+            --text-main: #ffffff;
+        }
+
+        html {
+            background: transparent;
+        }
+
+        body {
+            margin: 0;
+            /* Body er nå gjennomsiktig container */
+            background-color: transparent;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            user-select: none;
+            padding: 0;
+            /* Viktig for at border ikke skal kuttes */
+        }
+
+        /* NY WRAPPER: Denne gir det runde designet */
+        .window-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            background-color: var(--bg-app);
+            /* Prikkete bakgrunn flyttet hit */
+            background-image: radial-gradient(#2d3748 1px, transparent 1px);
+            background-size: 30px 30px;
+            /* Design-magien: */
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            /* Sikrer at innhold ikke stikker ut av de runde hjørnene */
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        /* DRA-REGION FOR VINDUET */
+        .title-bar-drag-region {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            /* Dekker hele toolbaren */
+            z-index: 50;
+            -webkit-app-region: drag;
+            /* Dette gjør at man kan dra vinduet her */
+        }
+
+        /* VERKTØYLINJE */
+        #toolbar {
+            height: 70px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 100;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        /* LOGO og KNAPPER må kunne klikkes, ikke dras */
+        .logo-container,
+        .center-controls,
+        .btn-close {
+            -webkit-app-region: no-drag;
+            /* VIKTIG! Ellers kan man ikke klikke dem */
+            position: relative;
+            z-index: 101;
+            /* Må ligge over dra-regionen */
+        }
+
+        /* LOGO */
+        .logo-container {
+            font-size: 1.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .neon-blue {
+            color: #e0f2fe;
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+        }
+
+        .neon-orange {
+            color: #fbbf24;
+            text-shadow: 0 0 15px #f59e0b, 0 0 25px #d97706;
+        }
+
+        /* SENTRERT KONTROLL-GRUPPE */
+        .center-controls {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* KNAPPER */
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .btn-close {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: rgba(220, 38, 38, 0.4);
+            color: #fca5a5;
+        }
+
+        .btn-close:hover {
+            background: #dc2626;
+            color: white;
+        }
+
+        /* KART-OMRÅDE */
+        #viewport {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Sørg for at dette ligger under verktøylinjen */
+            z-index: 10;
+        }
+
+        #viewport:active {
+            cursor: grabbing;
+        }
+
+        #content {
+            position: absolute;
+            width: 920px;
+            height: 500px;
+            transform-origin: center center;
+            transition: transform 0.1s linear;
+        }
+
+        /* BORD-STIL */
+        .desk {
+            position: absolute;
+            background: #2d3748;
+            border: 2px solid #64748b;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            width: 85px;
+            height: 55px;
+            box-sizing: border-box;
+            transition: transform 0.3s ease;
+        }
+
+        .desk span {
+            pointer-events: none;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            padding: 0 2px;
+        }
+
+        .desk-number {
+            position: absolute;
+            bottom: 2px;
+            left: 4px;
+            font-size: 0.5rem;
+            color: #94a3b8;
+            opacity: 0.6;
+            font-weight: 400;
+        }
+
+        .front-board {
+            width: 400px;
+            height: 30px;
+            background: #4a5568;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            margin-left: -200px;
+            border-radius: 0 0 8px 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #cbd5e1;
+            letter-spacing: 2px;
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .is-flipped .desk {
+            transform: rotate(-180deg);
+        }
+
+        .is-flipped .front-board {
+            transform: rotate(-180deg);
+        }
+
+        .bg-default {
+            background: #2d3748;
+            border-color: #64748b;
+        }
+
+        .bg-red {
+            background: #7f1d1d;
+            border-color: #991b1b;
+        }
+
+        .bg-yellow {
+            background: #78350f;
+            border-color: #92400e;
+        }
+
+        .bg-green {
+            background: #064e3b;
+            border-color: #065f46;
+        }
+
+        .bg-blue {
+            background: #1e3a8a;
+            border-color: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="window-wrapper">
+
+        <div class="title-bar-drag-region"></div>
+
+        <div id="toolbar">
+            <div class="logo-container">
+                <span class="neon-blue">KLASSE</span><span class="neon-orange">PLASS</span>
+            </div>
+
+            <div class="center-controls">
+                <button onclick="flipView()"><i class="fas fa-retweet"></i> Snu visning</button>
+                <div style="width:10px;"></div>
+                <button onclick="adjustZoom(-0.1)"><i class="fas fa-minus"></i></button>
+                <span id="zoomLabel"
+                    style="font-variant-numeric: tabular-nums; width: 50px; text-align: center; font-weight:bold;">100%</span>
+                <button onclick="adjustZoom(0.1)"><i class="fas fa-plus"></i></button>
+                <button onclick="resetView()">1:1</button>
+            </div>
+
+            <button onclick="window.close()" class="btn-close"><i class="fas fa-times"></i> Lukk</button>
+        </div>
+
+        <div id="viewport">
+            <div id="content">
+                <div class="front-board">TAVLE</div>
+            </div>
+        </div>
+
+    </div>
+    <script>
+        const { ipcRenderer } = require('electron');
+
+        const GROUP_COLORS = [
+            '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
+            '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#84cc16'
+        ];
+
+        // STATE
+        let state = {
+            zoom: 1.0,
+            x: 0,
+            y: 0,
+            flipped: false
+        };
+
+        const content = document.getElementById('content');
+        const label = document.getElementById('zoomLabel');
+        const viewport = document.getElementById('viewport');
+
+        // --- VISNINGSOPPDATERING ---
+        function updateTransform() {
+            const rotation = state.flipped ? 180 : 0;
+            content.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.zoom}) rotate(${rotation}deg)`;
+            label.innerText = Math.round(state.zoom * 100) + "%";
+
+            if (state.flipped) {
+                content.classList.add('is-flipped');
+            } else {
+                content.classList.remove('is-flipped');
+            }
+        }
+
+        // --- KNAPPE-FUNKSJONER ---
+        window.adjustZoom = (delta) => {
+            state.zoom = Math.max(0.3, Math.min(3.0, state.zoom + delta));
+            updateTransform();
+        };
+
+        window.resetView = () => {
+            state.zoom = 1.0; state.x = 0; state.y = 0; state.flipped = false;
+            updateTransform();
+        };
+
+        window.flipView = () => {
+            state.flipped = !state.flipped;
+            updateTransform();
+        };
+
+        // --- PANORERING (DRAG TO MOVE) ---
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        viewport.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button')) return;
+            isDragging = true;
+            startX = e.clientX; startY = e.clientY;
+            initialX = state.x; initialY = state.y;
+            viewport.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const dx = e.clientX - startX; const dy = e.clientY - startY;
+            state.x = initialX + dx; state.y = initialY + dy;
+            updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false; viewport.style.cursor = 'grab';
+        });
+
+        viewport.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                window.adjustZoom(delta);
+            }
+        });
+
+        // --- MOTTA DATA FRA MAIN.JS ---
+        ipcRenderer.on('render-layout', (event, layoutData) => {
+            const existingDesks = content.querySelectorAll('.desk');
+            existingDesks.forEach(e => e.remove());
+
+            layoutData.forEach((spot, index) => {
+                const d = document.createElement('div');
+                const colorClass = spot.color || 'bg-default';
+                d.className = `desk ${colorClass}`;
+                d.style.left = spot.x + 'px'; d.style.top = spot.y + 'px';
+                d.innerHTML = `<span class="desk-number">${index + 1}</span>`;
+
+                if (spot.groupId) {
+                    d.style.borderWidth = "3px";
+                    d.style.borderColor = GROUP_COLORS[(spot.groupId - 1) % GROUP_COLORS.length];
+                }
+                if (spot.student) {
+                    const s = document.createElement('span');
+                    s.innerText = spot.student.name;
+                    d.appendChild(s);
+                }
+                content.appendChild(d);
+            });
+        });
+    </script>
+</body>
+
+</html>
