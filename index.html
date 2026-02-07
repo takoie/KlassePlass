@@ -209,11 +209,20 @@
             transition: transform 0.3s;
         }
 
-        /* OM KNAPP STIL */
+        /* OM KNAPP / BUNN STIL */
         .about-btn-container {
-            margin-top: auto;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: 5px;
+            /* Redusert litt for å passe med toggle over */
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* Spacer for å dytte bunn-innhold ned */
+        .spacer {
+            flex: 1;
         }
 
         .nav-item-small {
@@ -224,7 +233,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 5px;
             font-weight: 400;
             transition: 0.2s;
             font-size: 0.8rem;
@@ -234,6 +242,64 @@
         .nav-item-small:hover {
             color: white;
         }
+
+        /* SETTINGS TOGGLE SWITCH */
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            /* Litt mer padding */
+            color: #94a3b8;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 18px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #334155;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(16px);
+        }
+
 
         /* CONTENT */
         .main-content {
@@ -336,7 +402,8 @@
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            padding: 10px;
+            padding: 8px 10px;
+            /* Litt lavere input */
             border-radius: 6px;
             width: 100%;
             transition: 0.2s;
@@ -351,16 +418,25 @@
             font-weight: 600;
         }
 
-        /* BUTTONS */
+        /* BUTTONS - OPPDATERT: Lavere og mer kompakte */
         .btn-action {
-            padding: 8px 20px;
+            padding: 6px 15px;
+            /* Mindre padding */
             border-radius: 6px;
             border: none;
-            font-weight: 600;
+            font-weight: 500;
+            /* Litt lettere font */
             cursor: pointer;
             font-size: 0.85rem;
             transition: 0.2s;
-            margin-right: 10px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            /* Margin for wrapping */
+            white-space: nowrap;
+            /* Hindrer tekstbryting inni knappen */
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .btn-sm-action {
@@ -817,6 +893,30 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
+        /* OPPDATERT EDITOR TOOLBAR STIL FOR WRAPPING */
+        .editor-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .editor-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .editor-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: flex-end;
+        }
+
         /* PRINT STYLES */
         .print-logo {
             display: none;
@@ -850,11 +950,11 @@
             .btn-action,
             #btnConfirmGroup,
             .header-input-group,
-            #unplacedDock {
+            #unplacedDock,
+            .settings-row {
                 display: none !important;
             }
 
-            /* SKJULER VIEW HEADER FOR Å UNNGÅ DOBBEL TITTEL */
             .view-section h2,
             .view-section #displaySubtitle {
                 display: none !important;
@@ -913,7 +1013,6 @@
                 box-shadow: none !important;
             }
 
-            /* PRINT HEADER TOP LEFT */
             .print-header {
                 display: block !important;
                 position: fixed;
@@ -938,7 +1037,6 @@
                 font-weight: 500;
             }
 
-            /* PRINT LOGO BOTTOM LEFT */
             .print-logo {
                 display: block !important;
                 position: fixed;
@@ -999,6 +1097,16 @@
                 <div class="nav-sub-item" onclick="navTo('view-seating-create')">Klassekart</div>
             </div>
 
+            <div class="spacer"></div>
+
+            <div class="settings-row">
+                <span>Tavle nederst</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="defaultFlipToggle" onchange="toggleDefaultFlip()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
             <div class="about-btn-container">
                 <div class="nav-item-small" onclick="openAboutModal()"><i class="fas fa-info-circle"></i> Om KlassePlass
                 </div>
@@ -1010,6 +1118,7 @@
                 <h2>Mine grupper</h2>
                 <div id="classGrid" class="card-grid"></div>
             </div>
+
             <div id="view-group-editor" class="view-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 id="classEditorTitle" class="m-0">Opprett gruppe</h2>
@@ -1033,6 +1142,7 @@
                 <h2>Mine rom</h2>
                 <div id="roomGrid" class="card-grid"></div>
             </div>
+
             <div id="view-room-editor" class="view-section">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 id="roomEditorTitle" class="m-0">Opprett rom</h2>
@@ -1068,8 +1178,8 @@
                             <input type="number" id="roomRows" class="dark-input" style="width:60px;" value="4">
                         </div>
                         <div style="display: flex; gap: 5px;">
-                            <button class="btn-action btn-secondary btn-sm-action"
-                                onclick="generateLayout()">Generer</button>
+                            <button class="btn-action btn-secondary btn-sm-action" onclick="generateLayout()">Generer
+                                layout</button>
                             <button class="btn-action btn-secondary btn-sm-action" onclick="centerTables()">Sentrer
                                 bord</button>
                         </div>
@@ -1105,8 +1215,8 @@
             </div>
 
             <div id="view-seating-editor" class="view-section">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex gap-3 align-items-center">
+                <div class="editor-header">
+                    <div class="editor-inputs">
                         <div class="header-input-group">
                             <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">NAVN:</span>
                             <input type="text" id="editChartName"
@@ -1120,24 +1230,21 @@
                                 spellcheck="false">
                         </div>
                     </div>
-                    <div class="d-flex gap-3">
-                        <button class="btn-action btn-secondary btn-sm-action" onclick="openPresentationWindow()">
-                            <i class="fas fa-desktop"></i> Vis på storskjerm
-                        </button>
-                        <button class="btn-action btn-secondary btn-sm-action" onclick="syncRoomLayout()"
-                            title="Hent oppdatert layout fra Rom">
-                            <i class="fas fa-sync-alt"></i> Oppdater layout
-                        </button>
-                        <button id="btnGroupMode" class="btn-action btn-secondary btn-sm-action"
-                            onclick="toggleGroupMode()">
-                            <i class="fas fa-object-group"></i> Lag Grupper
-                        </button>
-                        <button class="btn-action btn-purple btn-sm-action" onclick="startNewPeriod()">
-                            <i class="fas fa-code-branch"></i> Ny Periode
-                        </button>
-                        <button class="btn-action btn-secondary btn-sm-action" onclick="generateSeating()">
-                            <i class="fas fa-random"></i> Shuffle
-                        </button>
+                    <div class="editor-actions">
+                        <button class="btn-action btn-secondary" onclick="openPresentationWindow()"><i
+                                class="fas fa-desktop"></i> Fullskjermvisning</button>
+                        <button class="btn-action btn-secondary" onclick="syncRoomLayout()"
+                            title="Hent oppdatert layout fra Rom"><i class="fas fa-sync-alt"></i> Oppdater
+                            layout</button>
+                        <button id="btnGroupMode" class="btn-action btn-secondary" onclick="toggleGroupMode()"><i
+                                class="fas fa-object-group"></i> Lag grupper</button>
+                        <button class="btn-action btn-secondary" onclick="resetGroups()"><i class="fas fa-eraser"></i>
+                            Nullstill grupper</button>
+
+                        <button class="btn-action btn-purple" onclick="startNewPeriod()"><i
+                                class="fas fa-code-branch"></i> Ny periode</button>
+                        <button class="btn-action btn-secondary" onclick="generateSeating()"><i
+                                class="fas fa-random"></i> Shuffle</button>
                         <button class="btn-action btn-primary" onclick="saveChart()">Lagre</button>
                         <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
                     </div>
@@ -1148,22 +1255,20 @@
                             <div class="front-board">TAVLE</div>
                         </div>
                     </div>
-                    <div id="unplacedDock">
-                    </div>
+                    <div id="unplacedDock"></div>
                 </div>
             </div>
 
             <div id="view-chart-display" class="view-section">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="editor-header">
                     <div>
                         <h2 id="displayTitle" class="m-0">Visning</h2>
                         <div id="displaySubtitle" style="color:#94a3b8"></div>
                     </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn-action btn-secondary" onclick="openPresentationWindow()">
-                            <i class="fas fa-desktop"></i> Vis på storskjerm
-                        </button>
-                        <button class="btn-action btn-secondary" onclick="flipView()">Snu Visning</button>
+                    <div class="editor-actions">
+                        <button class="btn-action btn-secondary" onclick="openPresentationWindow()"><i
+                                class="fas fa-desktop"></i> Fullskjermvisning</button>
+                        <button class="btn-action btn-secondary" onclick="flipView()">Snu visning</button>
                         <button class="btn-action btn-secondary" onclick="window.print()">Print / PDF</button>
                         <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
                     </div>
@@ -1176,6 +1281,7 @@
             </div>
         </div>
     </div>
+
     <div id="historyModal" class="app-modal">
         <div class="modal-content" style="width: 500px;">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1219,12 +1325,8 @@
             <div class="logo-container" style="margin-bottom: 10px;">
                 <span class="neon-blue">Klasse</span><span class="neon-orange">Plass</span>
             </div>
-            <p style="color: #cbd5e1; font-size: 0.9rem;">
-                ❤️
-            </p>
-            <p style="color: #64748b; font-size: 0.8rem; margin-top: 20px;">
-                Laget av Stian Taknæs
-            </p>
+            <p style="color: #cbd5e1; font-size: 0.9rem;">❤️</p>
+            <p style="color: #64748b; font-size: 0.8rem; margin-top: 20px;">Laget av Stian Taknæs</p>
             <button class="btn-action btn-primary" onclick="closeAboutModal()" style="margin-top: 15px;">Lukk</button>
         </div>
     </div>

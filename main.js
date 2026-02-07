@@ -18,7 +18,7 @@ function initDatabase() {
         name TEXT, 
         class_id INTEGER, 
         room_id INTEGER, 
-        placements TEXT, 
+        placements TEXT,
         comment TEXT, 
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);

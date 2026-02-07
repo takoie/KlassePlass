@@ -72,7 +72,8 @@ function navTo(view) {
     const confirmBtn = document.getElementById('btnConfirmGroup');
     if (btn) {
         btn.classList.remove('btn-group-mode');
-        btn.innerHTML = '<i class="fas fa-object-group"></i> Lag Grupper';
+        // VIKTIG: Vi endrer IKKE teksten her lenger, kun fargen (via klassen)
+        // btn.innerHTML = '<i class="fas fa-object-group"></i> Lag Grupper'; 
     }
     if (confirmBtn) confirmBtn.style.display = 'none';
 
@@ -91,6 +92,32 @@ function showToast(msg) {
     t.innerText = msg; t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2000);
 }
+
+// --- STANDARD VISNING (PREFERANSE) ---
+function toggleDefaultFlip() {
+    const isChecked = document.getElementById('defaultFlipToggle').checked;
+    localStorage.setItem('defaultFlipped', isChecked ? 'yes' : 'no');
+    applyDefaultFlip('seatingCanvas');
+    applyDefaultFlip('displayCanvas');
+}
+
+function applyDefaultFlip(canvasId) {
+    const isFlipped = localStorage.getItem('defaultFlipped') === 'yes';
+    const canvas = document.getElementById(canvasId);
+    if (canvas) {
+        if (isFlipped) {
+            canvas.classList.add('flipped');
+        } else {
+            canvas.classList.remove('flipped');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const isFlipped = localStorage.getItem('defaultFlipped') === 'yes';
+    const toggle = document.getElementById('defaultFlipToggle');
+    if (toggle) toggle.checked = isFlipped;
+});
 
 // --- MODAL SYSTEM ---
 function openModal(title, val, cb) {
@@ -136,10 +163,10 @@ function closeAboutModal() { document.getElementById('aboutModal').style.display
 // PRESENTATION / NEW WINDOW FUNCTION
 // =========================================================
 function openPresentationWindow() {
-    // Check if we have data
     if (!currentChart || !currentChart.layout) return showToast("Ingen data å vise");
-    // Send to main process
-    ipcRenderer.send('open-presentation-window', JSON.stringify(currentChart.layout));
+    const isFlipped = localStorage.getItem('defaultFlipped') === 'yes';
+    const dataToSend = { layout: currentChart.layout, defaultFlipped: isFlipped };
+    ipcRenderer.send('open-presentation-window', JSON.stringify(dataToSend));
 }
 
 // =========================================================
@@ -781,7 +808,7 @@ function toggleGroupMode() {
 
     if (isGroupMode) {
         btn.classList.add('btn-group-mode');
-        btn.innerText = "Avslutt Gruppering";
+        btn.innerText = "Avslutt gruppering";
         confirmBtn.style.display = 'block';
 
         selectedDesksForGroup = [];
@@ -800,6 +827,19 @@ function toggleGroupMode() {
         document.querySelectorAll('.selected-for-group').forEach(el => el.classList.remove('selected-for-group'));
         selectedDesksForGroup = [];
     }
+}
+
+// --- NY FUNKSJON: Nullstill alle grupper ---
+function resetGroups() {
+    openConfirmModal("Nullstill grupper", "Vil du fjerne alle grupper (farger) fra dette klassekartet?", (res) => {
+        if (!res) return;
+
+        currentChart.layout.forEach(desk => {
+            desk.groupId = null;
+        });
+        renderSeating();
+        showToast("Alle grupper fjernet");
+    });
 }
 
 function handleGroupEnter(e) {
@@ -889,6 +929,9 @@ function updateUnplacedDock() {
 function renderSeating() {
     const c = document.getElementById('seatingCanvas');
     c.innerHTML = '<div class="front-board">TAVLE</div>';
+
+    // START STANDARDVISNING HVIS AKTIV
+    applyDefaultFlip('seatingCanvas');
 
     currentChart.layout.forEach((spot, idx) => {
         const d = document.createElement('div');
@@ -1062,6 +1105,9 @@ async function openChartDisplay(id) {
 
     const container = document.getElementById('displayCanvas');
     container.innerHTML = '<div class="front-board">TAVLE</div>';
+
+    // START STANDARDVISNING HVIS AKTIV
+    applyDefaultFlip('displayCanvas');
 
     // OPPDATER CURRENTCHART SLIK AT ZOOM FUNGERER FOR DENNE VISNINGEN OGSÅ
     currentChart.layout = JSON.parse(c.placements);
