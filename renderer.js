@@ -10,6 +10,17 @@ const GROUP_COLORS = [
 ];
 const CANVAS_W = 920;
 
+// Desk type specifications
+const DESK_TYPES = {
+    single: { width: 85, height: 55, capacity: 1 },
+    round3: { width: 90, height: 90, capacity: 3 },
+    round4: { width: 110, height: 110, capacity: 4 },
+    round6: { width: 130, height: 130, capacity: 6 },
+    bench2: { width: 170, height: 55, capacity: 2 },
+    bench4: { width: 170, height: 110, capacity: 4 }
+};
+
+
 // --- APP STATE ---
 let editingId = null;
 let currentChart = { id: null, classId: null, roomId: null, layout: [], allStudents: [] };
@@ -117,6 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const isFlipped = localStorage.getItem('defaultFlipped') === 'yes';
     const toggle = document.getElementById('defaultFlipToggle');
     if (toggle) toggle.checked = isFlipped;
+
+    // Sjekk om onboarding wizard skal vises
+    const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
+    if (!hasCompletedOnboarding) {
+        startOnboardingWizard();
+    }
 });
 
 // --- MODAL SYSTEM ---
@@ -325,7 +342,19 @@ async function editRoom(id) {
 function renderRoomCanvas(layout) {
     const c = document.getElementById('roomCanvas');
     c.innerHTML = '<div class="front-board">TAVLE</div>';
-    layout.forEach(d => spawnDesk(d.x, d.y, c));
+
+    layout.forEach(d => {
+        const type = d.type || 'single';  // Default to single if no type
+        spawnDesk(d.x, d.y, c, type);
+
+        // Apply rotation if it exists
+        if (d.rotation && d.rotation !== 0) {
+            const desk = c.lastElementChild; // Get the desk we just spawned
+            desk.dataset.rotation = d.rotation;
+            desk.classList.add(`rotated-${d.rotation}`);
+        }
+    });
+
     updateDeskNumbers();
 }
 
@@ -436,10 +465,20 @@ function checkSnapping(x, y, otherDesks) {
     return { x: finalX, y: finalY, snapped };
 }
 
-function spawnDesk(x, y, container) {
+function spawnDesk(x, y, container, type = 'single') {
     const d = document.createElement('div'); d.className = 'desk';
+    d.dataset.type = type;
+
+    // Get dimensions based on type
+    const spec = DESK_TYPES[type] || DESK_TYPES.single;
     d.style.left = x + 'px'; d.style.top = y + 'px';
-    d.style.width = DESK_W + 'px'; d.style.height = DESK_H + 'px';
+    d.style.width = spec.width + 'px'; d.style.height = spec.height + 'px';
+
+    // Add type class
+    d.classList.add(`type-${type}`);
+
+    // Initialize rotation to 0
+    d.dataset.rotation = '0';
 
     d.innerHTML = `<span class="desk-number"></span>`;
     ensureCanvasHeight(y);
@@ -534,37 +573,90 @@ function deleteSelectedDesk() {
     updateDeskNumbers();
 }
 
+function rotateDeskCW() {
+    if (!rightClickedDesk) return;
+
+    const currentRotation = parseInt(rightClickedDesk.dataset.rotation || 0);
+    const newRotation = (currentRotation + 90) % 360;
+
+    rightClickedDesk.dataset.rotation = newRotation;
+
+    // Remove all rotation classes
+    rightClickedDesk.classList.remove('rotated-0', 'rotated-90', 'rotated-180', 'rotated-270');
+
+    // Add new rotation class (skip if 0)
+    if (newRotation !== 0) {
+        rightClickedDesk.classList.add(`rotated-${newRotation}`);
+    }
+
+    document.getElementById('deskContextMenu').style.display = 'none';
+}
+
+function rotateDeskCCW() {
+    if (!rightClickedDesk) return;
+
+    const currentRotation = parseInt(rightClickedDesk.dataset.rotation || 0);
+    const newRotation = (currentRotation - 90 + 360) % 360;
+
+    rightClickedDesk.dataset.rotation = newRotation;
+
+    // Remove all rotation classes
+    rightClickedDesk.classList.remove('rotated-0', 'rotated-90', 'rotated-180', 'rotated-270');
+
+    // Add new rotation class (skip if 0)
+    if (newRotation !== 0) {
+        rightClickedDesk.classList.add(`rotated-${newRotation}`);
+    }
+
+    document.getElementById('deskContextMenu').style.display = 'none';
+}
+
 function addDesk() {
     const desks = Array.from(document.querySelectorAll('#roomCanvas .desk'));
+    const selectedType = document.getElementById('deskTypeSelect').value || 'single';
+    const spec = DESK_TYPES[selectedType];
+
     let newX = 20;
-    let newY = 100;
+    let newY = 60;
 
     if (desks.length > 0) {
-        desks.sort((a, b) => {
-            const ay = parseInt(a.style.top); const by = parseInt(b.style.top);
-            if (Math.abs(ay - by) > 20) return ay - by;
-            return parseInt(a.style.left) - parseInt(b.style.left);
-        });
         const last = desks[desks.length - 1];
-        const lx = parseInt(last.style.left);
-        const ly = parseInt(last.style.top);
+        const lastX = parseInt(last.style.left);
+        const lastY = parseInt(last.style.top);
+        const lastWidth = parseInt(last.style.width);
+        const lastHeight = parseInt(last.style.height);
 
-        newX = lx + DESK_W;
-        newY = ly;
+        newX = lastX + lastWidth + 15;
+        newY = lastY;
 
-        if (newX > (CANVAS_W - 130)) {
+        if (newX > CANVAS_W - spec.width) {
             newX = 20;
-            newY = ly + DESK_H + 40;
+            newY = lastY + lastHeight + 20;
         }
     }
-    spawnDesk(newX, newY, document.getElementById('roomCanvas'));
+
+    spawnDesk(newX, newY, document.getElementById('roomCanvas'), selectedType);
     updateDeskNumbers();
 }
 function clearCanvas() { document.getElementById('roomCanvas').innerHTML = '<div class="front-board">TAVLE</div>'; }
 
 async function saveRoom() {
     const name = document.getElementById('roomNameInput').value;
-    const layout = []; document.querySelectorAll('#roomCanvas .desk').forEach(d => layout.push({ x: parseInt(d.style.left), y: parseInt(d.style.top) }));
+    const layout = [];
+
+    document.querySelectorAll('#roomCanvas .desk').forEach(d => {
+        const type = d.dataset.type || 'single';
+        const spec = DESK_TYPES[type];
+
+        layout.push({
+            x: parseInt(d.style.left),
+            y: parseInt(d.style.top),
+            rotation: parseInt(d.dataset.rotation || 0),
+            type: type,
+            capacity: spec.capacity
+        });
+    });
+
     if (editingId) await ipcRenderer.invoke('update-room', editingId, name, JSON.stringify(layout));
     else await ipcRenderer.invoke('save-room', name, JSON.stringify(layout));
     showToast("Lagret"); navTo('view-rooms');
@@ -782,7 +874,11 @@ async function syncRoomLayout() {
                 return {
                     x: pos.x,
                     y: pos.y,
-                    student: oldSpot ? oldSpot.student : null,
+                    type: pos.type || 'single',           // NEW: preserve desk type
+                    rotation: pos.rotation || 0,          // NEW: preserve rotation
+                    capacity: pos.capacity || 1,          // NEW: preserve capacity
+                    students: oldSpot ? oldSpot.students : [],  // NEW: preserve students array
+                    student: oldSpot ? oldSpot.student : null,  // Keep for backwards compat
                     color: oldSpot ? oldSpot.color : 'bg-default',
                     locked: oldSpot ? oldSpot.locked : false,
                     groupId: oldSpot ? oldSpot.groupId : null
@@ -897,9 +993,14 @@ function updateUnplacedDock() {
         return;
     }
 
-    const placedNames = currentChart.layout
-        .filter(d => d.student)
-        .map(d => d.student.name);
+    const placedNames = [];
+    currentChart.layout.forEach(desk => {
+        if (desk.students && desk.students.length > 0) {
+            desk.students.forEach(s => placedNames.push(s.name || s));
+        } else if (desk.student) {
+            placedNames.push(desk.student.name);
+        }
+    });
 
     const unplaced = currentChart.allStudents.filter(name => !placedNames.includes(name));
 
@@ -926,6 +1027,73 @@ function updateUnplacedDock() {
     });
 }
 
+function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
+    const name = e.dataTransfer.getData('text/plain');
+    const sourceDeskIdx = e.dataTransfer.getData('source-desk-idx');
+    const sourceStudentPos = e.dataTransfer.getData('source-student-pos');
+
+    console.log('🎯 handleStudentSwap:', name, 'from', sourceDeskIdx, ':', sourceStudentPos, 'to', targetDeskIdx, ':', targetStudentPos);
+
+    if (!name || !sourceDeskIdx || !sourceStudentPos) {
+        const targetDesk = currentChart.layout[targetDeskIdx];
+        const capacity = targetDesk.capacity || 1;
+        const currentStudents = targetDesk.students || [];
+
+        if (currentStudents.length < capacity) {
+            const newStudent = { name: name, note: '', position: currentStudents.length };
+            targetDesk.students = targetDesk.students || [];
+            targetDesk.students.push(newStudent);
+            if (targetDesk.students.length === 1) {
+                targetDesk.student = newStudent;
+            }
+            renderSeating();
+        } else {
+            showToast(`Bordet er fullt (${capacity}/${capacity})`);
+        }
+        return;
+    }
+
+    const srcIdx = parseInt(sourceDeskIdx);
+    const srcPos = parseInt(sourceStudentPos);
+
+    if (srcIdx === targetDeskIdx && srcPos === targetStudentPos) {
+        console.log('⚠️ Cannot swap student with itself');
+        return;
+    }
+
+    const sourceDesk = currentChart.layout[srcIdx];
+    const targetDesk = currentChart.layout[targetDeskIdx];
+
+    if (!sourceDesk || !targetDesk) return;
+
+    const draggedStudent = sourceDesk.students && sourceDesk.students[srcPos];
+    const targetStudent = targetDesk.students && targetDesk.students[targetStudentPos];
+
+    if (!draggedStudent || !targetStudent) return;
+
+    console.log('🔄 Swapping:', draggedStudent.name, '↔', targetStudent.name);
+
+    const tempName = draggedStudent.name;
+    const tempNote = draggedStudent.note || '';
+    const targetOriginalName = targetStudent.name; // Save for toast
+
+    draggedStudent.name = targetStudent.name;
+    draggedStudent.note = targetStudent.note || '';
+
+    targetStudent.name = tempName;
+    targetStudent.note = tempNote;
+
+    if (sourceDesk.students.length === 1) {
+        sourceDesk.student = sourceDesk.students[0];
+    }
+    if (targetDesk.students.length === 1) {
+        targetDesk.student = targetDesk.students[0];
+    }
+
+    showToast(`🔄 Byttet ${tempName} ↔ ${targetOriginalName}`);
+    renderSeating();
+}
+
 function renderSeating() {
     const c = document.getElementById('seatingCanvas');
     c.innerHTML = '<div class="front-board">TAVLE</div>';
@@ -933,35 +1101,144 @@ function renderSeating() {
     // START STANDARDVISNING HVIS AKTIV
     applyDefaultFlip('seatingCanvas');
 
-    currentChart.layout.forEach((spot, idx) => {
+    currentChart.layout.forEach((desk, idx) => {
         const d = document.createElement('div');
-        let colorClass = spot.color || 'bg-default';
+        let colorClass = desk.color || 'bg-default';
 
         d.className = `desk ${colorClass}`;
-        d.style.left = spot.x + 'px'; d.style.top = spot.y + 'px';
-        d.style.width = DESK_W + 'px'; d.style.height = DESK_H + 'px';
+
+        // Add type and rotation classes
+        const deskType = desk.type || 'single';
+        d.classList.add(`type-${deskType}`);
+        if (desk.rotation && desk.rotation !== 0) {
+            d.classList.add(`rotated-${desk.rotation}`);
+        }
+
+        // Set position and dimensions
+        d.style.left = desk.x + 'px';
+        d.style.top = desk.y + 'px';
+        const spec = DESK_TYPES[deskType];
+        d.style.width = spec.width + 'px';
+        d.style.height = spec.height + 'px';
 
         // LEGGER TIL BORDNUMMER
         d.innerHTML += `<span class="desk-number">${idx + 1}</span>`;
 
-        if (spot.groupId) {
+        if (desk.groupId) {
             d.style.borderWidth = "3px";
-            d.style.borderColor = GROUP_COLORS[(spot.groupId - 1) % GROUP_COLORS.length];
+            d.style.borderColor = GROUP_COLORS[(desk.groupId - 1) % GROUP_COLORS.length];
         }
 
-        if (spot.locked) d.innerHTML += `<i class="fas fa-lock lock-icon"></i>`;
+        if (desk.locked) d.innerHTML += `<i class="fas fa-lock lock-icon"></i>`;
 
-        if (spot.student) {
-            const nameSpan = document.createElement('span');
-            nameSpan.innerText = spot.student.name;
-            if (spot.student.name.length > 10) nameSpan.style.fontSize = '0.75rem';
-            if (spot.student.name.length > 15) nameSpan.style.fontSize = '0.65rem';
-            if (spot.student.name.length > 20) nameSpan.style.fontSize = '0.55rem';
+        // Render students - support both old (single) and new (array) formats
+        const students = desk.students || (desk.student ? [desk.student] : []);
 
-            d.appendChild(nameSpan);
+        if (students.length > 0) {
+            if (students.length === 1 && deskType === 'single') {
+                // Single student on single desk - show name (large)
+                const nameSpan = document.createElement('span');
+                const studentData = students[0];
+                const studentName = studentData.name || studentData;
+                nameSpan.innerText = studentName;
+                if (studentName.length > 10) nameSpan.style.fontSize = '0.75rem';
+                if (studentName.length > 15) nameSpan.style.fontSize = '0.65rem';
+                if (studentName.length > 20) nameSpan.style.fontSize = '0.55rem';
 
-            if (spot.student.note) {
-                d.innerHTML += `<i class="fas fa-sticky-note note-icon"></i>`;
+                // Make single student name draggable
+                nameSpan.draggable = true;
+                nameSpan.style.cursor = 'grab';
+                nameSpan.onmousedown = (e) => e.stopPropagation();
+                nameSpan.ondragstart = (e) => {
+                    e.stopPropagation();
+                    nameSpan.style.opacity = '0.5';
+                    e.dataTransfer.setData('text/plain', studentName);
+                    e.dataTransfer.setData('source-desk-idx', idx.toString());
+                    e.dataTransfer.setData('source-student-pos', '0');
+                };
+                nameSpan.ondragend = () => nameSpan.style.opacity = '1';
+                nameSpan.ondragover = (e) => { e.preventDefault(); e.stopPropagation(); nameSpan.style.background = 'rgba(14, 165, 233, 0.3)'; };
+                nameSpan.ondragleave = () => nameSpan.style.background = '';
+                nameSpan.ondrop = (e) => { e.preventDefault(); e.stopPropagation(); nameSpan.style.background = ''; handleStudentSwap(e, idx, 0); };
+
+                d.appendChild(nameSpan);
+
+                if (studentData.note) {
+                    d.innerHTML += `<i class="fas fa-sticky-note note-icon"></i>`;
+                }
+            } else {
+                // Multiple students - show names in compact list
+                const nameContainer = document.createElement('div');
+                nameContainer.className = 'student-names-list';
+
+                students.forEach((student, pos) => {
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'student-name-item';
+                    const studentName = student.name || student;
+                    nameDiv.textContent = studentName;
+
+                    // Make each name draggable
+                    nameDiv.draggable = true;
+                    nameDiv.setAttribute('draggable', 'true');
+                    nameDiv.style.cursor = 'grab';
+                    nameDiv.style.userSelect = 'none';
+                    nameDiv.style.webkitUserSelect = 'none';
+
+                    // Prevent desk drag from activating
+                    nameDiv.onmousedown = (e) => {
+                        e.stopPropagation();
+                    };
+
+                    nameDiv.ondragstart = (e) => {
+                        e.stopPropagation();
+                        console.log('🎯 Drag started:', studentName, 'from desk', idx, 'position', pos);
+                        nameDiv.style.cursor = 'grabbing';
+                        nameDiv.style.opacity = '0.5';
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData("text/plain", studentName);
+                        e.dataTransfer.setData("source-desk-idx", idx.toString());
+                        e.dataTransfer.setData("source-student-pos", pos.toString());
+                    };
+
+                    nameDiv.ondragend = () => {
+                        console.log('✅ Drag ended');
+                        nameDiv.style.cursor = 'grab';
+                        nameDiv.style.opacity = '1';
+                    };
+
+                    // Add drop handler for precise swapping
+                    nameDiv.ondragover = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; // Highlight on hover
+                    };
+
+                    nameDiv.ondragleave = (e) => {
+                        nameDiv.style.background = '';
+                    };
+
+                    nameDiv.ondrop = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        nameDiv.style.background = '';
+                        handleStudentSwap(e, idx, pos);
+                    };
+
+                    // Add note indicator if student has notes
+                    if (student.note) {
+                        const noteIcon = document.createElement('i');
+                        noteIcon.className = 'fas fa-sticky-note';
+                        noteIcon.style.marginLeft = '3px';
+                        noteIcon.style.fontSize = '0.5rem';
+                        noteIcon.style.color = '#fcd34d';
+                        noteIcon.style.pointerEvents = 'none';
+                        nameDiv.appendChild(noteIcon);
+                    }
+
+                    nameContainer.appendChild(nameDiv);
+                });
+
+                d.appendChild(nameContainer);
             }
         }
 
@@ -970,23 +1247,114 @@ function renderSeating() {
         d.ondrop = (e) => {
             e.preventDefault();
             const name = e.dataTransfer.getData("text/plain");
+            const sourceDeskIdx = e.dataTransfer.getData("source-desk-idx");
+            const sourceStudentPos = e.dataTransfer.getData("source-student-pos");
+
             if (name) {
-                // Assign from Dock
-                spot.student = { name: name, note: '' };
-                renderSeating();
+                // Check if desk has capacity
+                const capacity = desk.capacity || 1;
+                const currentStudents = desk.students || [];
+
+                if (currentStudents.length < capacity) {
+                    // Remove from source desk if dragging between desks
+                    if (sourceDeskIdx && sourceStudentPos) {
+                        const srcIdx = parseInt(sourceDeskIdx);
+                        const srcPos = parseInt(sourceStudentPos);
+                        if (srcIdx !== idx && currentChart.layout[srcIdx]) {
+                            const sourceDesk = currentChart.layout[srcIdx];
+                            if (sourceDesk.students && sourceDesk.students[srcPos]) {
+                                sourceDesk.students.splice(srcPos, 1);
+                                if (sourceDesk.students.length === 0) {
+                                    sourceDesk.student = null;
+                                } else {
+                                    sourceDesk.student = sourceDesk.students[0];
+                                }
+                            }
+                        }
+                    }
+
+                    // Add student to desk
+                    const newStudent = { name: name, note: '', position: currentStudents.length };
+                    desk.students = desk.students || [];
+                    desk.students.push(newStudent);
+
+                    // Update backwards compat field
+                    if (desk.students.length === 1) {
+                        desk.student = newStudent;
+                    }
+
+                    renderSeating();
+                } else {
+                    // SWAP CASE: Desk is full, swap students
+                    if (sourceDeskIdx && sourceStudentPos) {
+                        const srcIdx = parseInt(sourceDeskIdx);
+                        const srcPos = parseInt(sourceStudentPos);
+
+                        // Don't swap if dragging within same desk
+                        if (srcIdx === idx) {
+                            console.log('⚠️ Cannot swap within same desk');
+                            return;
+                        }
+
+                        if (currentChart.layout[srcIdx]) {
+                            const sourceDesk = currentChart.layout[srcIdx];
+
+                            // Get the student being dragged
+                            const draggedStudent = sourceDesk.students && sourceDesk.students[srcPos];
+                            if (!draggedStudent) return;
+
+                            // Get the last student from target desk (the one being replaced)
+                            const replacedStudent = desk.students[desk.students.length - 1];
+
+                            console.log('🔄 Swapping:', draggedStudent.name, '↔', replacedStudent.name);
+
+                            // Remove dragged student from source
+                            sourceDesk.students.splice(srcPos, 1);
+
+                            // Remove replaced student from target
+                            desk.students.pop();
+
+                            // Add dragged student to target
+                            desk.students.push({ name: draggedStudent.name, note: draggedStudent.note || '', position: desk.students.length });
+
+                            // Add replaced student to source
+                            sourceDesk.students.push({ name: replacedStudent.name, note: replacedStudent.note || '', position: sourceDesk.students.length });
+
+                            // Update backwards compat fields
+                            if (desk.students.length === 1) {
+                                desk.student = desk.students[0];
+                            }
+                            if (sourceDesk.students.length === 1) {
+                                sourceDesk.student = sourceDesk.students[0];
+                            } else if (sourceDesk.students.length === 0) {
+                                sourceDesk.student = null;
+                            }
+
+                            showToast(`🔄 Byttet ${draggedStudent.name} ↔ ${replacedStudent.name}`);
+                            renderSeating();
+                        }
+                    } else {
+                        // Dragging from unplaced dock to full desk - no swap possible
+                        showToast(`Bordet er fullt (${capacity}/${capacity})`);
+                    }
+                }
             }
         };
-
         d.onmousedown = (e) => {
             if (isGroupMode) {
                 handleDeskClick(d, idx);
                 return;
             }
 
+            // Don't drag whole desk if it has multiple students - let individual names be dragged
+            if (students.length > 1) {
+                return;
+            }
+
             if (e.button !== 0) return; e.stopPropagation();
             e.preventDefault();
 
-            if (spot.locked) return showToast("Plassen er låst");
+            if (desk.locked) return showToast("Plassen er låst");
 
             d.classList.add('drag-origin');
 
@@ -1059,8 +1427,15 @@ async function generateSeating(keepLocked = true) {
 
     const lockedStudents = [];
     if (keepLocked) {
-        currentChart.layout.forEach(spot => {
-            if (spot.locked && spot.student) lockedStudents.push(spot.student.name);
+        currentChart.layout.forEach(desk => {
+            // Support both old (single student) and new (students array) format
+            if (desk.locked) {
+                if (desk.students && desk.students.length > 0) {
+                    desk.students.forEach(s => lockedStudents.push(s.name));
+                } else if (desk.student) {
+                    lockedStudents.push(desk.student.name);
+                }
+            }
         });
     }
 
@@ -1068,17 +1443,33 @@ async function generateSeating(keepLocked = true) {
     availableStudents.sort(() => Math.random() - 0.5);
 
     let studentIndex = 0;
-    currentChart.layout.forEach(spot => {
-        if (keepLocked && spot.locked) return;
-        if (studentIndex < availableStudents.length) {
-            spot.student = { name: availableStudents[studentIndex], note: '' };
-            spot.color = 'bg-default';
+    currentChart.layout.forEach(desk => {
+        if (keepLocked && desk.locked) return;
+
+        // Initialize students array
+        desk.students = [];
+        const capacity = desk.capacity || 1;
+
+        // Fill desk up to capacity
+        for (let i = 0; i < capacity && studentIndex < availableStudents.length; i++) {
+            desk.students.push({
+                name: availableStudents[studentIndex],
+                note: '',
+                position: i
+            });
             studentIndex++;
-        } else {
-            spot.student = null;
-            spot.color = 'bg-default';
         }
+
+        // Maintain backwards compatibility with old student property
+        if (desk.students.length > 0) {
+            desk.student = desk.students[0]; // Keep first student for backwards compat
+        } else {
+            desk.student = null;
+        }
+
+        desk.color = 'bg-default';
     });
+
     renderSeating();
 }
 
@@ -1145,9 +1536,33 @@ async function openChartDisplay(id) {
 }
 function flipView() { document.getElementById('displayCanvas').classList.toggle('flipped'); }
 function editStudentNote() {
-    const s = currentChart.layout[selectedSeatingDeskIdx].student;
-    if (!s) return showToast("Ingen elev her");
-    openModal("Notat", s.note || "", (val) => { s.note = val; renderSeating(); document.getElementById('seatingContextMenu').style.display = 'none'; });
+    if (selectedSeatingDeskIdx === null) return;
+
+    const placement = currentChart.layout[selectedSeatingDeskIdx];
+    if (!placement || !placement.student) return showToast("Ingen elev her");
+
+    // Åpne større modal med textarea
+    document.getElementById('noteStudentName').textContent = placement.student.name;
+    document.getElementById('noteTextarea').value = placement.student.note || '';
+    document.getElementById('studentNoteModal').style.display = 'flex';
+
+    // Fokuser på textarea
+    setTimeout(() => document.getElementById('noteTextarea').focus(), 100);
+}
+
+function saveStudentNote() {
+    if (selectedSeatingDeskIdx === null) return;
+
+    const note = document.getElementById('noteTextarea').value.trim();
+    currentChart.layout[selectedSeatingDeskIdx].student.note = note;
+    renderSeating();
+    closeStudentNoteModal();
+    showToast('Notat lagret');
+}
+
+function closeStudentNoteModal() {
+    document.getElementById('studentNoteModal').style.display = 'none';
+    document.getElementById('seatingContextMenu').style.display = 'none';
 }
 function setDeskColor(c) {
     currentChart.layout[selectedSeatingDeskIdx].color = c; renderSeating(); document.getElementById('seatingContextMenu').style.display = 'none';
@@ -1162,6 +1577,270 @@ document.addEventListener('click', (e) => {
         document.getElementById('seatingContextMenu').style.display = 'none';
     }
 });
+
+// =========================================================
+// ONBOARDING WIZARD
+// =========================================================
+let wizardStep = 1;
+let wizardData = {
+    className: '',
+    students: [],
+    roomTemplate: 'standard'
+};
+
+function startOnboardingWizard(
+
+) {
+    document.getElementById('onboardingWizard').style.display = 'flex';
+    wizardStep = 1;
+    wizardData = { className: '', students: [], roomTemplate: 'standard' };
+    renderWizardStep();
+}
+
+function renderWizardStep() {
+    const content = document.getElementById('wizardContent');
+    updateWizardProgress();
+
+    switch (wizardStep) {
+        case 1:
+            content.innerHTML = `
+                <h2>Velkommen til KlassePlass! 👋</h2>
+                <p>La oss lage ditt første klassekart sammen. Først må vi opprette en klasse.</p>
+                
+                <div style="margin-top: 25px;">
+                    <label class="form-label">Klassenavn</label>
+                    <input type="text" id="wizardClassName" class="dark-input" placeholder="f.eks. 8A" value="${wizardData.className}">
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <label class="form-label">Elever (ett navn per linje)</label>
+                    <textarea id="wizardStudents" class="dark-input" rows="8" placeholder="Ola Nordmann
+Kari Hansen
+Per Jensen
+Anne Olsen
+...">${wizardData.students.join('\n')}</textarea>
+                </div>
+            `;
+            document.getElementById('btnWizPrev').style.display = 'none';
+            document.getElementById('btnWizNext').innerHTML = 'Neste <i class="fas fa-arrow-right"></i>';
+            break;
+
+        case 2:
+            const templates = [
+                { id: 'standard', name: 'Standard', desc: '24 bord (4×6)' },
+                { id: 'large', name: 'Stort', desc: '30 bord (5×6)' },
+                { id: 'small', name: 'Lite', desc: '20 bord (4×5)' },
+                { id: 'groups', name: 'Gruppebord', desc: '6 grupper à 4' }
+            ];
+
+            content.innerHTML = `
+                <h2>Velg klasserom 🏫</h2>
+                <p>Hvilket rom passer best for klassen <strong>${wizardData.className}</strong> med <strong>${wizardData.students.length} elever</strong>?</p>
+                
+                <div class="template-grid">
+                    ${templates.map(t => `
+                        <div class="template-card ${wizardData.roomTemplate === t.id ? 'selected' : ''}" onclick="selectTemplate('${t.id}')">
+                            <h3>${t.name}</h3>
+                            <p>${t.desc}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('btnWizPrev').style.display = 'inline-block';
+            document.getElementById('btnWizNext').innerHTML = 'Neste <i class="fas fa-arrow-right"></i>';
+            break;
+
+        case 3:
+            content.innerHTML = `
+                <h2>Nesten ferdig! 🎉</h2>
+                <p>Vi oppretter nå klassekartet for <strong>${wizardData.className}</strong> i et <strong>${getTemplateName(wizardData.roomTemplate)}</strong> klasserom.</p>
+                
+                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 10px; padding: 20px; margin-top: 25px;">
+                    <p style="margin: 0; color: #cbd5e1;">
+                        <i class="fas fa-info-circle" style="color: var(--accent);"></i>
+                        Elevene vil bli randomisert automatisk. Du kan alltid endre plassering senere!
+                    </p>
+                </div>
+                
+                <div style="margin-top: 25px;">
+                    <strong style="display: block; margin-bottom: 10px;">Dine elever:</strong>
+                    <div style="max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; font-size: 0.9rem; color: #94a3b8;">
+                        ${wizardData.students.map((s, i) => `${i + 1}. ${s}`).join('<br>')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('btnWizNext').innerHTML = '<i class="fas fa-check"></i> Opprett klassekart';
+            break;
+    }
+
+    updateWizardButtons();
+}
+
+function updateWizardProgress() {
+    for (let i = 1; i <= 3; i++) {
+        const step = document.getElementById(`wizStep${i}`);
+        if (i < wizardStep) {
+            step.classList.remove('active');
+            step.classList.add('completed');
+        } else if (i === wizardStep) {
+            step.classList.remove('completed');
+            step.classList.add('active');
+        } else {
+            step.classList.remove('active', 'completed');
+        }
+    }
+}
+
+function updateWizardButtons() {
+    // Handled in renderWizardStep
+}
+
+function wizardNext() {
+    // Validate current step
+    if (wizardStep === 1) {
+        wizardData.className = document.getElementById('wizardClassName').value.trim();
+        wizardData.students = document.getElementById('wizardStudents').value
+            .split('\n')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+
+        if (!wizardData.className) {
+            showToast('Vennligst fyll ut klassenavn');
+            return;
+        }
+        if (wizardData.students.length === 0) {
+            showToast('Vennligst legg til minst én elev');
+            return;
+        }
+    }
+
+    if (wizardStep === 3) {
+        wizardFinish();
+        return;
+    }
+
+    wizardStep++;
+    renderWizardStep();
+}
+
+function wizardPrev() {
+    wizardStep--;
+    if (wizardStep < 1) wizardStep = 1;
+    renderWizardStep();
+}
+
+function wizardSkip() {
+    if (confirm('Er du sikker på at du vil hoppe over veiledningen?')) {
+        closeWizard();
+    }
+}
+
+function selectTemplate(templateId) {
+    wizardData.roomTemplate = templateId;
+    renderWizardStep(); // Re-render to update selected state
+}
+
+function getTemplateName(id) {
+    const names = { standard: 'standard', large: 'stort', small: 'lite', groups: 'gruppebord' };
+    return names[id] || id;
+}
+
+function generateTemplateLayout(template) {
+    const layouts = {
+        standard: { rows: 4, cols: [6] },
+        large: { rows: 5, cols: [6] },
+        small: { rows: 4, cols: [5] },
+        groups: { rows: 3, cols: [2, 2, 2] }  // 3x(2+2+2) = 24 bord, 6 grupper à 4
+    };
+
+    const config = layouts[template] || layouts.standard;
+    const desks = [];
+
+    const aisle = 30;
+    const rowGap = 20;
+    let startY = 70;
+
+    for (let r = 0; r < config.rows; r++) {
+        const totalCols = config.cols.reduce((a, b) => a + b, 0);
+        const totalAisles = Math.max(0, config.cols.length - 1);
+        const rowWidth = (totalCols * DESK_W) + (totalAisles * aisle);
+        let startX = (CANVAS_W - rowWidth) / 2;
+
+        if (startX < 20) startX = 20;
+
+        let currentX = startX;
+        config.cols.forEach((groupSize, gIdx) => {
+            for (let i = 0; i < groupSize; i++) {
+                desks.push({ x: currentX, y: startY });
+                currentX += DESK_W;
+            }
+            if (gIdx < config.cols.length - 1) currentX += aisle;
+        });
+
+        startY += DESK_H + rowGap;
+    }
+
+    return desks;
+}
+
+async function wizardFinish() {
+    try {
+        // Opprett klasse
+        const classId = await ipcRenderer.invoke('save-class', null,
+            wizardData.className, wizardData.students.join('\n'));
+
+        // Opprett rom fra template
+        const layout = generateTemplateLayout(wizardData.roomTemplate);
+        const roomId = await ipcRenderer.invoke('save-room',
+            getTemplateName(wizardData.roomTemplate) + ' rom', JSON.stringify(layout));
+
+        // Opprett klassekart
+        const chartName = `${wizardData.className} Klassekart`;
+        const currentWeek = getWeekNumber(new Date());
+
+        const chartLayout = layout.map(p => ({
+            x: p.x,
+            y: p.y,
+            student: null,
+            color: 'bg-default',
+            locked: false,
+            groupId: null
+        }));
+
+        currentChart = {
+            id: null,
+            classId: classId,
+            roomId: roomId,
+            layout: chartLayout,
+            allStudents: wizardData.students
+        };
+
+        document.getElementById('editChartName').value = chartName;
+        document.getElementById('editChartComment').value = `Uke ${currentWeek} - ${currentWeek + 4}`;
+
+        await generateSeating(false);
+        renderSeating();
+
+        // Merk wizard som fullført
+        localStorage.setItem('onboardingCompleted', 'true');
+
+        // Lukk wizard og naviger til editor
+        document.getElementById('onboardingWizard').style.display = 'none';
+        navTo('view-seating-editor');
+
+        showToast('🎉 Ditt første klassekart er klart!');
+
+    } catch (err) {
+        console.error(err);
+        showToast('Feil: ' + err.message);
+    }
+}
+
+function closeWizard() {
+    document.getElementById('onboardingWizard').style.display = 'none';
+    localStorage.setItem('onboardingCompleted', 'true');
+    navTo('view-charts-dashboard');
+}
 
 // STARTUP CALL
 navTo('view-charts-dashboard');
