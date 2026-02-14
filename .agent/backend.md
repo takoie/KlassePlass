@@ -19,6 +19,10 @@ Denne agenten overvåker og dokumenterer backend-arkitekturen for KlassePlass.
 
 ### 📊 Schema
 
+**Schema Version:** 1.0.0 (Initial)
+
+> **Note:** Ved fremtidige schema-endringer, opprett `schema_version` tabell for versjonshåndtering (se TAK-33)
+
 #### Tabell: `classes`
 ```sql
 CREATE TABLE classes (
@@ -103,6 +107,85 @@ LEFT JOIN classes ON seatings.class_id = classes.id
 LEFT JOIN rooms ON seatings.room_id = rooms.id 
 ORDER BY seatings.created_at DESC
 ```
+
+### 💾 Database Backup/Restore/Move
+
+| Handler | Type | Beskrivelse |
+|---------|------|-------------|
+| `backup-database` | handle | Backup database til valgt lokasjon |
+| `restore-database` | handle | Gjenopprett database fra backup-fil |
+| `move-database` | handle | Flytt database til ny plassering |
+| `get-db-path` | handle | Henter database-filsti |
+
+**Backup Handler:**
+```javascript
+ipcMain.handle('backup-database', async () => {
+  // Viser save dialog med foreslått filnavn: klassekart_backup_YYYY-MM-DD.db
+  // Kopierer klassekart_database.db til valgt lokasjon
+  // Returnerer { success, filePath, filename } eller { success: false, error }
+});
+```
+
+**Restore Handler:**
+```javascript
+ipcMain.handle('restore-database', async () => {
+  // Viser open dialog for .db filer
+  // Validerer filstørrelse (max 100MB)
+  // Lukker database connection
+  // Backup av eksisterende database til .backup
+  // Kopierer valgt fil til database-lokasjon
+  // Åpner ny database connection
+  // Rollback ved feil
+  // Returnerer { success } eller { success: false, error }
+});
+```
+
+**Move Handler:**
+```javascript
+ipcMain.handle('move-database', async () => {
+  // Viser folder selection dialog
+  // Tester skrivetilgang i ny plassering
+  // Lukker database connection
+  // Kopierer database til ny plassering
+  // Verifiserer at kopieringen var vellykket
+  // Sletter gammel database-fil
+  // Lagrer ny plassering i db-location.json config-fil
+  // Returnerer { success, newPath, requiresRestart } eller { success: false, error }
+});
+```
+
+**Get DB Path Handler:**
+```javascript
+ipcMain.handle('get-db-path', async () => {
+  return dbPath; // Returnerer full sti til database
+});
+```
+
+**Database Path Resolution ved Oppstart:**
+```javascript
+function getDbPath() {
+  // Leser db-location.json config-fil
+  // Hvis custom plassering finnes og er gyldig, bruk den
+  // Ellers bruk default plassering i userData
+  return customPath || defaultPath;
+}
+```
+
+**Sikkerhet og Feilhåndtering:**
+- Filstørrelse-validering (max 100MB) før restore
+- Automatisk backup av eksisterende database før restore og move
+- Rollback til backup ved feil
+- Skrivetilgang-test før flytting
+- Filstørrelse-verifisering etter kopiering
+- Safe database connection close/reopen
+- Persistent lagring av custom database-plassering
+- Comprehensive error handling med beskrivende meldinger
+
+**Move Database Use Cases:**
+- Flytte til ekstern harddisk
+- Flytte til sky-synkronisert mappe (OneDrive, Dropbox, Google Drive)
+- Flytte til annen partisjon med mer plass
+- Sentralisere for organisatoriske backup-rutiner
 
 ---
 

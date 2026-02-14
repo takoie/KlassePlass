@@ -124,11 +124,29 @@ Dette dokumentet holder oversikt over fremtidige planer, funksjoner og forbedrin
 **Teknisk:** Integrer jsPDF eller lignende bibliotek.  
 **Estimat:** Medium
 
-#### 🔴 Backup/Restore Database
-**Status:** Ikke startet  
-**Beskrivelse:** Manuell backup og gjenoppretting av database.  
-**Teknisk:** Kopier `klassekart_database.db` til valgt lokasjon.  
-**Estimat:** Liten
+#### ✅ Backup/Restore/Move Database (TAK-21)
+**Status:** Fullført  
+**Beskrivelse:** Manuell backup, gjenoppretting og flytting av database med sikkerhet.  
+**Implementert:**
+- Backup til valgt lokasjon med dato i filnavn
+- Gjenopprett med validering og rollback
+- Flytt database til ny plassering (ekstern disk, sky-mappe)
+- Persistent lagring av custom database-plassering
+- Settings modal med tabs og glassmorphism design  
+**Teknisk:** Electron dialog, fs.copyFileSync, config-fil for custom path  
+**Fullført:** 2026-02-13
+
+#### 🟡 Database Schema-versjonering (TAK-33)
+**Status:** Under vurdering  
+**Beskrivelse:** Håndtere schema-endringer over tid med versjonering og migrering.  
+**Teknisk:** 
+- `schema_version` tabell
+- Versjonsnummer i backup-filnavn
+- Validering ved restore
+- Automatisk migrering av gamle backups  
+**Estimat:** Medium (6t)  
+**Prioritet:** Medium  
+**Relatert til:** TAK-21
 
 #### 🔴 Drag-to-reorder i elevlister
 **Status:** Ikke startet  

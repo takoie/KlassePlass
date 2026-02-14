@@ -12,12 +12,12 @@ const CANVAS_W = 920;
 
 // Desk type specifications
 const DESK_TYPES = {
-    single: { width: 85, height: 55, capacity: 1 },
-    round3: { width: 90, height: 90, capacity: 3 },
-    round4: { width: 110, height: 110, capacity: 4 },
-    round6: { width: 130, height: 130, capacity: 6 },
-    bench2: { width: 170, height: 55, capacity: 2 },
-    bench4: { width: 170, height: 110, capacity: 4 }
+    single: { width: 85, height: 55, capacity: 1, name: 'Enkeltpult' },
+    round3: { width: 130, height: 130, capacity: 3, name: 'Rundbord (3)' },
+    round4: { width: 145, height: 145, capacity: 4, name: 'Rundbord (4)' },
+    round6: { width: 160, height: 160, capacity: 6, name: 'Rundbord (6)' },
+    bench2: { width: 170, height: 55, capacity: 2, name: 'Langbord (2)' },
+    bench4: { width: 340, height: 55, capacity: 4, name: 'Langbord (4)' }
 };
 
 
@@ -29,11 +29,15 @@ let deleteCallback = null;
 let confirmCallback = null;
 let rightClickedDesk = null;
 let selectedSeatingDeskIdx = null;
+let selectedStudentPos = null;
 
 // Group Mode State
 let isGroupMode = false;
 let selectedDesksForGroup = [];
 let groupCounter = 0;
+
+// Dropdown State
+let activeDropdown = null;
 
 // Room Editor Selection State
 let selectedDesks = [];
@@ -75,6 +79,11 @@ function navTo(view) {
 
     document.getElementById(view).classList.add('active');
 
+    // Remove room editor keyboard listeners when leaving room editor
+    if (view !== 'view-room-editor') {
+        removeRoomEditorKeyboardListeners();
+    }
+
     // Reset Modes
     isGroupMode = false;
     selectedDesksForGroup = [];
@@ -104,33 +113,83 @@ function showToast(msg) {
     setTimeout(() => t.classList.remove('show'), 2000);
 }
 
+let benchTooltipTimeout = null;
+function showBenchTooltip(el, names) {
+    if (!names || names.length === 0) return;
+    const tt = document.getElementById('benchTooltip');
+    if (!tt) return;
+    clearTimeout(benchTooltipTimeout);
+    const namesEl = tt.querySelector('.bench-tooltip-names');
+    namesEl.innerHTML = names.map(n => `<span>${n}</span>`).join('');
+    benchTooltipTimeout = setTimeout(() => {
+        const rect = el.getBoundingClientRect();
+        tt.style.left = (rect.left + rect.width / 2) + 'px';
+        tt.style.top = (rect.top - 8) + 'px';
+        tt.style.transform = 'translate(-50%, -100%)';
+        tt.classList.add('show');
+    }, 250);
+}
+function hideBenchTooltip() {
+    clearTimeout(benchTooltipTimeout);
+    const tt = document.getElementById('benchTooltip');
+    if (tt) tt.classList.remove('show');
+}
+
 // --- STANDARD VISNING (PREFERANSE) ---
-function toggleDefaultFlip() {
+async function toggleDefaultFlip() {
     const isChecked = document.getElementById('defaultFlipToggle').checked;
-    localStorage.setItem('defaultFlipped', isChecked ? 'yes' : 'no');
+    await ipcRenderer.invoke('save-setting', 'defaultFlipped', isChecked);
     applyDefaultFlip('seatingCanvas');
     applyDefaultFlip('displayCanvas');
 }
 
-function applyDefaultFlip(canvasId) {
-    const isFlipped = localStorage.getItem('defaultFlipped') === 'yes';
+async function applyDefaultFlip(canvasId) {
+    const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
     const canvas = document.getElementById(canvasId);
     if (canvas) {
         if (isFlipped) {
             canvas.classList.add('flipped');
+            // Adjust canvas height for flipped view
+            if (canvasId === 'seatingCanvas') {
+                setTimeout(() => adjustCanvasForFlipSeating(), 100);
+            }
         } else {
             canvas.classList.remove('flipped');
         }
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const isFlipped = localStorage.getItem('defaultFlipped') === 'yes';
+// Toggle design mode for room editor
+function toggleDesignMode() {
+    const isChecked = document.getElementById('designModeToggle').checked;
+    const canvas = document.getElementById('roomCanvas');
+    const board = canvas.querySelector('.front-board');
+    
+    if (isChecked) {
+        // Board-bottom mode: Move board to bottom
+        if (board) {
+            board.style.top = 'auto';
+            board.style.bottom = '10px';
+        }
+    } else {
+        // Board-top mode: Reset board to top
+        if (board) {
+            board.style.top = '10px';
+            board.style.bottom = 'auto';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
     const toggle = document.getElementById('defaultFlipToggle');
     if (toggle) toggle.checked = isFlipped;
 
+    // Last inn innhold for standardvisning (charts dashboard)
+    await loadCharts();
+
     // Sjekk om onboarding wizard skal vises
-    const hasCompletedOnboarding = localStorage.getItem('onboardingCompleted');
+    const hasCompletedOnboarding = await ipcRenderer.invoke('get-setting', 'onboardingCompleted');
     if (!hasCompletedOnboarding) {
         startOnboardingWizard();
     }
@@ -173,16 +232,181 @@ function closeConfirmModal(result) {
 }
 
 // ABOUT MODAL
-function openAboutModal() { document.getElementById('aboutModal').style.display = 'flex'; }
-function closeAboutModal() { document.getElementById('aboutModal').style.display = 'none'; }
+// Settings Modal with Tabs
+async function openSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'flex';
+    switchTab('settings'); // Default to Settings tab
+    
+    // Sync "Tavle nederst" toggle with settings
+    const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
+    const toggle = document.getElementById('defaultFlipToggle');
+    if (toggle) toggle.checked = isFlipped;
+    
+    // Load database path
+    try {
+        const dbPath = await ipcRenderer.invoke('get-db-path');
+        document.getElementById('dbPathDisplay').textContent = dbPath;
+    } catch (err) {
+        document.getElementById('dbPathDisplay').textContent = 'Kunne ikke laste database-plassering';
+    }
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'none';
+}
+
+function switchTab(tabId, event) {
+    // Hide all tab panes
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab pane
+    const targetPane = document.getElementById(`tab-${tabId}`);
+    if (targetPane) {
+        targetPane.classList.add('active');
+    }
+    
+    // Add active class to clicked button (if called from event)
+    if (event && event.target) {
+        const button = event.target.closest('.tab-button');
+        if (button) {
+            button.classList.add('active');
+        }
+    } else {
+        // If called programmatically, find and activate the matching button
+        const button = document.querySelector(`.tab-button[onclick*="${tabId}"]`);
+        if (button) {
+            button.classList.add('active');
+        }
+    }
+}
+
+// Database Backup/Restore Functions
+async function backupDatabase() {
+    try {
+        const result = await ipcRenderer.invoke('backup-database');
+        
+        if (result.canceled) {
+            return; // User cancelled, do nothing
+        }
+        
+        if (result.success) {
+            showToast(`✓ Database backed up: ${result.filename}`);
+        } else {
+            showToast(`✗ Backup feilet: ${result.error}`);
+        }
+    } catch (err) {
+        showToast(`✗ Feil ved backup: ${err.message}`);
+    }
+}
+
+async function restoreDatabase() {
+    // Show confirmation warning
+    openConfirmModal(
+        'Gjenopprett database',
+        '⚠️ Dette vil erstatte ALL eksisterende data med data fra backup-filen. Denne handlingen kan ikke angres. Er du sikker?',
+        async (confirmed) => {
+            if (!confirmed) return;
+            
+            try {
+                const result = await ipcRenderer.invoke('restore-database');
+                
+                if (result.canceled) {
+                    return; // User cancelled, do nothing
+                }
+                
+                if (result.success) {
+                    showToast('✓ Database gjenopprettet. Laster applikasjon på nytt...');
+                    
+                    // Close settings modal
+                    closeSettingsModal();
+                    
+                    // Reload all data after short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showToast(`✗ Gjenoppretting feilet: ${result.error}`);
+                }
+            } catch (err) {
+                showToast(`✗ Feil ved gjenoppretting: ${err.message}`);
+            }
+        }
+    );
+}
+
+async function moveDatabase() {
+    // Show confirmation with explanation
+    openConfirmModal(
+        'Flytt database',
+        'Dette vil flytte databasen til en ny plassering. Applikasjonen må startes på nytt etter flytting. Er du sikker?',
+        async (confirmed) => {
+            if (!confirmed) return;
+            
+            try {
+                const result = await ipcRenderer.invoke('move-database');
+                
+                if (result.canceled) {
+                    return; // User cancelled, do nothing
+                }
+                
+                if (result.success) {
+                    showToast(`✓ Database flyttet til: ${result.newPath}`);
+                    
+                    // Close settings modal
+                    closeSettingsModal();
+                    
+                    // Show message about restart requirement
+                    setTimeout(() => {
+                        openConfirmModal(
+                            'Applikasjon må startes på nytt',
+                            'Databasen er flyttet. Applikasjonen må startes på nytt for at endringen skal tre i kraft. Start på nytt nå?',
+                            (restart) => {
+                                if (restart) {
+                                    location.reload();
+                                }
+                            }
+                        );
+                    }, 500);
+                } else {
+                    showToast(`✗ Flytting feilet: ${result.error}`);
+                }
+            } catch (err) {
+                showToast(`✗ Feil ved flytting: ${err.message}`);
+            }
+        }
+    );
+}
 
 // =========================================================
 // PRESENTATION / NEW WINDOW FUNCTION
 // =========================================================
-function openPresentationWindow() {
+async function openPresentationWindow() {
     if (!currentChart || !currentChart.layout) return showToast("Ingen data å vise");
-    const isFlipped = localStorage.getItem('defaultFlipped') === 'yes';
-    const dataToSend = { layout: currentChart.layout, defaultFlipped: isFlipped };
+    
+    const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
+    
+    // Get room design mode
+    let designMode = 'board-top';
+    if (currentChart.roomId) {
+        const room = await ipcRenderer.invoke('get-room', currentChart.roomId);
+        if (room) {
+            const roomLayout = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '{}'));
+            designMode = roomLayout.designMode || 'board-top';
+        }
+    }
+    
+    const dataToSend = { 
+        layout: currentChart.layout, 
+        defaultFlipped: isFlipped,
+        designMode: designMode  // Pass design mode to presentation window
+    };
     ipcRenderer.send('open-presentation-window', JSON.stringify(dataToSend));
 }
 
@@ -203,25 +427,32 @@ roomContainer.onmousedown = (e) => {
     }
 
     isSelecting = true;
+    
+    // Get position relative to roomContainer
+    const containerRect = roomContainer.getBoundingClientRect();
     selectionStart = {
-        x: e.pageX + roomContainer.scrollLeft,
-        y: e.pageY + roomContainer.scrollTop
+        x: e.clientX - containerRect.left + roomContainer.scrollLeft,
+        y: e.clientY - containerRect.top + roomContainer.scrollTop
     };
 
     selectionBox = document.createElement('div');
     selectionBox.className = 'selection-box';
+    selectionBox.style.position = 'absolute';
     selectionBox.style.left = selectionStart.x + 'px';
     selectionBox.style.top = selectionStart.y + 'px';
     selectionBox.style.width = '0px';
     selectionBox.style.height = '0px';
-    document.body.appendChild(selectionBox);
+    selectionBox.style.pointerEvents = 'none';
+    // Append to roomCanvas instead of body
+    document.getElementById('roomCanvas').appendChild(selectionBox);
 };
 
 window.addEventListener('mousemove', (e) => {
     if (!isSelecting || !selectionBox) return;
 
-    const currentX = e.pageX + roomContainer.scrollLeft;
-    const currentY = e.pageY + roomContainer.scrollTop;
+    const containerRect = roomContainer.getBoundingClientRect();
+    const currentX = e.clientX - containerRect.left + roomContainer.scrollLeft;
+    const currentY = e.clientY - containerRect.top + roomContainer.scrollTop;
 
     const width = currentX - selectionStart.x;
     const height = currentY - selectionStart.y;
@@ -313,17 +544,22 @@ function openRoomCreate() {
     document.getElementById('roomNameInput').value = '';
     document.getElementById('btnRoomDelete').style.display = 'none';
     clearCanvas();
+    selectedDesks = [];
+    attachRoomEditorKeyboardListeners();
 }
 async function loadRooms() {
     const rooms = await ipcRenderer.invoke('get-rooms');
     const grid = document.getElementById('roomGrid'); grid.innerHTML = '';
     rooms.forEach(r => {
-        const l = JSON.parse(r.layout_data || '[]');
+        const layoutData = ensureRoomLayoutFormat(JSON.parse(r.layout_data || '[]'));
+        const deskCount = layoutData.desks ? layoutData.desks.length : 0;
+        const modeIcon = layoutData.designMode === 'board-bottom' ? '<i class="fas fa-arrow-down" style="color: #3b82f6;" title="Tavle nederst"></i> ' : '';
+        
         grid.innerHTML += `
             <div class="info-card" onclick="editRoom(${r.id})">
                 <span class="card-label-small">ROM</span>
-                <h5 class="card-title-large">${r.name}</h5>
-                <span class="card-info-text">${l.length} Bord</span>
+                <h5 class="card-title-large">${modeIcon}${r.name}</h5>
+                <span class="card-info-text">${deskCount} Bord</span>
                 <button class="btn-action btn-danger btn-sm-action" style="position:absolute; bottom:15px; right:15px;" 
                 onclick="event.stopPropagation(); openDeleteModal(() => deleteRoom(${r.id}))">Slett</button>
             </div>`;
@@ -336,7 +572,21 @@ async function editRoom(id) {
     document.getElementById('roomEditorTitle').innerText = "Rediger: " + r.name;
     document.getElementById('roomNameInput').value = r.name;
     document.getElementById('btnRoomDelete').style.display = 'block';
-    renderRoomCanvas(JSON.parse(r.layout_data));
+    
+    // Parse layout and ensure correct format
+    const layoutData = ensureRoomLayoutFormat(JSON.parse(r.layout_data));
+    
+    // Set design mode toggle
+    const designModeToggle = document.getElementById('designModeToggle');
+    if (designModeToggle) {
+        designModeToggle.checked = (layoutData.designMode === 'board-bottom');
+    }
+    
+    renderRoomCanvas(layoutData.desks);
+    
+    // Apply design mode visually
+    toggleDesignMode();
+    
     navTo('view-room-editor');
 }
 function renderRoomCanvas(layout) {
@@ -356,6 +606,8 @@ function renderRoomCanvas(layout) {
     });
 
     updateDeskNumbers();
+    selectedDesks = [];
+    attachRoomEditorKeyboardListeners();
 }
 
 function ensureCanvasHeight(yPos) {
@@ -366,25 +618,142 @@ function ensureCanvasHeight(yPos) {
     }
 }
 
+// Adjust canvas height when flipped to ensure all desks are visible (for room editor)
+function adjustCanvasForFlip() {
+    const canvas = document.getElementById('roomCanvas');
+    if (!canvas) return;
+    
+    const isFlipped = canvas.classList.contains('flipped');
+    if (!isFlipped) {
+        // Reset to default if not flipped
+        canvas.style.setProperty('--flip-offset', '0px');
+        return;
+    }
+    
+    const desks = Array.from(canvas.querySelectorAll('.desk'));
+    if (desks.length === 0) return;
+    
+    // Find the highest Y position (bottom-most desk)
+    let maxY = 0;
+    desks.forEach(d => {
+        const y = parseInt(d.style.top || 0);
+        const h = parseInt(d.style.height || DESK_H);
+        if (y + h > maxY) maxY = y + h;
+    });
+    
+    // Calculate needed offset for flipped view
+    const baseHeight = 500;
+    const buffer = 150; // Extra space at bottom when flipped
+    const flipOffset = Math.max(0, maxY - baseHeight + buffer);
+    
+    canvas.style.setProperty('--flip-offset', flipOffset + 'px');
+    const newHeight = baseHeight + flipOffset;
+    if (newHeight > parseInt(canvas.style.height || 500)) {
+        canvas.style.height = newHeight + 'px';
+    }
+}
+
+// Adjust canvas height when flipped for seating (klassekart editor)
+function adjustCanvasForFlipSeating() {
+    const canvas = document.getElementById('seatingCanvas');
+    if (!canvas) return;
+    
+    const isFlipped = canvas.classList.contains('flipped');
+    if (!isFlipped) {
+        canvas.style.setProperty('--flip-offset', '0px');
+        return;
+    }
+    
+    const desks = Array.from(canvas.querySelectorAll('.desk'));
+    if (desks.length === 0) return;
+    
+    // Find the highest Y position (bottom-most desk)
+    let maxY = 0;
+    desks.forEach(d => {
+        const rect = d.getBoundingClientRect();
+        const containerRect = canvas.getBoundingClientRect();
+        const y = rect.top - containerRect.top + canvas.scrollTop;
+        const h = rect.height;
+        if (y + h > maxY) maxY = y + h;
+    });
+    
+    // Calculate needed offset for flipped view
+    const baseHeight = canvas.scrollHeight || 500;
+    const buffer = 200;
+    const flipOffset = Math.max(0, maxY - baseHeight + buffer);
+    
+    canvas.style.setProperty('--flip-offset', flipOffset + 'px');
+}
+
+// =========================================================
+// COORDINATE TRANSFORMATION FOR DESIGN MODE
+// =========================================================
+
+// Get desk height based on type
+function getDeskHeight(type) {
+    const spec = DESK_TYPES[type];
+    return spec ? spec.height : DESK_H;
+}
+
+// Transform coordinates between board-top and board-bottom modes
+function transformCoordinatesForMode(desks, fromMode, toMode) {
+    if (fromMode === toMode) return desks;
+    
+    const CANVAS_H = 500;
+    return desks.map(desk => ({
+        ...desk,
+        y: CANVAS_H - desk.y - getDeskHeight(desk.type || 'single')
+    }));
+}
+
+// Convert room layout from old array format to new object format
+function ensureRoomLayoutFormat(layout) {
+    // If already in new format
+    if (layout && layout.desks && layout.designMode !== undefined) {
+        return layout;
+    }
+    
+    // If old format (array), convert to new format
+    if (Array.isArray(layout)) {
+        return {
+            desks: layout,
+            designMode: 'board-top'
+        };
+    }
+    
+    // Default empty layout
+    return {
+        desks: [],
+        designMode: 'board-top'
+    };
+}
+
 function generateLayout() {
     const preset = document.getElementById('roomPreset').value;
     const rows = parseInt(document.getElementById('roomRows').value) || 4;
-    if (!preset) return;
+    if (!preset) {
+        showToast('⚠️ Velg en struktur først');
+        return;
+    }
 
     const canvas = document.getElementById('roomCanvas');
     canvas.innerHTML = '<div class="front-board">TAVLE</div>';
     canvas.style.height = '100%';
 
+    // ALWAYS use single desks for auto-generation
+    const selectedType = 'single';
+    const spec = DESK_TYPES.single;
+
     const groups = preset.split(',').map(Number);
-    const gap = 0;
-    const aisle = 30; // 30px
-    const rowGap = 20; // 20px
+    const gap = 10; // Gap between desks in same group
+    const aisle = 40; // Gap between groups
+    const rowGap = 30; // Gap between rows
 
     const totalCols = groups.reduce((a, b) => a + b, 0);
     const totalAisles = Math.max(0, groups.length - 1);
-    let rowWidth = (totalCols * DESK_W) + (totalCols * gap) + (totalAisles * aisle) - gap;
+    let rowWidth = (totalCols * spec.width) + ((totalCols - 1) * gap) + (totalAisles * aisle);
 
-    // START 70px
+    // Start 70px from top
     let startY = 70;
 
     for (let r = 0; r < rows; r++) {
@@ -394,14 +763,15 @@ function generateLayout() {
         let currentX = startX;
         groups.forEach((gSize, gIdx) => {
             for (let i = 0; i < gSize; i++) {
-                spawnDesk(currentX, startY, canvas);
-                currentX += DESK_W + gap;
+                spawnDesk(currentX, startY, canvas, selectedType);
+                currentX += spec.width + gap;
             }
             if (gIdx < groups.length - 1) currentX += aisle;
         });
-        startY += DESK_H + rowGap;
+        startY += spec.height + rowGap;
     }
     updateDeskNumbers();
+    showToast(`✓ Layout generert med enkeltpulter`);
 }
 
 function centerTables() {
@@ -427,7 +797,11 @@ function centerTables() {
     const currentCenterX = minX + (contentWidth / 2);
     const diffX = targetCenterX - currentCenterX;
 
-    const targetCenterY = 500 / 2 + 15;
+    // Check if canvas is flipped - adjust vertical centering accordingly
+    const canvas = document.getElementById('roomCanvas');
+    const isFlipped = canvas && canvas.classList.contains('flipped');
+    const CANVAS_H = 500;
+    const targetCenterY = isFlipped ? (CANVAS_H - 100) : (CANVAS_H / 2 + 15);
     const currentCenterY = minY + (contentHeight / 2);
     const diffY = targetCenterY - currentCenterY;
 
@@ -437,6 +811,11 @@ function centerTables() {
         d.style.left = (currentX + diffX) + 'px';
         d.style.top = Math.max(60, currentY + diffY) + 'px';
     });
+    
+    // Adjust canvas height if flipped
+    if (isFlipped) {
+        adjustCanvasForFlip();
+    }
 }
 
 function checkSnapping(x, y, otherDesks) {
@@ -573,6 +952,78 @@ function deleteSelectedDesk() {
     updateDeskNumbers();
 }
 
+function deleteSelectedDesks() {
+    if (selectedDesks.length === 0) return;
+    
+    const count = selectedDesks.length;
+    selectedDesks.forEach(desk => desk.remove());
+    selectedDesks = [];
+    
+    updateDeskNumbers();
+    showToast(`✓ ${count} bord slettet`);
+}
+
+// Keyboard event handler for room editor
+let roomEditorKeyHandler = null;
+
+function attachRoomEditorKeyboardListeners() {
+    // Remove existing listener if any
+    if (roomEditorKeyHandler) {
+        document.removeEventListener('keydown', roomEditorKeyHandler);
+    }
+    
+    roomEditorKeyHandler = (e) => {
+        // Only handle if we're in room editor view
+        const roomEditorView = document.getElementById('view-room-editor');
+        if (!roomEditorView || !roomEditorView.classList.contains('active')) return;
+        
+        // Delete or Backspace key
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            // Don't delete if user is typing in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                return;
+            }
+            
+            e.preventDefault();
+            
+            if (selectedDesks.length > 0) {
+                deleteSelectedDesks();
+            }
+        }
+        
+        // Escape key to deselect all
+        if (e.key === 'Escape') {
+            if (selectedDesks.length > 0) {
+                selectedDesks.forEach(d => d.classList.remove('is-selected'));
+                selectedDesks = [];
+                showToast('Avmarkert');
+            }
+        }
+        
+        // Ctrl+A to select all desks
+        if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            const allDesks = Array.from(document.querySelectorAll('#roomCanvas .desk'));
+            selectedDesks.forEach(d => d.classList.remove('is-selected'));
+            selectedDesks = allDesks;
+            selectedDesks.forEach(d => d.classList.add('is-selected'));
+            if (allDesks.length > 0) {
+                showToast(`${allDesks.length} bord markert`);
+            }
+        }
+    };
+    
+    document.addEventListener('keydown', roomEditorKeyHandler);
+    console.log('Room editor keyboard listeners attached');
+}
+
+function removeRoomEditorKeyboardListeners() {
+    if (roomEditorKeyHandler) {
+        document.removeEventListener('keydown', roomEditorKeyHandler);
+        roomEditorKeyHandler = null;
+    }
+}
+
 function rotateDeskCW() {
     if (!rightClickedDesk) return;
 
@@ -611,44 +1062,82 @@ function rotateDeskCCW() {
     document.getElementById('deskContextMenu').style.display = 'none';
 }
 
-function addDesk() {
+function findEmptySpot(newWidth, newHeight) {
     const desks = Array.from(document.querySelectorAll('#roomCanvas .desk'));
-    const selectedType = document.getElementById('deskTypeSelect').value || 'single';
-    const spec = DESK_TYPES[selectedType];
-
-    let newX = 20;
-    let newY = 60;
-
-    if (desks.length > 0) {
-        const last = desks[desks.length - 1];
-        const lastX = parseInt(last.style.left);
-        const lastY = parseInt(last.style.top);
-        const lastWidth = parseInt(last.style.width);
-        const lastHeight = parseInt(last.style.height);
-
-        newX = lastX + lastWidth + 15;
-        newY = lastY;
-
-        if (newX > CANVAS_W - spec.width) {
-            newX = 20;
-            newY = lastY + lastHeight + 20;
+    const padding = 15;
+    const startX = 20;
+    
+    // Check if canvas is flipped - start from bottom instead of top
+    const canvas = document.getElementById('roomCanvas');
+    const isFlipped = canvas && canvas.classList.contains('flipped');
+    const CANVAS_H = 500;
+    const startY = isFlipped ? (CANVAS_H - 200) : 60;
+    const maxX = CANVAS_W - 20;
+    
+    // Try to find a spot by scanning in a grid pattern
+    for (let y = startY; y < 2000; y += 30) {
+        for (let x = startX; x < maxX - newWidth; x += 30) {
+            // Check if this position overlaps with any existing desk
+            let overlaps = false;
+            
+            for (let desk of desks) {
+                const deskX = parseInt(desk.style.left);
+                const deskY = parseInt(desk.style.top);
+                const deskWidth = parseInt(desk.style.width);
+                const deskHeight = parseInt(desk.style.height);
+                
+                // Check for overlap with padding
+                if (!(x + newWidth + padding < deskX || 
+                      x > deskX + deskWidth + padding ||
+                      y + newHeight + padding < deskY || 
+                      y > deskY + deskHeight + padding)) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            
+            if (!overlaps) {
+                return { x, y };
+            }
         }
     }
-
-    spawnDesk(newX, newY, document.getElementById('roomCanvas'), selectedType);
-    updateDeskNumbers();
+    
+    // Fallback: place at end of canvas
+    if (desks.length > 0) {
+        const last = desks[desks.length - 1];
+        const lastY = parseInt(last.style.top);
+        const lastHeight = parseInt(last.style.height);
+        return { x: startX, y: lastY + lastHeight + 40 };
+    }
+    
+    return { x: startX, y: startY };
 }
+
+function addDeskOfType(type) {
+    const spec = DESK_TYPES[type];
+    const position = findEmptySpot(spec.width, spec.height);
+    
+    spawnDesk(position.x, position.y, document.getElementById('roomCanvas'), type);
+    updateDeskNumbers();
+    showToast(`✓ ${DESK_TYPES[type].name} lagt til`);
+}
+
+// Legacy function for compatibility
+function addDesk() {
+    addDeskOfType('single');
+}
+
 function clearCanvas() { document.getElementById('roomCanvas').innerHTML = '<div class="front-board">TAVLE</div>'; }
 
 async function saveRoom() {
     const name = document.getElementById('roomNameInput').value;
-    const layout = [];
+    const desks = [];
 
     document.querySelectorAll('#roomCanvas .desk').forEach(d => {
         const type = d.dataset.type || 'single';
         const spec = DESK_TYPES[type];
 
-        layout.push({
+        desks.push({
             x: parseInt(d.style.left),
             y: parseInt(d.style.top),
             rotation: parseInt(d.dataset.rotation || 0),
@@ -656,6 +1145,16 @@ async function saveRoom() {
             capacity: spec.capacity
         });
     });
+
+    // Get design mode from toggle
+    const designModeToggle = document.getElementById('designModeToggle');
+    const designMode = designModeToggle && designModeToggle.checked ? 'board-bottom' : 'board-top';
+
+    // Create layout object with new structure
+    const layout = {
+        desks: desks,
+        designMode: designMode
+    };
 
     if (editingId) await ipcRenderer.invoke('update-room', editingId, name, JSON.stringify(layout));
     else await ipcRenderer.invoke('save-room', name, JSON.stringify(layout));
@@ -758,9 +1257,33 @@ function openSeatingSetup() {
     document.getElementById('setupClassSelect').value = '';
 }
 async function loadSetup() {
-    const cls = await ipcRenderer.invoke('get-classes'); const rms = await ipcRenderer.invoke('get-rooms');
-    document.getElementById('setupClassSelect').innerHTML = cls.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    document.getElementById('setupRoomSelect').innerHTML = rms.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+    const cls = await ipcRenderer.invoke('get-classes'); 
+    const rms = await ipcRenderer.invoke('get-rooms');
+    
+    // Klasser med antall elever
+    const classOptions = cls.map(c => {
+        const studentCount = c.students ? c.students.split('\n').filter(s => s.trim()).length : 0;
+        return `<option value="${c.id}">${c.name} (${studentCount} elever)</option>`;
+    }).join('');
+    document.getElementById('setupClassSelect').innerHTML = '<option value="">Velg gruppe</option>' + classOptions;
+    
+    // Rom med antall plasser
+    const roomOptions = rms.map(r => {
+        let totalCapacity = 0;
+        try {
+            const layout = JSON.parse(r.layout_data || '[]');
+            totalCapacity = layout.reduce((sum, desk) => {
+                const deskType = desk.type || 'single';
+                const spec = DESK_TYPES[deskType];
+                const capacity = desk.capacity ?? spec?.capacity ?? 1;
+                return sum + capacity;
+            }, 0);
+        } catch (e) {
+            totalCapacity = 0;
+        }
+        return `<option value="${r.id}">${r.name} (${totalCapacity} plasser)</option>`;
+    }).join('');
+    document.getElementById('setupRoomSelect').innerHTML = '<option value="">Velg rom</option>' + roomOptions;
 }
 
 function getWeekNumber(d) {
@@ -775,13 +1298,23 @@ async function createChart() {
     const name = document.getElementById('chartNameInput').value; const cid = document.getElementById('setupClassSelect').value; const rid = document.getElementById('setupRoomSelect').value;
     if (!name || !cid || !rid) return showToast("Fyll ut alt");
     const rooms = await ipcRenderer.invoke('get-rooms'); const room = rooms.find(r => r.id == rid);
+    if (!room) return showToast("Rom ikke funnet");
 
-    // FETCH FULL STUDENT LIST TO STORE IN CHART
+    const rawLayout = JSON.parse(room.layout_data || '[]');
+    if (!Array.isArray(rawLayout) || rawLayout.length === 0) return showToast("Rommet har ingen bord – legg til bord i Mine rom først");
+
     const cls = await ipcRenderer.invoke('get-class', cid);
     const studentList = cls.students.split('\n').filter(s => s.trim());
 
-    const layout = JSON.parse(room.layout_data).map(p => ({
-        ...p, student: null, color: 'bg-default', locked: false, groupId: null
+    const layout = rawLayout.map(p => ({
+        ...p,
+        type: p.type || 'single',
+        capacity: p.capacity ?? (DESK_TYPES[p.type || 'single']?.capacity ?? 1),
+        students: null,
+        student: null,
+        color: 'bg-default',
+        locked: false,
+        groupId: null
     }));
 
     currentChart = {
@@ -796,6 +1329,7 @@ async function createChart() {
     await generateSeating(false);
     renderSeating();
     navTo('view-seating-editor');
+    loadNormalToolbar();
 }
 
 async function editChart(id) {
@@ -805,14 +1339,29 @@ async function editChart(id) {
     const cls = await ipcRenderer.invoke('get-class', c.class_id);
     const studentList = cls.students.split('\n').filter(s => s.trim());
 
+    // Fetch room data to check designMode
+    let roomDesignMode = 'board-top';
+    if (c.room_id) {
+        const room = await ipcRenderer.invoke('get-room', c.room_id);
+        if (room) {
+            const roomLayout = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '{}'));
+            roomDesignMode = roomLayout.designMode || 'board-top';
+        }
+    }
+
     currentChart = {
-        id: c.id, classId: c.class_id, roomId: c.room_id, layout: JSON.parse(c.placements),
-        allStudents: studentList
+        id: c.id, 
+        classId: c.class_id, 
+        roomId: c.room_id, 
+        layout: JSON.parse(c.placements),
+        allStudents: studentList,
+        roomDesignMode: roomDesignMode  // Store for rendering
     };
     document.getElementById('editChartName').value = c.name;
     document.getElementById('editChartComment').value = c.comment;
     renderSeating();
     navTo('view-seating-editor');
+    loadNormalToolbar();
 }
 
 // NEW PERIOD LOGIC
@@ -867,20 +1416,24 @@ async function syncRoomLayout() {
 
             if (!room) return showToast("Finner ikke rommet");
 
-            const newLayoutBase = JSON.parse(room.layout_data);
+            const newLayoutBase = JSON.parse(room.layout_data || '[]');
 
             const newLayout = newLayoutBase.map((pos, i) => {
                 const oldSpot = currentChart.layout[i];
+                const deskType = pos.type || 'single';
+                const spec = DESK_TYPES[deskType];
+                const deskCapacity = pos.capacity ?? spec?.capacity ?? 1;
+                
                 return {
                     x: pos.x,
                     y: pos.y,
-                    type: pos.type || 'single',           // NEW: preserve desk type
-                    rotation: pos.rotation || 0,          // NEW: preserve rotation
-                    capacity: pos.capacity || 1,          // NEW: preserve capacity
-                    students: oldSpot ? oldSpot.students : [],  // NEW: preserve students array
-                    student: oldSpot ? oldSpot.student : null,  // Keep for backwards compat
+                    type: deskType,
+                    rotation: pos.rotation || 0,
+                    capacity: deskCapacity,
+                    students: oldSpot ? oldSpot.students : null,  // null for new desks
+                    student: oldSpot ? oldSpot.student : null,
                     color: oldSpot ? oldSpot.color : 'bg-default',
-                    locked: oldSpot ? oldSpot.locked : false,
+                    locked: false,  // Reset locked when syncing
                     groupId: oldSpot ? oldSpot.groupId : null
                 };
             });
@@ -899,30 +1452,94 @@ async function syncRoomLayout() {
 // --- MAKKERGRUPPER ---
 function toggleGroupMode() {
     isGroupMode = !isGroupMode;
-    const btn = document.getElementById('btnGroupMode');
-    const confirmBtn = document.getElementById('btnConfirmGroup');
-
+    const editorActions = document.querySelector('#view-seating-editor .editor-actions');
+    
     if (isGroupMode) {
-        btn.classList.add('btn-group-mode');
-        btn.innerText = "Avslutt gruppering";
-        confirmBtn.style.display = 'block';
-
+        // Switch to grouping mode UI
+        editorActions.classList.add('mode-grouping');
+        editorActions.innerHTML = `
+            <span class="mode-badge">Grupperingsmodus aktiv</span>
+            <button class="btn-action btn-secondary" onclick="resetGroups()">
+                <i class="fas fa-eraser"></i> Nullstill
+            </button>
+            <button class="btn-action btn-primary" onclick="confirmGrouping()">
+                <i class="fas fa-check"></i> Ferdig
+            </button>
+            <button class="btn-action btn-secondary" onclick="cancelGroupMode()">
+                <i class="fas fa-times"></i> Avbryt
+            </button>
+        `;
+        document.getElementById('btnConfirmGroup').style.display = 'block';
         selectedDesksForGroup = [];
         showToast("Klikk på bord + ENTER for å lage en gruppe");
-
-        // ENTER-LISTENER
         window.addEventListener('keydown', handleGroupEnter);
-
     } else {
-        btn.classList.remove('btn-group-mode');
-        btn.innerHTML = '<i class="fas fa-object-group"></i> Lag Grupper';
-        confirmBtn.style.display = 'none';
+        cancelGroupMode();
+    }
+}
 
-        window.removeEventListener('keydown', handleGroupEnter);
+function cancelGroupMode() {
+    isGroupMode = false;
+    selectedDesksForGroup = [];
+    document.getElementById('btnConfirmGroup').style.display = 'none';
+    window.removeEventListener('keydown', handleGroupEnter);
+    document.querySelectorAll('.selected-for-group').forEach(el => el.classList.remove('selected-for-group'));
+    
+    // Restore normal toolbar
+    const editorActions = document.querySelector('#view-seating-editor .editor-actions');
+    editorActions.classList.remove('mode-grouping');
+    loadNormalToolbar();
+    renderSeating();
+}
 
-        document.querySelectorAll('.selected-for-group').forEach(el => el.classList.remove('selected-for-group'));
+function confirmGrouping() {
+    if (selectedDesksForGroup.length > 0) {
+        groupCounter++;
+        selectedDesksForGroup.forEach(idx => {
+            currentChart.layout[idx].groupId = groupCounter;
+        });
         selectedDesksForGroup = [];
     }
+    cancelGroupMode();
+}
+
+function loadNormalToolbar() {
+    const editorActions = document.querySelector('#view-seating-editor .editor-actions');
+    editorActions.innerHTML = `
+        <div class="btn-group">
+            <button class="btn-action btn-secondary dropdown-toggle" onclick="toggleDropdown('toolsDropdown')">
+                <i class="fas fa-tools"></i> Verktøy
+            </button>
+            <div class="dropdown-menu" id="toolsDropdown">
+                <a onclick="showAddDeskModal()"><i class="fas fa-plus"></i> Legg til bord</a>
+                <a onclick="syncRoomLayout()"><i class="fas fa-sync-alt"></i> Oppdater fra rom</a>
+                <hr>
+                <a onclick="openPresentationWindow()"><i class="fas fa-desktop"></i> Fullskjermvisning</a>
+                <a onclick="toggleGroupMode()"><i class="fas fa-object-group"></i> Lag grupper</a>
+                <a onclick="startNewPeriod()"><i class="fas fa-code-branch"></i> Ny periode</a>
+            </div>
+        </div>
+        <button class="btn-action btn-accent btn-lg" onclick="generateSeating()">
+            <i class="fas fa-random"></i> Shuffle
+        </button>
+        <button class="btn-action btn-primary" onclick="saveChart()">
+            <i class="fas fa-save"></i> Lagre
+        </button>
+        <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+}
+
+function toggleDropdown(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+    
+    if (activeDropdown && activeDropdown !== dropdown) {
+        activeDropdown.classList.remove('show');
+    }
+    dropdown.classList.toggle('show');
+    activeDropdown = dropdown.classList.contains('show') ? dropdown : null;
 }
 
 // --- NY FUNKSJON: Nullstill alle grupper ---
@@ -936,6 +1553,178 @@ function resetGroups() {
         renderSeating();
         showToast("Alle grupper fjernet");
     });
+}
+
+// --- LEGG TIL BORD I SEATING EDITOR ---
+function showAddDeskModal() {
+    if (activeDropdown) {
+        activeDropdown.classList.remove('show');
+        activeDropdown = null;
+    }
+    
+    const types = Object.keys(DESK_TYPES);
+    const html = types.map(type => {
+        const spec = DESK_TYPES[type];
+        return `
+            <button class="desk-type-option" onclick="addDeskToSeating('${type}')">
+                <div class="desk-preview type-${type}">${spec.capacity}</div>
+                <span>${spec.name}</span>
+            </button>
+        `;
+    }).join('');
+    
+    openModal("Legg til bord", "", () => {});
+    const modalContent = document.querySelector('#customModal .modal-content');
+    modalContent.innerHTML = `
+        <div class="modal-title">Legg til bord</div>
+        <div class="desk-type-selector">
+            ${html}
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;">
+            <button class="btn-action btn-secondary" onclick="closeModal(false)">Avbryt</button>
+        </div>
+    `;
+    document.getElementById('customModal').style.display = 'flex';
+}
+
+function addDeskToSeating(type) {
+    if (!currentChart.layout) return;
+    
+    const spec = DESK_TYPES[type];
+    const position = findOptimalDeskPosition(currentChart.layout, type);
+    
+    const newDesk = {
+        x: position.x,
+        y: position.y,
+        type: type,
+        capacity: spec.capacity,
+        students: null,
+        student: null,
+        color: 'bg-default',
+        locked: false,
+        groupId: null,
+        rotation: 0
+    };
+    
+    currentChart.layout.push(newDesk);
+    closeModal(false);
+    
+    // Render først
+    renderSeating();
+    
+    // Deretter aktivere drag-mode med visuell feedback
+    const newDeskIdx = currentChart.layout.length - 1;
+    showToast(`${spec.name} lagt til - dra for å plassere`);
+    
+    // Highlight new desk
+    setTimeout(() => {
+        const deskElements = document.querySelectorAll('#seatingCanvas .desk');
+        if (deskElements[newDeskIdx]) {
+            const newDeskEl = deskElements[newDeskIdx];
+            newDeskEl.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.8)';
+            newDeskEl.style.border = '3px solid #3b82f6';
+            
+            // Enable dragging immediately
+            enableDeskDragging(newDeskEl, newDeskIdx);
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                newDeskEl.style.boxShadow = '';
+                newDeskEl.style.border = '';
+            }, 3000);
+        }
+    }, 100);
+}
+
+function enableDeskDragging(deskEl, idx) {
+    let isDragging = false;
+    let startX, startY, offsetX, offsetY;
+    
+    deskEl.style.cursor = 'move';
+    
+    deskEl.onmousedown = function(e) {
+        if (isGroupMode) return;
+        if (e.target.closest('.student-name-item') || e.target.closest('.bench-slot')) return;
+        
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        
+        const rect = deskEl.getBoundingClientRect();
+        const container = document.getElementById('seatingCanvas').getBoundingClientRect();
+        offsetX = startX - rect.left - container.left;
+        offsetY = startY - rect.top - container.top;
+        
+        deskEl.style.opacity = '0.7';
+        deskEl.style.zIndex = '1000';
+        
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            
+            const containerRect = document.getElementById('seatingCanvas').getBoundingClientRect();
+            let newX = e.clientX - containerRect.left - offsetX;
+            let newY = e.clientY - containerRect.top - offsetY;
+            
+            // Bounds checking
+            newX = Math.max(10, Math.min(newX, containerRect.width - 100));
+            newY = Math.max(60, Math.min(newY, containerRect.height - 70));
+            
+            deskEl.style.left = newX + 'px';
+            deskEl.style.top = newY + 'px';
+            
+            currentChart.layout[idx].x = Math.round(newX);
+            currentChart.layout[idx].y = Math.round(newY);
+        }
+        
+        function onMouseUp() {
+            if (!isDragging) return;
+            isDragging = false;
+            deskEl.style.opacity = '1';
+            deskEl.style.zIndex = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        
+        e.preventDefault();
+    };
+}
+
+function findOptimalDeskPosition(layout, deskType) {
+    const spec = DESK_TYPES[deskType];
+    const width = spec.width || 85;
+    const height = spec.height || 55;
+    
+    if (layout.length === 0) {
+        return { x: 100, y: 100 };
+    }
+    
+    // Find rightmost and bottommost positions
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    let avgY = 0;
+    
+    layout.forEach(desk => {
+        if (desk.x > maxX) maxX = desk.x;
+        if (desk.y > maxY) maxY = desk.y;
+        avgY += desk.y;
+    });
+    
+    avgY = Math.floor(avgY / layout.length);
+    
+    // Try to place to the right of rightmost desk
+    const newX = maxX + 100;
+    const newY = avgY;
+    
+    // Check if it fits in view (simple check)
+    if (newX > 800) {
+        // If too far right, place below
+        return { x: 100, y: maxY + 100 };
+    }
+    
+    return { x: newX, y: newY };
 }
 
 function handleGroupEnter(e) {
@@ -996,7 +1785,7 @@ function updateUnplacedDock() {
     const placedNames = [];
     currentChart.layout.forEach(desk => {
         if (desk.students && desk.students.length > 0) {
-            desk.students.forEach(s => placedNames.push(s.name || s));
+            desk.students.filter(s => s).forEach(s => placedNames.push(s.name || s));
         } else if (desk.student) {
             placedNames.push(desk.student.name);
         }
@@ -1035,12 +1824,13 @@ function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
     console.log('🎯 handleStudentSwap:', name, 'from', sourceDeskIdx, ':', sourceStudentPos, 'to', targetDeskIdx, ':', targetStudentPos);
 
     if (!name || !sourceDeskIdx || !sourceStudentPos) {
+        // This is a drop from unplaced dock or external source
         const targetDesk = currentChart.layout[targetDeskIdx];
         const capacity = targetDesk.capacity || 1;
         const currentStudents = targetDesk.students || [];
 
         if (currentStudents.length < capacity) {
-            const newStudent = { name: name, note: '', position: currentStudents.length };
+            const newStudent = { name: name, note: '', locked: false, position: currentStudents.length };
             targetDesk.students = targetDesk.students || [];
             targetDesk.students.push(newStudent);
             if (targetDesk.students.length === 1) {
@@ -1070,12 +1860,16 @@ function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
     const targetStudent = targetDesk.students && targetDesk.students[targetStudentPos];
 
     if (!draggedStudent || !targetStudent) return;
+    if (draggedStudent.locked || targetStudent.locked) {
+        showToast('Kan ikke bytte med låst elev');
+        return;
+    }
 
     console.log('🔄 Swapping:', draggedStudent.name, '↔', targetStudent.name);
 
     const tempName = draggedStudent.name;
     const tempNote = draggedStudent.note || '';
-    const targetOriginalName = targetStudent.name; // Save for toast
+    const targetOriginalName = targetStudent.name;
 
     draggedStudent.name = targetStudent.name;
     draggedStudent.note = targetStudent.note || '';
@@ -1094,14 +1888,117 @@ function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
     renderSeating();
 }
 
+function applyAutoScaling(deskElement, students, deskType) {
+    // Only apply to round tables with multiple students
+    if (!deskType.startsWith('round') || !students || students.length === 0) return;
+    
+    const validStudents = students.filter(s => s);
+    if (validStudents.length === 0) return;
+    
+    // Calculate average name length
+    const avgNameLength = validStudents.reduce((sum, s) => sum + (s.name || s).length, 0) / validStudents.length;
+    const studentCount = validStudents.length;
+    
+    // Base font sizes for different capacities
+    const baseFontSizes = {
+        round3: 0.7,
+        round4: 0.68,
+        round6: 0.65
+    };
+    
+    let fontSize = baseFontSizes[deskType] || 0.7;
+    
+    // PRIMARY: Scale based on average name length (longer names = smaller font)
+    // This is the most important factor
+    if (avgNameLength > 15) {
+        fontSize *= 0.70;
+    } else if (avgNameLength > 12) {
+        fontSize *= 0.80;
+    } else if (avgNameLength > 10) {
+        fontSize *= 0.85;
+    } else if (avgNameLength > 8) {
+        fontSize *= 0.90;
+    } else if (avgNameLength > 6) {
+        fontSize *= 0.95;
+    }
+    // Short names (≤6 chars) keep full size
+    
+    // SECONDARY: Minor adjustment based on student count
+    // Only reduce significantly if both many students AND long names
+    if (studentCount >= 6 && avgNameLength > 8) {
+        fontSize *= 0.90;
+    } else if (studentCount >= 5 && avgNameLength > 10) {
+        fontSize *= 0.92;
+    }
+    
+    // Apply minimum font size
+    fontSize = Math.max(fontSize, 0.45);
+    
+    // Apply to all student name items in this desk
+    const nameItems = deskElement.querySelectorAll('.student-name-item');
+    nameItems.forEach(item => {
+        item.style.fontSize = `${fontSize}rem`;
+    });
+}
+
 function renderSeating() {
+    hideBenchTooltip(); // Skjul tooltip før rendering
     const c = document.getElementById('seatingCanvas');
     c.innerHTML = '<div class="front-board">TAVLE</div>';
 
-    // START STANDARDVISNING HVIS AKTIV
-    applyDefaultFlip('seatingCanvas');
+    // Check if room is designed with board-bottom mode
+    const roomDesignMode = currentChart.roomDesignMode || 'board-top';
+    const board = c.querySelector('.front-board');
+    
+    if (roomDesignMode === 'board-bottom') {
+        // Native board-bottom mode: Place board at bottom
+        if (board) {
+            board.style.top = 'auto';
+            board.style.bottom = '10px';
+        }
+        // Don't use CSS flip transform for native board-bottom rooms
+    } else {
+        // Legacy board-top mode: Use defaultFlipped setting with CSS transform
+        applyDefaultFlip('seatingCanvas');
+    }
 
     currentChart.layout.forEach((desk, idx) => {
+        function showSeatingContextMenu(e, studentPos = null) {
+            e.preventDefault();
+            e.stopPropagation();
+            selectedSeatingDeskIdx = idx;
+            selectedStudentPos = studentPos;
+            const spot = currentChart.layout[idx];
+            const m = document.getElementById('seatingContextMenu');
+            
+            // Sjekk om det er en elev å låse
+            let hasStudent = false;
+            let isLocked = false;
+            if (studentPos !== null && spot.students?.[studentPos]) {
+                hasStudent = true;
+                isLocked = spot.students[studentPos].locked;
+            } else if (spot.students) {
+                const firstStudent = spot.students.find(s => s);
+                if (firstStudent) {
+                    hasStudent = true;
+                    isLocked = firstStudent.locked;
+                }
+            } else if (spot.student) {
+                hasStudent = true;
+                isLocked = spot.student.locked;
+            }
+            
+            // Oppdater meny-tekster
+            document.getElementById('ctxLockText').innerText = isLocked ? "Lås opp plassering" : "Lås plassering";
+            document.getElementById('ctxNoteAction').style.display = hasStudent ? 'block' : 'none';
+            document.getElementById('ctxLockAction').style.display = hasStudent ? 'block' : 'none';
+            
+            const ungroupItem = document.getElementById('ctxUngroupAction');
+            ungroupItem.style.display = spot.groupId ? 'block' : 'none';
+            m.style.display = 'block';
+            m.style.left = e.pageX + 'px';
+            m.style.top = e.pageY + 'px';
+        }
         const d = document.createElement('div');
         let colorClass = desk.color || 'bg-default';
 
@@ -1134,97 +2031,312 @@ function renderSeating() {
         // Render students - support both old (single) and new (array) formats
         const students = desk.students || (desk.student ? [desk.student] : []);
 
-        if (students.length > 0) {
-            if (students.length === 1 && deskType === 'single') {
-                // Single student on single desk - show name (large)
-                const nameSpan = document.createElement('span');
-                const studentData = students[0];
-                const studentName = studentData.name || studentData;
-                nameSpan.innerText = studentName;
-                if (studentName.length > 10) nameSpan.style.fontSize = '0.75rem';
-                if (studentName.length > 15) nameSpan.style.fontSize = '0.65rem';
-                if (studentName.length > 20) nameSpan.style.fontSize = '0.55rem';
+        const capacity = desk.capacity || (DESK_TYPES[deskType] && DESK_TYPES[deskType].capacity) || 1;
 
-                // Make single student name draggable
-                nameSpan.draggable = true;
-                nameSpan.style.cursor = 'grab';
-                nameSpan.onmousedown = (e) => e.stopPropagation();
-                nameSpan.ondragstart = (e) => {
+        if (students[0] && deskType === 'single') {
+            // Single desk: hele bordet er draggable (treff hvorsomhelst)
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'student-name-single';
+            const studentData = students[0];
+            const studentName = studentData.name || studentData;
+            const isLocked = !!studentData.locked;
+            nameSpan.innerText = studentName;
+            if (studentName.length > 10) nameSpan.style.fontSize = '0.75rem';
+            if (studentName.length > 15) nameSpan.style.fontSize = '0.65rem';
+            if (studentName.length > 20) nameSpan.style.fontSize = '0.55rem';
+
+            // Tillat høyreklikk på navnet for notat, men ikke venstreklikk (for drag)
+            nameSpan.style.cursor = isLocked ? 'default' : 'grab';
+            nameSpan.style.pointerEvents = isGroupMode ? 'none' : 'auto';
+            nameSpan.onmousedown = (e) => {
+                if (isGroupMode) return; // La klikk gå til desk
+                if (e.button === 0) { // Venstreklikk - la det gå til desk for drag
+                    if (!isLocked) e.stopPropagation();
+                }
+            };
+            nameSpan.oncontextmenu = (e) => showSeatingContextMenu(e, 0);
+            d.appendChild(nameSpan);
+
+            if (studentData.note) {
+                d.innerHTML += `<i class="fas fa-sticky-note note-icon"></i>`;
+            }
+            if (isLocked) {
+                d.innerHTML += `<i class="fas fa-lock lock-icon" style="top:2px; right:3px; left:auto;"></i>`;
+            }
+
+            // Hele bordet draggable – treff hvorsomhelst (kun hvis ikke låst)
+            if (!isLocked) {
+                d.draggable = true;
+                d.style.cursor = 'grab';
+                d.onmousedown = (e) => {
+                    if (isGroupMode) { handleDeskClick(d, idx); return; }
+                    if (e.target === nameSpan) return; // La nameSpan håndtere sin own mousedown
                     e.stopPropagation();
+                };
+                d.ondragstart = (e) => {
+                    if (isGroupMode) return;
+                    d.classList.add('drag-source');
                     nameSpan.style.opacity = '0.5';
                     e.dataTransfer.setData('text/plain', studentName);
                     e.dataTransfer.setData('source-desk-idx', idx.toString());
                     e.dataTransfer.setData('source-student-pos', '0');
                 };
-                nameSpan.ondragend = () => nameSpan.style.opacity = '1';
-                nameSpan.ondragover = (e) => { e.preventDefault(); e.stopPropagation(); nameSpan.style.background = 'rgba(14, 165, 233, 0.3)'; };
-                nameSpan.ondragleave = () => nameSpan.style.background = '';
-                nameSpan.ondrop = (e) => { e.preventDefault(); e.stopPropagation(); nameSpan.style.background = ''; handleStudentSwap(e, idx, 0); };
-
-                d.appendChild(nameSpan);
-
-                if (studentData.note) {
-                    d.innerHTML += `<i class="fas fa-sticky-note note-icon"></i>`;
-                }
+                d.ondragend = () => { d.classList.remove('drag-source'); nameSpan.style.opacity = '1'; };
             } else {
-                // Multiple students - show names in compact list
+                d.style.cursor = 'default';
+                d.ondblclick = () => showToast('Eleven er låst og kan ikke flyttes');
+            }
+        } else if (deskType === 'single' && !students[0]) {
+            const slotDiv = document.createElement('div');
+            slotDiv.className = 'bench-slot bench-slot-empty';
+            slotDiv.innerHTML = '<span class="bench-slot-hint">+</span>';
+            slotDiv.style.display = 'flex';
+            slotDiv.style.alignItems = 'center';
+            slotDiv.style.justifyContent = 'center';
+            slotDiv.style.minHeight = '100%';
+            slotDiv.ondragover = (e) => { e.preventDefault(); slotDiv.classList.add('drop-target-active'); };
+            slotDiv.ondragleave = () => slotDiv.classList.remove('drop-target-active');
+            slotDiv.ondrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                slotDiv.classList.remove('drop-target-active');
+                const name = e.dataTransfer.getData("text/plain");
+                if (!name) return;
+                const sourceDeskIdx = e.dataTransfer.getData("source-desk-idx");
+                const sourceStudentPos = e.dataTransfer.getData("source-student-pos");
+                if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
+                    const srcIdx = parseInt(sourceDeskIdx);
+                    const srcPos = parseInt(sourceStudentPos);
+                    const srcDesk = currentChart.layout[srcIdx];
+                    if (srcDesk?.students?.[srcPos]?.locked) return;
+                }
+                // Get student data from source if available
+                let studentData = null;
+                if (sourceDeskIdx && sourceStudentPos) {
+                    const srcIdx = parseInt(sourceDeskIdx);
+                    const srcPos = parseInt(sourceStudentPos);
+                    if (srcIdx !== idx && currentChart.layout[srcIdx]) {
+                        const srcDesk = currentChart.layout[srcIdx];
+                        studentData = srcDesk?.students?.[srcPos];
+                    }
+                }
+                
+                const newStudent = studentData 
+                    ? { ...studentData, position: 0 }
+                    : { name: name, note: '', locked: false, position: 0 };
+                desk.students = [newStudent];
+                desk.student = newStudent;
+                desk.capacity = 1;
+                if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
+                    const srcIdx = parseInt(sourceDeskIdx);
+                    const srcPos = parseInt(sourceStudentPos);
+                    if (srcIdx !== idx && currentChart.layout[srcIdx]) {
+                        const srcDesk = currentChart.layout[srcIdx];
+                        if (srcDesk.students?.[srcPos]) {
+                            // For single desks, clear the array; for multi-student desks, set to null
+                            if (srcDesk.type === 'single') {
+                                srcDesk.students = [null];
+                                srcDesk.student = null;
+                            } else {
+                                srcDesk.students[srcPos] = null;
+                                const firstStudent = srcDesk.students.find(s => s);
+                                srcDesk.student = firstStudent || null;
+                            }
+                        }
+                    }
+                }
+                renderSeating();
+            };
+            // Ingen kontekstmeny på tomme slots
+            d.appendChild(slotDiv);
+        } else if (deskType === 'bench2' || deskType === 'bench4' || deskType === 'round3' || deskType === 'round4' || deskType === 'round6') {
+                // Sluker for bench og round – tomme som "+"-drop-soner
                 const nameContainer = document.createElement('div');
                 nameContainer.className = 'student-names-list';
-
+                const slots = capacity;
+                for (let pos = 0; pos < slots; pos++) {
+                    const slotDiv = document.createElement('div');
+                    slotDiv.className = 'bench-slot';
+                    slotDiv.dataset.slot = pos.toString();
+                    const student = students[pos];
+                    if (student) {
+                        const studentName = student.name || student;
+                        const nameDiv = document.createElement('div');
+                        nameDiv.className = 'student-name-item';
+                        
+                        // Create text node for name
+                        const nameSpan = document.createElement('span');
+                        nameSpan.className = 'student-name-text';
+                        nameSpan.textContent = studentName;
+                        nameDiv.appendChild(nameSpan);
+                        
+                        nameDiv.title = studentName; // Tooltip for full name
+                        const isLocked = !!student.locked;
+                        nameDiv.draggable = !isLocked;
+                        nameDiv.style.cursor = isLocked ? 'default' : 'grab';
+                        nameDiv.style.pointerEvents = isGroupMode ? 'none' : 'auto';
+                        nameDiv.onmousedown = (e) => { 
+                            if (isGroupMode) return; // La klikk gå til desk
+                            e.stopPropagation(); 
+                        };
+                        nameDiv.ondragstart = (e) => {
+                            if (isLocked) { 
+                                e.preventDefault(); 
+                                showToast('Eleven er låst og kan ikke flyttes');
+                                return; 
+                            }
+                            e.stopPropagation();
+                            d.classList.add('drag-source');
+                            nameDiv.style.opacity = '0.5';
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData("text/plain", studentName);
+                            e.dataTransfer.setData("source-desk-idx", idx.toString());
+                            e.dataTransfer.setData("source-student-pos", pos.toString());
+                        };
+                        nameDiv.ondragend = () => { d.classList.remove('drag-source'); nameDiv.style.opacity = '1'; };
+                        nameDiv.ondragover = (e) => { e.preventDefault(); if (!isLocked) nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; };
+                        nameDiv.ondragleave = () => { nameDiv.style.background = ''; };
+                        nameDiv.ondrop = (e) => { e.preventDefault(); nameDiv.style.background = ''; handleStudentSwap(e, idx, pos); };
+                        nameDiv.oncontextmenu = (ev) => showSeatingContextMenu(ev, pos);
+                        
+                        // Create icon container
+                        const iconContainer = document.createElement('div');
+                        iconContainer.className = 'student-icons';
+                        iconContainer.style.display = 'inline-flex';
+                        iconContainer.style.gap = '2px';
+                        iconContainer.style.marginLeft = '3px';
+                        iconContainer.style.pointerEvents = 'none';
+                        
+                        if (student.note) {
+                            const noteIcon = document.createElement('i');
+                            noteIcon.className = 'fas fa-sticky-note';
+                            noteIcon.style.fontSize = '0.5rem';
+                            noteIcon.style.color = '#fcd34d';
+                            iconContainer.appendChild(noteIcon);
+                        }
+                        if (isLocked) {
+                            const lockIcon = document.createElement('i');
+                            lockIcon.className = 'fas fa-lock';
+                            lockIcon.style.fontSize = '0.5rem';
+                            lockIcon.style.color = '#fbbf24';
+                            iconContainer.appendChild(lockIcon);
+                        }
+                        
+                        if (iconContainer.children.length > 0) {
+                            nameDiv.appendChild(iconContainer);
+                        }
+                        
+                        slotDiv.appendChild(nameDiv);
+                    } else {
+                        slotDiv.classList.add('bench-slot-empty');
+                        slotDiv.innerHTML = '<span class="bench-slot-hint">+</span>';
+                        slotDiv.ondragover = (e) => { e.preventDefault(); slotDiv.classList.add('drop-target-active'); };
+                        slotDiv.ondragleave = () => slotDiv.classList.remove('drop-target-active');
+                        slotDiv.ondrop = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            slotDiv.classList.remove('drop-target-active');
+                            const name = e.dataTransfer.getData("text/plain");
+                            const sourceDeskIdx = e.dataTransfer.getData("source-desk-idx");
+                            const sourceStudentPos = e.dataTransfer.getData("source-student-pos");
+                            if (!name) return;
+                            if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
+                                const srcIdx = parseInt(sourceDeskIdx);
+                                const srcPos = parseInt(sourceStudentPos);
+                                const srcDesk = currentChart.layout[srcIdx];
+                                const srcStudent = srcDesk?.students?.[srcPos];
+                                if (srcStudent?.locked) {
+                                    showToast('Eleven er låst og kan ikke flyttes');
+                                    return;
+                                }
+                            }
+                            const spec = DESK_TYPES[deskType];
+                            const maxSlots = desk.capacity || spec?.capacity || capacity;
+                            desk.students = desk.students || Array(maxSlots).fill(null);
+                            
+                            // Get student data from source if available
+                            let studentData = null;
+                            if (sourceDeskIdx && sourceStudentPos) {
+                                const srcIdx = parseInt(sourceDeskIdx);
+                                const srcPos = parseInt(sourceStudentPos);
+                                if (srcIdx !== idx && currentChart.layout[srcIdx]) {
+                                    const srcDesk = currentChart.layout[srcIdx];
+                                    studentData = srcDesk?.students?.[srcPos];
+                                }
+                            }
+                            
+                            const newStudent = studentData 
+                                ? { ...studentData, position: pos }
+                                : { name: name, note: '', locked: false, position: pos };
+                            desk.students[pos] = newStudent;
+                            const firstStudent = desk.students.find(s => s);
+                            if (firstStudent) desk.student = firstStudent;
+                            if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
+                                const srcIdx = parseInt(sourceDeskIdx);
+                                const srcPos = parseInt(sourceStudentPos);
+                                if (srcIdx !== idx && currentChart.layout[srcIdx]) {
+                                    const srcDesk = currentChart.layout[srcIdx];
+                                    if (srcDesk.students?.[srcPos]) {
+                                        // For single desks, clear the array; for multi-student desks, set to null
+                                        if (srcDesk.type === 'single') {
+                                            srcDesk.students = [null];
+                                            srcDesk.student = null;
+                                        } else {
+                                            srcDesk.students[srcPos] = null;
+                                            const firstStudent = srcDesk.students.find(s => s);
+                                            srcDesk.student = firstStudent || null;
+                                        }
+                                    }
+                                }
+                            }
+                            renderSeating();
+                        };
+                        // Ingen kontekstmeny på tomme slots
+                    }
+                    nameContainer.appendChild(slotDiv);
+                }
+                d.appendChild(nameContainer);
+                
+                // Auto-scale font size based on student count and name lengths
+                applyAutoScaling(d, students, deskType);
+        } else if (students.length > 0) {
+                // Vanlige bord (single med flere – uvanlig, men fallback)
+                const nameContainer = document.createElement('div');
+                nameContainer.className = 'student-names-list';
                 students.forEach((student, pos) => {
+                    if (!student) return;
                     const nameDiv = document.createElement('div');
                     nameDiv.className = 'student-name-item';
                     const studentName = student.name || student;
+                    const isLocked = !!student.locked;
                     nameDiv.textContent = studentName;
-
-                    // Make each name draggable
-                    nameDiv.draggable = true;
-                    nameDiv.setAttribute('draggable', 'true');
-                    nameDiv.style.cursor = 'grab';
-                    nameDiv.style.userSelect = 'none';
-                    nameDiv.style.webkitUserSelect = 'none';
-
-                    // Prevent desk drag from activating
-                    nameDiv.onmousedown = (e) => {
-                        e.stopPropagation();
+                    nameDiv.title = studentName; // Tooltip for full name
+                    nameDiv.draggable = !isLocked;
+                    nameDiv.style.cursor = isLocked ? 'default' : 'grab';
+                    nameDiv.style.pointerEvents = isGroupMode ? 'none' : 'auto';
+                    nameDiv.onmousedown = (e) => { 
+                        if (isGroupMode) return; // La klikk gå til desk
+                        e.stopPropagation(); 
                     };
-
                     nameDiv.ondragstart = (e) => {
+                        if (isLocked) { 
+                            e.preventDefault(); 
+                            showToast('Eleven er låst og kan ikke flyttes');
+                            return; 
+                        }
                         e.stopPropagation();
-                        console.log('🎯 Drag started:', studentName, 'from desk', idx, 'position', pos);
-                        nameDiv.style.cursor = 'grabbing';
+                        d.classList.add('drag-source');
                         nameDiv.style.opacity = '0.5';
                         e.dataTransfer.effectAllowed = 'move';
                         e.dataTransfer.setData("text/plain", studentName);
                         e.dataTransfer.setData("source-desk-idx", idx.toString());
                         e.dataTransfer.setData("source-student-pos", pos.toString());
                     };
-
-                    nameDiv.ondragend = () => {
-                        console.log('✅ Drag ended');
-                        nameDiv.style.cursor = 'grab';
-                        nameDiv.style.opacity = '1';
-                    };
-
-                    // Add drop handler for precise swapping
-                    nameDiv.ondragover = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; // Highlight on hover
-                    };
-
-                    nameDiv.ondragleave = (e) => {
-                        nameDiv.style.background = '';
-                    };
-
-                    nameDiv.ondrop = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        nameDiv.style.background = '';
-                        handleStudentSwap(e, idx, pos);
-                    };
-
-                    // Add note indicator if student has notes
+                    nameDiv.ondragend = () => { d.classList.remove('drag-source'); nameDiv.style.opacity = '1'; };
+                    nameDiv.ondragover = (e) => { e.preventDefault(); nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; };
+                    nameDiv.ondragleave = () => { nameDiv.style.background = ''; };
+                    nameDiv.ondrop = (e) => { e.preventDefault(); nameDiv.style.background = ''; handleStudentSwap(e, idx, pos); };
+                    nameDiv.oncontextmenu = showSeatingContextMenu;
                     if (student.note) {
                         const noteIcon = document.createElement('i');
                         noteIcon.className = 'fas fa-sticky-note';
@@ -1234,13 +2346,19 @@ function renderSeating() {
                         noteIcon.style.pointerEvents = 'none';
                         nameDiv.appendChild(noteIcon);
                     }
-
+                    if (isLocked) {
+                        const lockIcon = document.createElement('i');
+                        lockIcon.className = 'fas fa-lock';
+                        lockIcon.style.marginLeft = '3px';
+                        lockIcon.style.fontSize = '0.5rem';
+                        lockIcon.style.color = '#fbbf24';
+                        lockIcon.style.pointerEvents = 'none';
+                        nameDiv.appendChild(lockIcon);
+                    }
                     nameContainer.appendChild(nameDiv);
                 });
-
                 d.appendChild(nameContainer);
             }
-        }
 
         // ENABLE DROP ON DESK
         d.ondragover = (e) => e.preventDefault();
@@ -1253,34 +2371,60 @@ function renderSeating() {
             if (name) {
                 // Check if desk has capacity
                 const capacity = desk.capacity || 1;
-                const currentStudents = desk.students || [];
+                const currentStudents = (desk.students || []).filter(s => s);
 
                 if (currentStudents.length < capacity) {
-                    // Remove from source desk if dragging between desks
+                    // Get student data from source desk if available
+                    let studentData = null;
                     if (sourceDeskIdx && sourceStudentPos) {
                         const srcIdx = parseInt(sourceDeskIdx);
                         const srcPos = parseInt(sourceStudentPos);
                         if (srcIdx !== idx && currentChart.layout[srcIdx]) {
                             const sourceDesk = currentChart.layout[srcIdx];
                             if (sourceDesk.students && sourceDesk.students[srcPos]) {
-                                sourceDesk.students.splice(srcPos, 1);
-                                if (sourceDesk.students.length === 0) {
+                                studentData = sourceDesk.students[srcPos]; // Preserve student object
+                                // For single desks, clear the array; for multi-student desks, set to null
+                                if (sourceDesk.type === 'single') {
+                                    sourceDesk.students = [null];
                                     sourceDesk.student = null;
                                 } else {
-                                    sourceDesk.student = sourceDesk.students[0];
+                                    sourceDesk.students[srcPos] = null;
+                                    const firstStudent = sourceDesk.students.find(s => s);
+                                    sourceDesk.student = firstStudent || null;
                                 }
                             }
                         }
                     }
 
-                    // Add student to desk
-                    const newStudent = { name: name, note: '', position: currentStudents.length };
-                    desk.students = desk.students || [];
-                    desk.students.push(newStudent);
+                    // Initialize students array with correct capacity
+                    // CRITICAL: Only reset array if it's empty or missing - NEVER overwrite existing students
+                    if (!desk.students) {
+                        desk.students = Array(capacity).fill(null);
+                    } else if (desk.students.length !== capacity) {
+                        // Array length mismatch - resize WITHOUT losing existing students
+                        const existingStudents = desk.students.filter(s => s);
+                        desk.students = Array(capacity).fill(null);
+                        // Restore existing students to their positions
+                        existingStudents.forEach((student, i) => {
+                            if (i < capacity && student.position !== undefined && student.position < capacity) {
+                                desk.students[student.position] = student;
+                            } else if (i < capacity) {
+                                desk.students[i] = student;
+                            }
+                        });
+                    }
 
-                    // Update backwards compat field
-                    if (desk.students.length === 1) {
-                        desk.student = newStudent;
+                    // Find first available slot
+                    const firstEmptySlot = desk.students.findIndex(s => !s);
+                    if (firstEmptySlot !== -1) {
+                        const newStudent = studentData 
+                            ? { ...studentData, position: firstEmptySlot }
+                            : { name: name, note: '', locked: false, position: firstEmptySlot };
+                        desk.students[firstEmptySlot] = newStudent;
+
+                        // Update backwards compat field
+                        const firstStudent = desk.students.find(s => s);
+                        desk.student = firstStudent || null;
                     }
 
                     renderSeating();
@@ -1302,23 +2446,46 @@ function renderSeating() {
                             // Get the student being dragged
                             const draggedStudent = sourceDesk.students && sourceDesk.students[srcPos];
                             if (!draggedStudent) return;
+                            if (draggedStudent.locked) return;
 
-                            // Get the last student from target desk (the one being replaced)
-                            const replacedStudent = desk.students[desk.students.length - 1];
+                            // Find the last occupied slot in target desk
+                            let lastOccupiedIdx = -1;
+                            for (let i = desk.students.length - 1; i >= 0; i--) {
+                                if (desk.students[i]) {
+                                    lastOccupiedIdx = i;
+                                    break;
+                                }
+                            }
+
+                            if (lastOccupiedIdx === -1) return; // No student to swap
+
+                            const replacedStudent = desk.students[lastOccupiedIdx];
+                            if (replacedStudent?.locked) {
+                                showToast('Kan ikke bytte med låst elev');
+                                return;
+                            }
 
                             console.log('🔄 Swapping:', draggedStudent.name, '↔', replacedStudent.name);
 
-                            // Remove dragged student from source
-                            sourceDesk.students.splice(srcPos, 1);
+                            // Remove dragged student from source (set to null, not splice)
+                            if (sourceDesk.type === 'single') {
+                                sourceDesk.students = [null];
+                            } else {
+                                sourceDesk.students[srcPos] = null;
+                            }
 
-                            // Remove replaced student from target
-                            desk.students.pop();
+                            // Place dragged student in target slot
+                            desk.students[lastOccupiedIdx] = { ...draggedStudent, position: lastOccupiedIdx };
 
-                            // Add dragged student to target
-                            desk.students.push({ name: draggedStudent.name, note: draggedStudent.note || '', position: desk.students.length });
-
-                            // Add replaced student to source
-                            sourceDesk.students.push({ name: replacedStudent.name, note: replacedStudent.note || '', position: sourceDesk.students.length });
+                            // Find first empty slot in source desk for replaced student
+                            const srcCapacity = sourceDesk.capacity || 1;
+                            if (!sourceDesk.students || sourceDesk.students.length !== srcCapacity) {
+                                sourceDesk.students = Array(srcCapacity).fill(null);
+                            }
+                            const firstEmptyInSource = sourceDesk.students.findIndex(s => !s);
+                            if (firstEmptyInSource !== -1) {
+                                sourceDesk.students[firstEmptyInSource] = { ...replacedStudent, position: firstEmptyInSource };
+                            }
 
                             // Update backwards compat fields
                             if (desk.students.length === 1) {
@@ -1345,75 +2512,27 @@ function renderSeating() {
                 handleDeskClick(d, idx);
                 return;
             }
-
-            // Don't drag whole desk if it has multiple students - let individual names be dragged
-            if (students.length > 1) {
-                return;
-            }
-
-            if (e.button !== 0) return; e.stopPropagation();
-            e.preventDefault();
-
-            if (desk.locked) return showToast("Plassen er låst");
-
-            d.classList.add('drag-origin');
-
-            const ghost = d.cloneNode(true);
-            ghost.classList.remove('drag-origin');
-            ghost.style.position = 'fixed'; ghost.style.zIndex = 999;
-            ghost.style.opacity = 0.8; ghost.style.pointerEvents = 'none';
-            document.body.append(ghost);
-
-            function move(ev) {
-                requestAnimationFrame(() => {
-                    ghost.style.left = ev.clientX - 40 + 'px';
-                    ghost.style.top = ev.clientY - 25 + 'px';
-                });
-            }
-
-            function drop(ev) {
-                window.removeEventListener('mousemove', move);
-                window.removeEventListener('mouseup', drop);
-                ghost.remove();
-                d.classList.remove('drag-origin');
-
-                const elem = document.elementFromPoint(ev.clientX, ev.clientY);
-                const target = elem ? elem.closest('.desk') : null;
-
-                if (target && target !== d) {
-                    const targetIdx = currentChart.layout.findIndex(s => s.x == parseInt(target.style.left) && s.y == parseInt(target.style.top));
-                    if (targetIdx !== -1) {
-                        if (currentChart.layout[targetIdx].locked) {
-                            showToast("Målplassen er låst");
-                        } else {
-                            const tempS = currentChart.layout[idx].student;
-                            const tempC = currentChart.layout[idx].color;
-                            currentChart.layout[idx].student = currentChart.layout[targetIdx].student;
-                            currentChart.layout[idx].color = currentChart.layout[targetIdx].color;
-                            currentChart.layout[idx].student = currentChart.layout[targetIdx].student;
-                            currentChart.layout[targetIdx].student = tempS;
-                            currentChart.layout[targetIdx].color = tempC;
-                            renderSeating();
-                        }
-                    }
-                }
-            }
-            window.addEventListener('mousemove', move);
-            window.addEventListener('mouseup', drop);
         };
 
         d.oncontextmenu = (e) => {
-            e.preventDefault(); e.stopPropagation();
-            selectedSeatingDeskIdx = idx;
-
-            const m = document.getElementById('seatingContextMenu');
-            document.getElementById('ctxLockText').innerText = spot.locked ? "Lås opp" : "Lås plass";
-
-            const ungroupItem = document.getElementById('ctxUngroupAction');
-            ungroupItem.style.display = spot.groupId ? 'block' : 'none';
-
-            m.style.display = 'block'; m.style.left = e.pageX + 'px'; m.style.top = e.pageY + 'px';
+            // Kun vis meny hvis det ikke er et spesifikt student-element
+            if (!e.target.closest('.student-name-item') && !e.target.closest('.bench-slot')) {
+                showSeatingContextMenu(e);
+            }
         };
+
+        if (deskType === 'bench2' || deskType === 'bench4' || deskType === 'round3' || deskType === 'round4' || deskType === 'round6') {
+            // Dynamically fetch names when hovering instead of caching at render time
+            d.addEventListener('mouseenter', () => {
+                const currentDesk = currentChart.layout[idx];
+                const currentStudents = currentDesk.students || [];
+                const names = currentStudents.filter(s => s).map(s => s.name || s);
+                if (names.length > 0) {
+                    showBenchTooltip(d, names);
+                }
+            });
+            d.addEventListener('mouseleave', hideBenchTooltip);
+        }
         c.appendChild(d);
     });
 
@@ -1425,16 +2544,29 @@ async function generateSeating(keepLocked = true) {
     const cls = await ipcRenderer.invoke('get-class', currentChart.classId);
     let allNames = cls.students.split('\n').filter(s => s.trim());
 
+    // Build a map of existing student data (notes, locked status)
+    const studentDataMap = new Map();
+    currentChart.layout.forEach(desk => {
+        if (desk.students) {
+            desk.students.forEach(s => {
+                if (s && s.name) {
+                    studentDataMap.set(s.name, { note: s.note || '', locked: !!s.locked });
+                }
+            });
+        } else if (desk.student && desk.student.name) {
+            studentDataMap.set(desk.student.name, { note: desk.student.note || '', locked: !!desk.student.locked });
+        }
+    });
+
     const lockedStudents = [];
     if (keepLocked) {
         currentChart.layout.forEach(desk => {
-            // Support both old (single student) and new (students array) format
-            if (desk.locked) {
-                if (desk.students && desk.students.length > 0) {
-                    desk.students.forEach(s => lockedStudents.push(s.name));
-                } else if (desk.student) {
-                    lockedStudents.push(desk.student.name);
-                }
+            if (desk.students) {
+                desk.students.forEach(s => {
+                    if (s && s.locked) lockedStudents.push(s.name);
+                });
+            } else if (desk.student && desk.student.locked) {
+                lockedStudents.push(desk.student.name);
             }
         });
     }
@@ -1444,30 +2576,30 @@ async function generateSeating(keepLocked = true) {
 
     let studentIndex = 0;
     currentChart.layout.forEach(desk => {
-        if (keepLocked && desk.locked) return;
+        const spec = DESK_TYPES[desk.type || 'single'];
+        const capacity = desk.capacity || spec?.capacity || 1;
+        const oldStudents = desk.students ? [...desk.students] : [];
 
-        // Initialize students array
-        desk.students = [];
-        const capacity = desk.capacity || 1;
-
-        // Fill desk up to capacity
-        for (let i = 0; i < capacity && studentIndex < availableStudents.length; i++) {
-            desk.students.push({
-                name: availableStudents[studentIndex],
-                note: '',
-                position: i
-            });
-            studentIndex++;
+        desk.students = Array(capacity).fill(null);
+        for (let pos = 0; pos < capacity; pos++) {
+            const oldStudent = oldStudents[pos];
+            if (oldStudent && oldStudent.locked) {
+                desk.students[pos] = oldStudent;
+            } else if (studentIndex < availableStudents.length) {
+                const studentName = availableStudents[studentIndex++];
+                const existingData = studentDataMap.get(studentName);
+                desk.students[pos] = { 
+                    name: studentName, 
+                    note: existingData?.note || '', 
+                    locked: existingData?.locked || false,
+                    position: pos 
+                };
+            }
         }
 
-        // Maintain backwards compatibility with old student property
-        if (desk.students.length > 0) {
-            desk.student = desk.students[0]; // Keep first student for backwards compat
-        } else {
-            desk.student = null;
-        }
-
-        desk.color = 'bg-default';
+        const first = desk.students.find(s => s !== null);
+        desk.student = first || null;
+        // DON'T reset color on shuffle - keep existing colors
     });
 
     renderSeating();
@@ -1494,22 +2626,56 @@ async function openChartDisplay(id) {
     document.getElementById('printTitle').innerText = c.name;
     document.getElementById('printSubtitle').innerText = c.comment || '';
 
+    // Get room design mode
+    let designMode = 'board-top';
+    if (c.room_id) {
+        const room = await ipcRenderer.invoke('get-room', c.room_id);
+        if (room) {
+            const roomLayout = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '{}'));
+            designMode = roomLayout.designMode || 'board-top';
+        }
+    }
+
     const container = document.getElementById('displayCanvas');
     container.innerHTML = '<div class="front-board">TAVLE</div>';
 
-    // START STANDARDVISNING HVIS AKTIV
-    applyDefaultFlip('displayCanvas');
+    const board = container.querySelector('.front-board');
+    
+    // Check if room is designed with board-bottom mode
+    if (designMode === 'board-bottom') {
+        // Native board-bottom mode: Place board at bottom
+        if (board) {
+            board.classList.add('bottom');
+            board.style.top = 'auto';
+            board.style.bottom = '10px';
+        }
+        // Don't use CSS flip for native board-bottom rooms
+    } else {
+        // Legacy board-top mode: Use defaultFlipped setting
+        applyDefaultFlip('displayCanvas');
+    }
 
     // OPPDATER CURRENTCHART SLIK AT ZOOM FUNGERER FOR DENNE VISNINGEN OGSÅ
     currentChart.layout = JSON.parse(c.placements);
 
+    // Use DESK_TYPES for consistent sizing
+    const DESK_SPECS = {
+        single: { w: DESK_TYPES.single.width, h: DESK_TYPES.single.height },
+        round3: { w: DESK_TYPES.round3.width, h: DESK_TYPES.round3.height },
+        round4: { w: DESK_TYPES.round4.width, h: DESK_TYPES.round4.height },
+        round6: { w: DESK_TYPES.round6.width, h: DESK_TYPES.round6.height },
+        bench2: { w: DESK_TYPES.bench2.width, h: DESK_TYPES.bench2.height },
+        bench4: { w: DESK_TYPES.bench4.width, h: DESK_TYPES.bench4.height }
+    };
     JSON.parse(c.placements).forEach((spot, idx) => {
         const d = document.createElement('div');
         let colorClass = spot.color || 'bg-default';
+        const deskType = spot.type || 'single';
+        const spec = DESK_SPECS[deskType] || DESK_SPECS.single;
 
-        d.className = `desk ${colorClass}`;
+        d.className = `desk type-${deskType} ${colorClass}`;
         d.style.left = spot.x + 'px'; d.style.top = spot.y + 'px';
-        d.style.width = DESK_W + 'px'; d.style.height = DESK_H + 'px';
+        d.style.width = spec.w + 'px'; d.style.height = spec.h + 'px';
 
         d.innerHTML += `<span class="desk-number">${idx + 1}</span>`;
 
@@ -1518,46 +2684,125 @@ async function openChartDisplay(id) {
             d.style.borderColor = GROUP_COLORS[(spot.groupId - 1) % GROUP_COLORS.length];
         }
 
-        if (spot.student) {
+        const students = spot.students || (spot.student ? [spot.student] : []);
+        const capacity = spot.capacity || spec.capacity || 1;
+        
+        // Single desk rendering
+        if (deskType === 'single' && students[0]) {
+            const studentData = students[0];
             const nameSpan = document.createElement('span');
-            nameSpan.innerText = spot.student.name;
-
-            // AUTO TEXT SIZE LOGIC FOR DISPLAY TOO
-            if (spot.student.name.length > 10) nameSpan.style.fontSize = '0.75rem';
-            if (spot.student.name.length > 15) nameSpan.style.fontSize = '0.65rem';
-            if (spot.student.name.length > 20) nameSpan.style.fontSize = '0.55rem';
-
+            nameSpan.textContent = studentData.name || studentData;
+            nameSpan.style.fontWeight = '600';
             d.appendChild(nameSpan);
+        } 
+        // Multi-student desk rendering (bench/round)
+        else if (deskType === 'bench2' || deskType === 'bench4' || deskType === 'round3' || deskType === 'round4' || deskType === 'round6') {
+            const nameContainer = document.createElement('div');
+            nameContainer.className = 'student-names-list';
+            
+            for (let pos = 0; pos < capacity; pos++) {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'bench-slot';
+                const student = students[pos];
+                
+                if (student) {
+                    const studentName = student.name || student;
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'student-name-item';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'student-name-text';
+                    nameSpan.textContent = studentName;
+                    nameDiv.appendChild(nameSpan);
+                    
+                    slotDiv.appendChild(nameDiv);
+                } else {
+                    slotDiv.classList.add('bench-slot-empty');
+                    slotDiv.innerHTML = '<span class="bench-slot-hint">+</span>';
+                }
+                nameContainer.appendChild(slotDiv);
+            }
+            d.appendChild(nameContainer);
+            
+            // Apply autoscaling for round tables
+            if (deskType.startsWith('round')) {
+                applyAutoScaling(d, students, deskType);
+            }
         }
+        
         container.appendChild(d);
     });
 
     navTo('view-chart-display');
 }
-function flipView() { document.getElementById('displayCanvas').classList.toggle('flipped'); }
+function flipView() { 
+    document.getElementById('displayCanvas').classList.toggle('flipped');
+    // No need to adjust canvas here since displayCanvas is read-only view
+}
 function editStudentNote() {
     if (selectedSeatingDeskIdx === null) return;
 
     const placement = currentChart.layout[selectedSeatingDeskIdx];
-    if (!placement || !placement.student) return showToast("Ingen elev her");
+    let student = null;
+    if (selectedStudentPos !== null && placement?.students?.[selectedStudentPos]) {
+        student = placement.students[selectedStudentPos];
+    } else if (placement?.students) {
+        student = placement.students.find(s => s);
+    } else if (placement?.student) {
+        student = placement.student;
+    }
+    if (!placement || !student) return showToast("Ingen elev her");
 
-    // Åpne større modal med textarea
-    document.getElementById('noteStudentName').textContent = placement.student.name;
-    document.getElementById('noteTextarea').value = placement.student.note || '';
+    document.getElementById('noteStudentName').textContent = student.name || student;
+    document.getElementById('noteTextarea').value = student.note || '';
     document.getElementById('studentNoteModal').style.display = 'flex';
 
-    // Fokuser på textarea
     setTimeout(() => document.getElementById('noteTextarea').focus(), 100);
 }
 
 function saveStudentNote() {
     if (selectedSeatingDeskIdx === null) return;
 
+    const placement = currentChart.layout[selectedSeatingDeskIdx];
+    const student = selectedStudentPos !== null && placement?.students?.[selectedStudentPos]
+        ? placement.students[selectedStudentPos]
+        : placement?.students?.[0] || placement?.student;
+    if (!student) return;
+
     const note = document.getElementById('noteTextarea').value.trim();
-    currentChart.layout[selectedSeatingDeskIdx].student.note = note;
+    if (selectedStudentPos !== null && placement.students?.[selectedStudentPos]) {
+        placement.students[selectedStudentPos].note = note;
+    } else if (placement.students?.length) {
+        const firstStudent = placement.students.find(s => s);
+        if (firstStudent) firstStudent.note = note;
+    } else if (placement.student) {
+        placement.student.note = note;
+    }
     renderSeating();
     closeStudentNoteModal();
     showToast('Notat lagret');
+}
+
+function toggleStudentLock() {
+    if (selectedSeatingDeskIdx === null) return;
+    const desk = currentChart.layout[selectedSeatingDeskIdx];
+    
+    // Finn eleven som skal låses
+    let student = null;
+    if (selectedStudentPos !== null && desk?.students?.[selectedStudentPos]) {
+        student = desk.students[selectedStudentPos];
+    } else if (desk?.students) {
+        student = desk.students.find(s => s);
+    } else if (desk?.student) {
+        student = desk.student;
+    }
+    
+    if (!student) return;
+    
+    student.locked = !student.locked;
+    renderSeating();
+    document.getElementById('seatingContextMenu').style.display = 'none';
+    showToast(student.locked ? 'Plassering låst' : 'Plassering låst opp');
 }
 
 function closeStudentNoteModal() {
@@ -1567,14 +2812,17 @@ function closeStudentNoteModal() {
 function setDeskColor(c) {
     currentChart.layout[selectedSeatingDeskIdx].color = c; renderSeating(); document.getElementById('seatingContextMenu').style.display = 'none';
 }
-function toggleDeskLock() {
-    const s = currentChart.layout[selectedSeatingDeskIdx]; s.locked = !s.locked; renderSeating(); document.getElementById('seatingContextMenu').style.display = 'none';
-}
 
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.ctx-item')) {
         document.getElementById('deskContextMenu').style.display = 'none';
         document.getElementById('seatingContextMenu').style.display = 'none';
+    }
+    
+    // Close dropdown when clicking outside
+    if (!e.target.closest('.btn-group') && activeDropdown) {
+        activeDropdown.classList.remove('show');
+        activeDropdown = null;
     }
 });
 
@@ -1799,8 +3047,10 @@ async function wizardFinish() {
         const currentWeek = getWeekNumber(new Date());
 
         const chartLayout = layout.map(p => ({
-            x: p.x,
-            y: p.y,
+            ...p,
+            type: p.type || 'single',
+            capacity: p.capacity ?? 1,
+            students: null,
             student: null,
             color: 'bg-default',
             locked: false,
@@ -1822,11 +3072,12 @@ async function wizardFinish() {
         renderSeating();
 
         // Merk wizard som fullført
-        localStorage.setItem('onboardingCompleted', 'true');
+        await ipcRenderer.invoke('save-setting', 'onboardingCompleted', true);
 
         // Lukk wizard og naviger til editor
         document.getElementById('onboardingWizard').style.display = 'none';
         navTo('view-seating-editor');
+        loadNormalToolbar();
 
         showToast('🎉 Ditt første klassekart er klart!');
 
@@ -1836,9 +3087,9 @@ async function wizardFinish() {
     }
 }
 
-function closeWizard() {
+async function closeWizard() {
     document.getElementById('onboardingWizard').style.display = 'none';
-    localStorage.setItem('onboardingCompleted', 'true');
+    await ipcRenderer.invoke('save-setting', 'onboardingCompleted', true);
     navTo('view-charts-dashboard');
 }
 
