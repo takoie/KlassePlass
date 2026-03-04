@@ -333,7 +333,8 @@ async function deleteClass() {
 }
 
 async function addConstraint() {
-  if (!_activeClass) return;
+  console.log('[addConstraint] called, _activeClass=', _activeClass, 'portal=', document.getElementById('modal-portal'));
+  if (!_activeClass) { console.warn('[addConstraint] no active class'); return; }
   const names = _students.map(s => s.name);
 
   const backdrop = document.createElement('div');
@@ -366,7 +367,10 @@ async function addConstraint() {
       </div>
     </div>
   `;
-  getPortal().appendChild(backdrop);
+  const portal = getPortal();
+  console.log('[addConstraint] appending to portal:', portal, 'backdrop:', backdrop);
+  portal.appendChild(backdrop);
+  console.log('[addConstraint] backdrop appended, portal children:', portal.children.length, 'backdrop rect:', JSON.stringify(backdrop.getBoundingClientRect()));
 
   backdrop.querySelector('#c-cancel').addEventListener('click', () => backdrop.remove());
   backdrop.querySelector('#c-save').addEventListener('click', async () => {
