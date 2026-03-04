@@ -6,7 +6,7 @@
 
 import { renderDesks }        from '../shared/renderDesks.js';
 import { randomizeSeating }   from '../shared/randomize.js';
-import { DESK_COLORS }        from '../shared/constants.js';
+import { DESK_COLORS, CANVAS_W } from '../shared/constants.js';
 import { extractPairsFromLayout, showToast, getWeekNumber, getPortal } from '../shared/utils.js';
 import { showContextMenu }    from '../shared/contextMenu.js';
 import { buildChartFromParams, buildChartFromDb } from '../shared/chartHelpers.js';
@@ -150,8 +150,20 @@ function renderDecorations(canvas) {
   (_chart.decorations ?? []).forEach(deco => {
     const el = document.createElement('div');
     el.className = `decoration decoration-${deco.type}`;
-    el.style.cssText = `left:${deco.x}px;top:${deco.y}px;width:${deco.width}px;height:${deco.height}px;pointer-events:none;`;
-    if (deco.rotation) el.style.transform = `rotate(${deco.rotation}deg)`;
+
+    let x = deco.x, y = deco.y;
+    let rot = deco.rotation ?? 0;
+
+    if (_chart.flipForDisplay) {
+      // Mirror position relative to canvas dimensions
+      x = CANVAS_W - deco.x - deco.width;
+      y = _chart.roomHeight - deco.y - deco.height;
+      // Rotate decoration +180° to remain visually correct after canvas rotation
+      rot = (rot + 180) % 360;
+    }
+
+    el.style.cssText = `left:${x}px;top:${y}px;width:${deco.width}px;height:${deco.height}px;pointer-events:none;`;
+    el.style.transform = `rotate(${rot}deg)`;
     if (deco.type === 'label' && deco.label) el.textContent = deco.label;
     canvas.appendChild(el);
   });
