@@ -116,6 +116,7 @@ async function loadSettings() {
   document.getElementById('btn-theme-light')?.classList.toggle('active', currentTheme === 'light');
   const mode = currentTheme === 'light' ? 'light' : 'dark';
   const colorTheme = settings.colorTheme ?? (mode === 'light' ? 'nord' : 'night');
+  document.documentElement.dataset.theme = colorTheme;
   renderSwatches(mode, colorTheme);
 
   // Flip display
@@ -159,12 +160,11 @@ function renderSwatches(mode, activeThemeId) {
 }
 
 async function setColorTheme(themeId) {
-  await window.api.saveSettings({ colorTheme: themeId });
   const s = store.getState().settings;
-  const newSettings = { ...s, colorTheme: themeId };
-  store.setState({ settings: newSettings });
-  document.documentElement.dataset.theme = themeId;
   const mode = s.theme === 'light' ? 'light' : 'dark';
+  await window.api.saveSettings({ colorTheme: themeId });
+  store.setState({ settings: { ...s, colorTheme: themeId } });
+  document.documentElement.dataset.theme = themeId;
   renderSwatches(mode, themeId);
 }
 
@@ -270,13 +270,13 @@ async function setTheme(theme) {
   const isDark = theme !== 'light';
   const mode = isDark ? 'dark' : 'light';
   const defaultColorTheme = THEMES[mode][0].id;
+  const s = store.getState().settings;
 
   document.getElementById('btn-theme-dark')?.classList.toggle('active', isDark);
   document.getElementById('btn-theme-light')?.classList.toggle('active', !isDark);
   document.documentElement.dataset.theme = defaultColorTheme;
 
   await window.api.saveSettings({ theme, colorTheme: defaultColorTheme });
-  const s = store.getState().settings;
   store.setState({ settings: { ...s, theme, colorTheme: defaultColorTheme } });
   renderSwatches(mode, defaultColorTheme);
 }

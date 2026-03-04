@@ -196,7 +196,7 @@
 }
 
 .color-swatch.active {
-  border-color: oklch(var(--bc));
+  border-color: oklch(var(--bc)) !important;
   outline: 2px solid oklch(var(--p));
   outline-offset: 2px;
 }
