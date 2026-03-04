@@ -9,6 +9,7 @@ import { showToast, getPortal, createDesk, uid } from '../shared/utils.js';
 let _room = null;  // { id, name, desks, decorations, designMode, roomHeight }
 let _selectedIds = new Set();
 let _dragState = null;
+let _rotated = false;
 
 // Multi-select drag (selection box on canvas background)
 let _selBoxState = null;
@@ -45,16 +46,9 @@ const TEMPLATE = `
       </button>
     </div>
     <div class="toolbar-right">
-      <div class="design-mode-toggle">
-        <label class="toggle-label">
-          <input type="radio" name="design-mode" value="board-top" id="mode-board-top" checked>
-          <span>Tavle øverst</span>
-        </label>
-        <label class="toggle-label">
-          <input type="radio" name="design-mode" value="board-bottom" id="mode-board-bottom">
-          <span>Tavle nederst</span>
-        </label>
-      </div>
+      <button class="btn btn-ghost btn-sm" id="btn-rotate-room" title="Roter visning 180°">
+        <i class="fa-solid fa-rotate-180"></i> Roter visning
+      </button>
       <button class="btn btn-primary btn-sm" id="btn-room-save">
         <i class="fa-solid fa-floppy-disk"></i> Lagre
       </button>
@@ -82,6 +76,7 @@ export const roomEditorView = {
   },
   unmount() {
     _room = null; _selectedIds.clear(); _dragState = null; _selBoxState = null;
+    _rotated = false;
   },
 };
 
@@ -114,12 +109,14 @@ function render() {
   if (!canvas || !_room) return;
 
   canvas.style.minHeight = _room.roomHeight + 'px';
+  canvas.classList.toggle('canvas-rotated', _rotated);
 
   [...canvas.querySelectorAll('.room-desk, .decoration')].forEach(el => el.remove());
 
   const board = document.getElementById('room-front-board');
-  board?.classList.toggle('board-bottom', _room.designMode === 'board-bottom');
-  board?.classList.toggle('board-top',    _room.designMode !== 'board-bottom');
+  const boardVisuallyAtBottom = (_room.designMode === 'board-bottom') !== _rotated;
+  board?.classList.toggle('board-bottom', boardVisuallyAtBottom);
+  board?.classList.toggle('board-top', !boardVisuallyAtBottom);
 
   _room.desks.forEach(desk => canvas.appendChild(buildRoomDeskEl(desk)));
   _room.decorations.forEach(deco => canvas.appendChild(buildDecoEl(deco)));
@@ -148,7 +145,10 @@ function buildRoomDeskEl(desk) {
     e.stopPropagation();
     if (!e.shiftKey) _selectedIds.clear();
     _selectedIds.add(desk.id);
-    render();
+    // Use lightweight visual update instead of full render to avoid detaching elements mid-drag
+    document.querySelectorAll('.room-desk').forEach(d => {
+      d.classList.toggle('selected', _selectedIds.has(d.dataset.deskId));
+    });
   });
 
   return el;
@@ -223,22 +223,38 @@ function makeDeskDraggable(el, desk) {
     e.stopPropagation();
     const rect = el.parentElement.getBoundingClientRect();
 
-    // If the dragged desk isn't in the selection, make it the only selected
+    // If the dragged desk isn't in the selection, make it the only selected.
+    // Do NOT call render() here — it rebuilds the DOM and detaches el, making
+    // setPointerCapture throw InvalidStateError on the detached element.
     if (!_selectedIds.has(desk.id)) {
       _selectedIds.clear();
       _selectedIds.add(desk.id);
-      render();
+      // Visually mark selection without full re-render
+      document.querySelectorAll('.room-desk').forEach(d => {
+        d.classList.toggle('selected', _selectedIds.has(d.dataset.deskId));
+      });
     }
+
+    const canvasEl = el.parentElement;
+    const isRotated = canvasEl?.classList.contains('canvas-rotated');
 
     // Capture start offsets for ALL selected desks
     const offsets = {};
     _selectedIds.forEach(id => {
       const d = _room.desks.find(x => x.id === id);
-      if (d) offsets[id] = { dx: e.clientX - rect.left - d.x, dy: e.clientY - rect.top - d.y };
+      if (d) {
+        let localX = e.clientX - rect.left;
+        let localY = e.clientY - rect.top;
+        if (isRotated) {
+          localX = rect.width - localX;
+          localY = rect.height - localY;
+        }
+        offsets[id] = { dx: localX - d.x, dy: localY - d.y };
+      }
     });
 
     _dragState = { deskId: desk.id, offsets, isDeco: false };
-    el.setPointerCapture(e.pointerId);
+    try { el.setPointerCapture(e.pointerId); } catch (_) { /* pointer already released */ }
   });
 
   el.addEventListener('pointermove', e => {
@@ -247,8 +263,15 @@ function makeDeskDraggable(el, desk) {
 
     // Compute raw position for primary desk
     const off = _dragState.offsets[desk.id];
-    const rawX = e.clientX - rect.left - off.dx;
-    const rawY = e.clientY - rect.top  - off.dy;
+    let localX = e.clientX - rect.left;
+    let localY = e.clientY - rect.top;
+    const canvasEl = el.parentElement;
+    if (canvasEl?.classList.contains('canvas-rotated')) {
+      localX = rect.width - localX;
+      localY = rect.height - localY;
+    }
+    const rawX = localX - off.dx;
+    const rawY = localY - off.dy;
 
     // Snap primary desk
     const { x: snappedX, y: snappedY } = snapDesk(desk, rawX, rawY);
@@ -275,10 +298,17 @@ function makeDecoDraggable(el, deco) {
     e.preventDefault();
     e.stopPropagation();
     const rect = el.parentElement.getBoundingClientRect();
+    const isRotated = el.parentElement?.classList.contains('canvas-rotated');
+    let localX = e.clientX - rect.left;
+    let localY = e.clientY - rect.top;
+    if (isRotated) {
+      localX = rect.width - localX;
+      localY = rect.height - localY;
+    }
     _dragState = {
       isDeco: true, decoId: deco.id,
-      offsetX: e.clientX - rect.left - deco.x,
-      offsetY: e.clientY - rect.top  - deco.y,
+      offsetX: localX - deco.x,
+      offsetY: localY - deco.y,
     };
     el.setPointerCapture(e.pointerId);
   });
@@ -286,8 +316,14 @@ function makeDecoDraggable(el, deco) {
   el.addEventListener('pointermove', e => {
     if (!_dragState || !_dragState.isDeco || _dragState.decoId !== deco.id) return;
     const rect = el.parentElement.getBoundingClientRect();
-    const rawX = e.clientX - rect.left - _dragState.offsetX;
-    const rawY = e.clientY - rect.top  - _dragState.offsetY;
+    let localX = e.clientX - rect.left;
+    let localY = e.clientY - rect.top;
+    if (el.parentElement?.classList.contains('canvas-rotated')) {
+      localX = rect.width - localX;
+      localY = rect.height - localY;
+    }
+    const rawX = localX - _dragState.offsetX;
+    const rawY = localY - _dragState.offsetY;
     const { x, y } = snapDeco(rawX, rawY);
     deco.x = x; deco.y = y;
     el.style.left = x + 'px'; el.style.top = y + 'px';
@@ -547,11 +583,10 @@ function bindEvents() {
   document.getElementById('btn-room-save')?.addEventListener('click', saveRoom);
   document.getElementById('btn-auto-generate')?.addEventListener('click', autoGenerate);
 
-  // Design mode
-  document.querySelectorAll('input[name="design-mode"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      if (_room) { _room.designMode = radio.value; render(); }
-    });
+  document.getElementById('btn-rotate-room')?.addEventListener('click', (e) => {
+    _rotated = !_rotated;
+    e.currentTarget.classList.toggle('btn-active', _rotated);
+    render();
   });
 
   // Legg til bord
