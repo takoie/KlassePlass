@@ -1,0 +1,41 @@
+<!-- charts-dashboard.html — Oversikt over alle klassekart -->
+<div class="view-header">
+  <div>
+    <h1 class="view-title">Klassekart</h1>
+    <p class="view-subtitle">Oversikt over alle dine klassekart</p>
+  </div>
+  <button class="btn btn-accent" id="btn-new-chart">
+    <i class="fa-solid fa-plus"></i> Nytt klassekart
+  </button>
+</div>
+
+<!-- Filter bar -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <label class="filter-label">Klasse</label>
+    <select id="filter-class" class="filter-select">
+      <option value="">Alle klasser</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label class="filter-label">Sorter</label>
+    <select id="filter-sort" class="filter-select">
+      <option value="newest">Nyeste først</option>
+      <option value="oldest">Eldste først</option>
+      <option value="name">Alfabetisk</option>
+    </select>
+  </div>
+</div>
+
+<!-- Charts grid -->
+<div id="charts-grid" class="cards-grid"></div>
+
+<!-- Empty state (hidden when there are charts) -->
+<div id="charts-empty" class="empty-state hidden">
+  <i class="fa-solid fa-chalkboard"></i>
+  <h3>Ingen klassekart ennå</h3>
+  <p>Opprett ditt første klassekart for å komme i gang.</p>
+  <button class="btn btn-primary" id="btn-new-chart-empty">
+    <i class="fa-solid fa-plus"></i> Opprett klassekart
+  </button>
+</div>

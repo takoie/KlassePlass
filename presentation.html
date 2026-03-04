@@ -1,816 +1,121 @@
 <!DOCTYPE html>
 <html lang="no">
-
 <head>
-    <meta charset="UTF-8">
-    <title>KlassePlass Presentasjon</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <style>
-        :root {
-            --bg-app: #0f111a;
-            --text-main: #ffffff;
-        }
+  <meta charset="UTF-8">
+  <title>KlassePlass Presentasjon</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="src/styles/base.css">
+  <link rel="stylesheet" href="src/styles/desk-types.css">
+  <style>
+    body { background: var(--bg-app); overflow: hidden; }
 
-        html {
-            background: transparent;
-        }
+    .pres-toolbar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 48px;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 0 16px; gap: 8px;
+      z-index: 100;
+      transition: opacity 0.3s ease;
+    }
+    .pres-toolbar.hidden-toolbar { opacity: 0; pointer-events: none; }
+    body:hover .pres-toolbar.hidden-toolbar { opacity: 1; pointer-events: auto; }
 
-        body {
-            margin: 0;
-            background-color: transparent;
-            color: white;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            user-select: none;
-            padding: 0;
-        }
+    .canvas-outer {
+      width: 100vw;
+      height: calc(100vh - 48px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+    }
+    .pres-canvas {
+      position: relative;
+      transform-origin: top center;
+      background: var(--canvas-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
 
-        .window-wrapper {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-            background-color: var(--bg-app);
-            background-image: radial-gradient(#2d3748 1px, transparent 1px);
-            background-size: 30px 30px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            overflow: hidden;
-            position: relative;
-            box-sizing: border-box;
-        }
+    /* Større fonter i presentasjons-modus */
+    .pres-canvas .student-name { font-size: 13px; font-weight: 600; }
+    .pres-canvas .desk { font-size: 13px; }
 
-        .title-bar-drag-region {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 70px;
-            z-index: 50;
-            -webkit-app-region: drag;
-        }
+    /* High-contrast modus */
+    .high-contrast .desk         { background: #000 !important; border: 2px solid #fff !important; }
+    .high-contrast .student-name { color: #fff !important; font-size: 14px; }
+    .high-contrast .front-board  { background: #fff !important; color: #000 !important; }
 
-        #toolbar {
-            height: 70px;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-bottom: 1px solid #334155;
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            padding: 0 24px;
-            z-index: 100;
-            position: relative;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            gap: 16px;
-        }
-
-        .logo-container,
-        .center-controls,
-        .btn-close {
-            -webkit-app-region: no-drag;
-            position: relative;
-            z-index: 101;
-        }
-
-        .logo-container {
-            font-size: 1.3rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            font-style: italic;
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            justify-self: start;
-        }
-
-        .neon-blue {
-            color: #e0f2fe;
-            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
-        }
-
-        .neon-orange {
-            color: #fbbf24;
-            text-shadow: 0 0 15px #f59e0b, 0 0 25px #d97706;
-        }
-
-        .center-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-self: center;
-            flex-wrap: nowrap;
-        }
-        
-        .btn-close {
-            justify-self: end;
-        }
-
-        button {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #e2e8f0;
-            padding: 8px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            backdrop-filter: blur(10px);
-            white-space: nowrap;
-        }
-        
-        button i {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        button:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-
-        button:active {
-            transform: translateY(0);
-            box-shadow: none;
-        }
-
-        .btn-close {
-            background: rgba(220, 38, 38, 0.15);
-            border-color: rgba(220, 38, 38, 0.3);
-            color: #fca5a5;
-        }
-
-        .btn-close:hover {
-            background: rgba(220, 38, 38, 0.9);
-            border-color: #dc2626;
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
-        }
-        
-        .btn-close:active {
-            background: #b91c1c;
-        }
-
-        #viewport {
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-            cursor: grab;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-
-        #viewport:active {
-            cursor: grabbing;
-        }
-
-        #content {
-            position: absolute;
-            width: 920px;
-            height: 500px;
-            transform-origin: center center;
-            transition: transform 0.1s linear;
-        }
-
-        /* --- PULT DESIGN --- */
-        .desk {
-            position: absolute;
-            background: #2d3748;
-            border: 2px solid #64748b;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 700;
-            font-size: 14px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            box-sizing: border-box;
-            transition: transform 0.3s ease;
-            overflow: visible;
-            padding: 2px;
-        }
-        
-        /* Desk type sizes */
-        .desk.type-single {
-            width: 85px;
-            height: 55px;
-        }
-        
-        .desk.type-round3 {
-            width: 130px;
-            height: 130px;
-            border-radius: 50%;
-        }
-        
-        .desk.type-round4 {
-            width: 145px;
-            height: 145px;
-            border-radius: 50%;
-        }
-        
-        .desk.type-round6 {
-            width: 160px;
-            height: 160px;
-            border-radius: 50%;
-        }
-        
-        .desk.type-bench2 {
-            width: 170px;
-            height: 55px;
-        }
-        
-        .desk.type-bench4 {
-            width: 340px;
-            height: 55px;
-        }
-
-        /* Container for navnet */
-        .name-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* Frede området til tallet i bunn */
-            padding: 2px 2px 14px 2px;
-            box-sizing: border-box;
-        }
-
-        .name-span {
-            /* REGLER FOR TEKSTBRYTING */
-            white-space: normal;
-            /* Tillat linjeskift */
-            word-break: normal;
-            /* ALDRI bryt midt i ord */
-            overflow-wrap: normal;
-            /* ALDRI bryt midt i ord, selv ved overflow */
-
-            text-align: center;
-            line-height: 1.1;
-            display: block;
-            width: 100%;
-        }
-
-        /* Nummeret er absolutt posisjonert i hjørnet */
-        .desk-number {
-            position: absolute;
-            bottom: 3px;
-            left: 5px;
-            font-size: 0.6rem;
-            color: #94a3b8;
-            opacity: 0.8;
-            font-weight: 400;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .front-board {
-            width: 400px;
-            height: 30px;
-            background: #4a5568;
-            position: absolute;
-            top: 0;
-            left: 50%;
-            margin-left: -200px;
-            border-radius: 0 0 8px 8px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #cbd5e1;
-            letter-spacing: 2px;
-            font-size: 0.8rem;
-            transition: transform 0.3s ease;
-        }
-
-        /* FLIPP-LOGIKK */
-        .is-flipped .desk {
-            transform: rotate(-180deg);
-        }
-
-        .is-flipped .front-board {
-            transform: rotate(-180deg);
-        }
-
-        /* Multi-student layout */
-        .student-names-list {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            align-items: center;
-            justify-content: center;
-            width: 90%;
-            max-height: 90%;
-            padding: 4px 2px;
-        }
-        
-        .bench-slot {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2px 3px;
-            border-radius: 4px;
-            position: relative;
-        }
-        
-        .bench-slot-empty {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px dashed rgba(255, 255, 255, 0.2);
-        }
-        
-        .bench-slot-hint {
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.35);
-        }
-        
-        .student-name-item {
-            font-size: 0.75rem;
-            color: white;
-            font-weight: 600;
-            text-align: center;
-            line-height: 1.2;
-            white-space: normal;
-            word-break: break-word;
-            padding: 2px 3px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            gap: 2px;
-        }
-        
-        .student-name-text {
-            flex-shrink: 1;
-            min-width: 0;
-        }
-        
-        .student-icons {
-            flex-shrink: 0;
-            display: inline-flex;
-            gap: 2px;
-        }
-        
-        /* Bench2 layout */
-        .desk.type-bench2 .student-names-list {
-            flex-direction: row;
-            gap: 3px;
-            width: 100%;
-        }
-        
-        .desk.type-bench2 .bench-slot {
-            flex: 1;
-            min-width: 18px;
-        }
-        
-        .desk.type-bench2 .student-name-item {
-            font-size: 0.85rem;
-        }
-        
-        /* Bench4 layout */
-        .desk.type-bench4 .student-names-list {
-            flex-direction: row;
-            gap: 3px;
-            width: 100%;
-        }
-        
-        .desk.type-bench4 .bench-slot {
-            flex: 1;
-            min-width: 18px;
-        }
-        
-        .desk.type-bench4 .student-name-item {
-            font-size: 0.85rem;
-        }
-        
-        /* Round3/4 flex-wrap layout */
-        .desk.type-round3 .student-names-list,
-        .desk.type-round4 .student-names-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2px;
-            width: 95%;
-            height: 95%;
-        }
-        
-        .desk.type-round3 .bench-slot,
-        .desk.type-round4 .bench-slot {
-            flex: 1 1 auto;
-            min-width: 10px;
-            min-height: 14px;
-        }
-        
-        /* Round6 grid layout */
-        .desk.type-round6 .student-names-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: repeat(3, 1fr);
-            gap: 3px;
-            width: 85%;
-            height: 90%;
-            align-items: center;
-            justify-content: center;
-            place-items: center;
-        }
-        
-        .desk.type-round6 .bench-slot {
-            width: 100%;
-            max-width: 100%;
-            min-height: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1px 2px;
-        }
-        
-        .bg-default { background: #2d3748; border-color: #64748b; }
-        .bg-sand { background: #57534e; border-color: #78716c; }
-        .bg-terracotta { background: #9a3412; border-color: #c2410c; }
-        .bg-sage { background: #166534; border-color: #15803d; }
-        .bg-slate { background: #334155; border-color: #475569; }
-        .bg-amber { background: #92400e; border-color: #b45309; }
-        .bg-red { background: #7f1d1d; border-color: #991b1b; }
-        .bg-yellow { background: #78350f; border-color: #92400e; }
-        .bg-green { background: #064e3b; border-color: #065f46; }
-        .bg-blue { background: #1e3a8a; border-color: #1e40af; }
-        
-        /* High contrast mode */
-        body.high-contrast {
-            background: #000000;
-        }
-        
-        body.high-contrast .desk {
-            background: #ffffff !important;
-            border: 4px solid #000000 !important;
-            color: #000000 !important;
-        }
-        
-        body.high-contrast .student-name-item,
-        body.high-contrast .student-name-text {
-            color: #000000 !important;
-            font-weight: 700 !important;
-        }
-        
-        body.high-contrast .desk-number {
-            background: #000000 !important;
-            color: #ffffff !important;
-            font-weight: 700 !important;
-        }
-        
-        body.high-contrast .bench-slot-empty {
-            background: rgba(0, 0, 0, 0.1) !important;
-            border-color: #000000 !important;
-        }
-        
-        body.high-contrast .student-icons i {
-            color: #000000 !important;
-            text-shadow: none !important;
-        }
-        
-        /* Hide numbers class */
-        body.hide-numbers .desk-number {
-            display: none !important;
-        }
-        
-        /* Hide groups class */
-        body.hide-groups .desk {
-            border-width: 2px !important;
-            border-color: #64748b !important;
-        }
-        
-        body.high-contrast.hide-groups .desk {
-            border-color: #000000 !important;
-        }
-    </style>
+    /* Trekk-animasjon overlay */
+    #draw-overlay {
+      position: fixed; inset: 0;
+      background: var(--bg-overlay);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      pointer-events: none;
+    }
+    #draw-card {
+      background: var(--bg-card);
+      border: 2px solid var(--accent);
+      border-radius: 16px;
+      padding: 32px 48px;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      animation: cardPop 0.5s cubic-bezier(0.22,1,0.36,1);
+    }
+    @keyframes cardPop {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+  </style>
 </head>
-
-<body class="hide-numbers">
-
-    <div class="window-wrapper">
-        <div class="title-bar-drag-region"></div>
-
-        <div id="toolbar">
-            <div class="logo-container">
-                <span class="neon-blue">KLASSE</span><span class="neon-orange">PLASS</span>
-            </div>
-
-            <div class="center-controls">
-                <button onclick="toggleHighContrast()" id="contrastBtn" title="Bytt til høykontrast-modus">
-                    <i class="fas fa-adjust"></i> Høykontrast
-                </button>
-                <button onclick="toggleNumbers()" id="numbersBtn" title="Vis/skjul bordnumre">
-                    <i class="fas fa-hashtag"></i> Vis tall
-                </button>
-                <button onclick="toggleGroups()" id="groupsBtn" title="Vis/skjul gruppegrenser">
-                    <i class="fas fa-layer-group"></i> Skjul grupper
-                </button>
-                <button onclick="flipView()" title="Snu visningen 180°">
-                    <i class="fas fa-retweet"></i> Snu visning
-                </button>
-                <div style="display: flex; align-items: center; gap: 6px; padding: 0 4px;">
-                    <button onclick="adjustZoom(-0.1)" title="Zoom ut">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <span id="zoomLabel" style="font-variant-numeric: tabular-nums; min-width: 50px; text-align: center; font-weight: 600; font-size: 0.9rem; color: #cbd5e1;">100%</span>
-                    <button onclick="adjustZoom(0.1)" title="Zoom inn">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                    <button onclick="resetView()" title="Tilbakestill zoom til 100%">
-                        <i class="fas fa-expand-arrows-alt"></i>
-                    </button>
-                </div>
-            </div>
-
-            <button onclick="window.close()" class="btn-close"><i class="fas fa-times"></i> Lukk</button>
-        </div>
-
-        <div id="viewport">
-            <div id="content">
-                <div class="front-board">TAVLE</div>
-            </div>
-        </div>
+<body>
+  <div class="canvas-outer" id="canvas-outer">
+    <div class="pres-canvas" id="pres-canvas">
+      <div id="pres-board" class="front-board board-top">TAVLE</div>
     </div>
+  </div>
 
-    <script>
-        const { ipcRenderer } = require('electron');
-        
-        function toggleHighContrast() {
-            document.body.classList.toggle('high-contrast');
-            const btn = document.getElementById('contrastBtn');
-            if (document.body.classList.contains('high-contrast')) {
-                btn.innerHTML = '<i class="fas fa-adjust"></i> Normal modus';
-            } else {
-                btn.innerHTML = '<i class="fas fa-adjust"></i> Høykontrast';
-            }
-        }
-        
-        function toggleNumbers() {
-            document.body.classList.toggle('hide-numbers');
-            const btn = document.getElementById('numbersBtn');
-            if (document.body.classList.contains('hide-numbers')) {
-                btn.innerHTML = '<i class="fas fa-hashtag"></i> Vis tall';
-            } else {
-                btn.innerHTML = '<i class="fas fa-hashtag"></i> Skjul tall';
-            }
-        }
-        
-        function toggleGroups() {
-            document.body.classList.toggle('hide-groups');
-            const btn = document.getElementById('groupsBtn');
-            if (document.body.classList.contains('hide-groups')) {
-                btn.innerHTML = '<i class="fas fa-layer-group"></i> Vis grupper';
-            } else {
-                btn.innerHTML = '<i class="fas fa-layer-group"></i> Skjul grupper';
-            }
-        }
-        
-        function applyAutoScaling(deskElement, students, deskType) {
-            // Only apply to round tables with multiple students
-            if (!deskType.startsWith('round') || !students || students.length === 0) return;
-            
-            const validStudents = students.filter(s => s);
-            if (validStudents.length === 0) return;
-            
-            // Calculate average name length
-            const avgNameLength = validStudents.reduce((sum, s) => sum + (s.name || s).length, 0) / validStudents.length;
-            const studentCount = validStudents.length;
-            
-            // Base font sizes for different capacities
-            const baseFontSizes = {
-                round3: 0.7,
-                round4: 0.68,
-                round6: 0.65
-            };
-            
-            let fontSize = baseFontSizes[deskType] || 0.7;
-            
-            // PRIMARY: Scale based on average name length (longer names = smaller font)
-            // This is the most important factor
-            if (avgNameLength > 15) {
-                fontSize *= 0.70;
-            } else if (avgNameLength > 12) {
-                fontSize *= 0.80;
-            } else if (avgNameLength > 10) {
-                fontSize *= 0.85;
-            } else if (avgNameLength > 8) {
-                fontSize *= 0.90;
-            } else if (avgNameLength > 6) {
-                fontSize *= 0.95;
-            }
-            // Short names (≤6 chars) keep full size
-            
-            // SECONDARY: Minor adjustment based on student count
-            // Only reduce significantly if both many students AND long names
-            if (studentCount >= 6 && avgNameLength > 8) {
-                fontSize *= 0.90;
-            } else if (studentCount >= 5 && avgNameLength > 10) {
-                fontSize *= 0.92;
-            }
-            
-            // Apply minimum font size
-            fontSize = Math.max(fontSize, 0.45);
-            
-            // Apply to all student name items in this desk
-            const nameItems = deskElement.querySelectorAll('.student-name-item');
-            nameItems.forEach(item => {
-                item.style.fontSize = `${fontSize}rem`;
-            });
-        }
+  <!-- Trekk-animasjon overlay (skjult som standard) -->
+  <div id="draw-overlay" style="display:none">
+    <div id="draw-card"></div>
+  </div>
 
-        const GROUP_COLORS = [
-            '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
-            '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#84cc16'
-        ];
+  <!-- Verktøylinje -->
+  <div class="pres-toolbar" id="pres-toolbar">
+    <button class="btn btn-ghost btn-sm" id="btn-zoom-in"    title="Zoom inn"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+    <button class="btn btn-ghost btn-sm" id="btn-zoom-out"   title="Zoom ut"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+    <button class="btn btn-ghost btn-sm" id="btn-zoom-reset" title="Tilbakestill zoom"><i class="fa-solid fa-expand"></i></button>
+    <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+    <button class="btn btn-ghost btn-sm" id="btn-toggle-names"   title="Vis/skjul navn"><i class="fa-solid fa-user"></i></button>
+    <button class="btn btn-ghost btn-sm" id="btn-toggle-numbers" title="Vis/skjul numre"><i class="fa-solid fa-hashtag"></i></button>
+    <button class="btn btn-ghost btn-sm" id="btn-high-contrast"  title="Høy kontrast"><i class="fa-solid fa-circle-half-stroke"></i></button>
+    <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+    <button class="btn btn-accent btn-sm" id="btn-draw-start" title="Start trekke-modus">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Trekk
+    </button>
+    <button class="btn btn-secondary btn-sm hidden" id="btn-draw-next" title="Trekk neste elev">
+      Neste <i class="fa-solid fa-chevron-right"></i>
+    </button>
+    <button class="btn btn-ghost btn-sm hidden" id="btn-draw-all" title="Vis alle">
+      Vis alle
+    </button>
+    <div style="flex:1"></div>
+    <span id="pres-chart-name" style="font-size:13px;color:var(--text-secondary)"></span>
+    <button class="btn btn-ghost btn-sm" id="btn-close" title="Lukk"><i class="fa-solid fa-xmark"></i></button>
+  </div>
 
-        let state = {
-            zoom: 1.0,
-            x: 0,
-            y: 0,
-            flipped: false
-        };
-
-        const content = document.getElementById('content');
-        const label = document.getElementById('zoomLabel');
-        const viewport = document.getElementById('viewport');
-
-        function updateTransform() {
-            const rotation = state.flipped ? 180 : 0;
-            content.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.zoom}) rotate(${rotation}deg)`;
-            label.innerText = Math.round(state.zoom * 100) + "%";
-
-            if (state.flipped) {
-                content.classList.add('is-flipped');
-            } else {
-                content.classList.remove('is-flipped');
-            }
-        }
-
-        window.adjustZoom = (delta) => {
-            state.zoom = Math.max(0.3, Math.min(3.0, state.zoom + delta));
-            updateTransform();
-        };
-
-        window.resetView = () => {
-            state.zoom = 1.0; state.x = 0; state.y = 0;
-            updateTransform();
-        };
-
-        window.flipView = () => {
-            state.flipped = !state.flipped;
-            updateTransform();
-        };
-
-        // DRAG LOGIC
-        let isDragging = false;
-        let startX, startY, initialX, initialY;
-
-        viewport.addEventListener('mousedown', (e) => {
-            if (e.target.closest('button')) return;
-            isDragging = true;
-            startX = e.clientX; startY = e.clientY;
-            initialX = state.x; initialY = state.y;
-            viewport.style.cursor = 'grabbing';
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            const dx = e.clientX - startX; const dy = e.clientY - startY;
-            state.x = initialX + dx; state.y = initialY + dy;
-            updateTransform();
-        });
-
-        window.addEventListener('mouseup', () => {
-            isDragging = false; viewport.style.cursor = 'grab';
-        });
-
-        viewport.addEventListener('wheel', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                e.preventDefault();
-                const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                window.adjustZoom(delta);
-            }
-        });
-
-        // --- MOTTA DATA FRA MAIN.JS ---
-        ipcRenderer.on('render-layout', (event, data) => {
-
-            const layoutData = data.layout;
-            const shouldFlip = data.defaultFlipped;
-            const designMode = data.designMode || 'board-top';  // Get design mode
-
-            const DESK_SPECS = { single: { w: 85, h: 55 }, round3: { w: 130, h: 130 }, round4: { w: 145, h: 145 }, round6: { w: 160, h: 160 }, bench2: { w: 170, h: 55 }, bench4: { w: 340, h: 55 } };
-
-            content.innerHTML = '<div class="front-board">TAVLE</div>';
-            
-            const board = content.querySelector('.front-board');
-            
-            // Check if room is designed with board-bottom mode
-            if (designMode === 'board-bottom') {
-                // Native board-bottom mode: Place board at bottom, don't flip
-                if (board) {
-                    board.style.top = 'auto';
-                    board.style.bottom = '10px';
-                }
-                state.flipped = false;  // Don't use CSS flip for native board-bottom rooms
-            } else {
-                // Legacy board-top mode: Use defaultFlipped setting with CSS transform
-                state.flipped = shouldFlip;
-            }
-            
-            updateTransform();
-
-            layoutData.forEach((spot, index) => {
-                const d = document.createElement('div');
-                const colorClass = spot.color || 'bg-default';
-                const deskType = spot.type || 'single';
-                const spec = DESK_SPECS[deskType] || DESK_SPECS.single;
-
-                d.className = `desk type-${deskType} ${colorClass}`;
-                d.style.left = spot.x + 'px';
-                d.style.top = spot.y + 'px';
-                d.style.width = spec.w + 'px';
-                d.style.height = spec.h + 'px';
-
-                const numDiv = document.createElement('div');
-                numDiv.className = 'desk-number';
-                numDiv.innerText = index + 1;
-                d.appendChild(numDiv);
-
-                if (spot.groupId) {
-                    d.style.borderWidth = "3px";
-                    d.style.borderColor = GROUP_COLORS[(spot.groupId - 1) % GROUP_COLORS.length];
-                }
-
-                // Render students
-                const students = spot.students || (spot.student ? [spot.student] : []);
-                const capacity = spot.capacity || (deskType === 'bench2' ? 2 : deskType === 'bench4' ? 4 : deskType === 'round3' ? 3 : deskType === 'round4' ? 4 : deskType === 'round6' ? 6 : 1);
-                
-                // Single desk rendering
-                if (deskType === 'single' && students[0]) {
-                    const studentData = students[0];
-                    const nameSpan = document.createElement('span');
-                    nameSpan.textContent = studentData.name || studentData;
-                    nameSpan.style.fontWeight = '600';
-                    d.appendChild(nameSpan);
-                } 
-                // Multi-student desk rendering
-                else if (deskType === 'bench2' || deskType === 'bench4' || deskType === 'round3' || deskType === 'round4' || deskType === 'round6') {
-                    const nameContainer = document.createElement('div');
-                    nameContainer.className = 'student-names-list';
-                    
-                    for (let pos = 0; pos < capacity; pos++) {
-                        const slotDiv = document.createElement('div');
-                        slotDiv.className = 'bench-slot';
-                        const student = students[pos];
-                        
-                        if (student) {
-                            const studentName = student.name || student;
-                            const nameDiv = document.createElement('div');
-                            nameDiv.className = 'student-name-item';
-                            
-                            const nameSpan = document.createElement('span');
-                            nameSpan.className = 'student-name-text';
-                            nameSpan.textContent = studentName;
-                            nameDiv.appendChild(nameSpan);
-                            
-                            slotDiv.appendChild(nameDiv);
-                        } else {
-                            // Only show placeholder on round tables, not benches
-                            if (deskType.startsWith('round')) {
-                                slotDiv.classList.add('bench-slot-empty');
-                                slotDiv.innerHTML = '<span class="bench-slot-hint">+</span>';
-                            }
-                        }
-                        
-                        // Only append slot if it has content OR is a round table
-                        if (student || deskType.startsWith('round')) {
-                            nameContainer.appendChild(slotDiv);
-                        }
-                    }
-                    d.appendChild(nameContainer);
-                    
-                    // Apply autoscaling for round tables
-                    if (deskType.startsWith('round')) {
-                        applyAutoScaling(d, students, deskType);
-                    }
-                }
-                content.appendChild(d);
-            });
-        });
-    </script>
+  <script>
+    // Presentation-vindu bruker CommonJS siden det er et separat Electron-vindu
+    const { ipcRenderer } = require('electron');
+    // Dynamisk import av ES-modules
+    import('./src/views/presentation.js').then(m => m.init(ipcRenderer));
+  </script>
 </body>
-
 </html>
