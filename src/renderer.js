@@ -53,7 +53,7 @@ window.navTo = navTo;
 async function init() {
   const settings = await window.api.getSettings();
   store.setState({ settings });
-  applyTheme(settings.theme ?? 'dark');
+  applyTheme(settings.theme ?? 'dracula');
 
   // Lyt på auto-update
   window.api.onUpdateReady(info => {
@@ -65,7 +65,7 @@ async function init() {
 }
 
 function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme === 'light' ? 'light' : '';
+  document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dracula';
 }
 
 function showUpdateBanner(info) {

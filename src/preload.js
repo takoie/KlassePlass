@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Historikk
   getHistory:       (cid, n) => ipcRenderer.invoke('get-history', cid, n),
+  saveHistory:      (data)   => ipcRenderer.invoke('save-history', data),
 
   // Eksport / Import
   exportBundle:     (cid)    => ipcRenderer.invoke('export-bundle', cid),
@@ -55,6 +56,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // App info
   getVersion:       ()       => ipcRenderer.invoke('get-version'),
+  getDbPath:        ()       => ipcRenderer.invoke('get-db-path'),
 
   // Window controls
   minimizeWindow:   ()       => ipcRenderer.send('window-minimize'),

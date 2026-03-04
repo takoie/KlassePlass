@@ -1,75 +1,71 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="no" data-theme="dracula">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KlassePlass</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="src/styles/base.css">
-  <link rel="stylesheet" href="src/styles/components.css">
-  <link rel="stylesheet" href="src/styles/desk-types.css">
-  <link rel="stylesheet" href="src/styles/seating-editor.css">
-  <link rel="stylesheet" href="src/styles/room-editor.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {} },
+      plugins: [],
+    }
+  </script>
+  <link rel="stylesheet" href="src/styles/canvas.css">
 </head>
-<body>
-  <div id="app">
+<body class="bg-base-100 text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased">
+  <div id="app" class="flex flex-col h-screen overflow-hidden">
     <!-- Title bar -->
-    <div class="titlebar">
-      <span class="titlebar-title" style="font-size:13px;font-weight:600;color:var(--text-secondary)">
-        KlassePlass
-      </span>
-      <div class="titlebar-controls">
-        <button class="titlebar-btn" onclick="window.api.minimizeWindow()" title="Minimer">
-          <i class="fa-solid fa-minus"></i>
+    <div class="titlebar flex items-center justify-between px-3 h-8 bg-base-200 border-b border-base-300 flex-shrink-0" style="-webkit-app-region:drag">
+      <span class="text-sm font-semibold text-base-content/60">KlassePlass</span>
+      <div class="flex gap-1" style="-webkit-app-region:no-drag">
+        <button class="btn btn-ghost btn-xs btn-circle" onclick="window.api.minimizeWindow()" title="Minimer">
+          <i class="fa-solid fa-minus text-xs"></i>
         </button>
-        <button class="titlebar-btn" onclick="window.api.maximizeWindow()" title="Maksimer">
-          <i class="fa-regular fa-square"></i>
+        <button class="btn btn-ghost btn-xs btn-circle" onclick="window.api.maximizeWindow()" title="Maksimer">
+          <i class="fa-regular fa-square text-xs"></i>
         </button>
-        <button class="titlebar-btn close" onclick="window.api.closeWindow()" title="Lukk">
-          <i class="fa-solid fa-xmark"></i>
+        <button class="btn btn-ghost btn-xs btn-circle hover:btn-error" onclick="window.api.closeWindow()" title="Lukk">
+          <i class="fa-solid fa-xmark text-xs"></i>
         </button>
       </div>
     </div>
 
     <!-- Layout -->
-    <div style="display:flex;flex:1;overflow:hidden">
+    <div class="flex flex-1 overflow-hidden">
       <!-- Sidebar nav -->
-      <nav class="sidebar">
-        <div style="padding:8px 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px">
-          <div style="font-size:15px;font-weight:700;color:var(--text-primary)">KlassePlass</div>
-          <div style="font-size:11px;color:var(--text-muted)">Klasseromsplanlegger</div>
+      <nav class="w-52 flex-shrink-0 bg-base-200 border-r border-base-300 flex flex-col py-2 gap-1">
+        <div class="px-4 pb-3 mb-1 border-b border-base-300">
+          <div class="text-base font-bold">KlassePlass</div>
+          <div class="text-xs text-base-content/50">Klasseromsplanlegger</div>
         </div>
         <div class="nav-item active" data-view="charts-dashboard" onclick="navTo('charts-dashboard')">
-          <i class="fa-solid fa-grid-2"></i> Klassekart
+          <i class="fa-solid fa-grid-2 w-4 text-center"></i> Klassekart
         </div>
         <div class="nav-item" data-view="classes" onclick="navTo('classes')">
-          <i class="fa-solid fa-users"></i> Klasser
+          <i class="fa-solid fa-users w-4 text-center"></i> Klasser
         </div>
         <div class="nav-item" data-view="room-editor" onclick="navTo('room-editor')">
-          <i class="fa-solid fa-door-open"></i> Rom
+          <i class="fa-solid fa-door-open w-4 text-center"></i> Rom
         </div>
-        <div style="flex:1"></div>
+        <div class="flex-1"></div>
         <div class="nav-item" data-view="settings" onclick="navTo('settings')">
-          <i class="fa-solid fa-gear"></i> Innstillinger
+          <i class="fa-solid fa-gear w-4 text-center"></i> Innstillinger
         </div>
       </nav>
 
       <!-- Main content -->
-      <main id="app-content" style="flex:1;overflow:auto;background:var(--canvas-bg)"></main>
+      <main id="app-content" class="flex-1 overflow-auto bg-base-100"></main>
     </div>
 
     <!-- Auto-update banner -->
-    <div id="update-banner" class="hidden" style="
-      position:fixed;bottom:16px;right:16px;
-      background:var(--bg-card);border:1px solid var(--border);
-      border-radius:var(--radius-md);padding:12px 16px;
-      box-shadow:0 4px 16px rgba(0,0,0,0.3);
-      display:flex;align-items:center;gap:12px;z-index:4000;
-    ">
-      <i class="fa-solid fa-arrow-up-from-bracket" style="color:var(--accent)"></i>
-      <span style="font-size:13px">Versjon <strong id="update-version"></strong> er klar</span>
+    <div id="update-banner" class="hidden fixed bottom-4 right-4 bg-base-200 border border-base-300 rounded-xl p-3 shadow-xl flex items-center gap-3 z-50">
+      <i class="fa-solid fa-arrow-up-from-bracket text-primary"></i>
+      <span class="text-sm">Versjon <strong id="update-version"></strong> er klar</span>
       <button class="btn btn-primary btn-sm" onclick="window.api.restartApp()">Start på nytt</button>
-      <button class="btn btn-ghost btn-sm btn-icon" onclick="this.closest('#update-banner').classList.add('hidden')">
+      <button class="btn btn-ghost btn-sm btn-circle" onclick="this.closest('#update-banner').classList.add('hidden')">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
@@ -77,6 +73,20 @@
 
   <style>
     .hidden { display: none !important; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      margin: 0 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s;
+      color: oklch(var(--bc) / 0.6);
+    }
+    .nav-item:hover { background: oklch(var(--b3)); color: oklch(var(--bc)); }
+    .nav-item.active { background: oklch(var(--p) / 0.15); color: oklch(var(--p)); }
   </style>
 
   <script type="module" src="src/renderer.js"></script>

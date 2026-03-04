@@ -22,6 +22,7 @@ function registerHandlers(winRef) {
 
   // ---- App info ----
   ipcMain.handle('get-version', async () => app.getVersion());
+  ipcMain.handle('get-db-path', async () => getDbPathFn());
 
   // ---- Settings ----
   ipcMain.handle('get-settings',   async ()       => loadSettings());

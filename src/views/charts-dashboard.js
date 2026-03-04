@@ -14,18 +14,18 @@ const TEMPLATE = `
     <h1 class="view-title">Klassekart</h1>
     <p class="view-subtitle">Oversikt over alle dine klassekart</p>
   </div>
-  <button class="btn btn-accent" id="btn-new-chart">
+  <button class="btn btn-secondary btn-sm" id="btn-new-chart">
     <i class="fa-solid fa-plus"></i> Nytt klassekart
   </button>
 </div>
 <div class="filter-bar">
   <div class="filter-group">
     <label class="filter-label">Klasse</label>
-    <select id="filter-class" class="filter-select"><option value="">Alle klasser</option></select>
+    <select id="filter-class" class="select select-sm select-bordered"><option value="">Alle klasser</option></select>
   </div>
   <div class="filter-group">
     <label class="filter-label">Sorter</label>
-    <select id="filter-sort" class="filter-select">
+    <select id="filter-sort" class="select select-sm select-bordered">
       <option value="newest">Nyeste først</option>
       <option value="oldest">Eldste først</option>
       <option value="name">Alfabetisk</option>
@@ -103,9 +103,9 @@ function buildChartCard(chart) {
     </div>
     <div class="chart-card-actions">
       <button class="btn btn-ghost btn-sm btn-delete" data-id="${chart.id}" title="Slett">
-        <i class="fa-solid fa-trash"></i>
+        <i class="fa-solid fa-trash text-error"></i>
       </button>
-      <button class="btn btn-secondary btn-sm btn-open" data-id="${chart.id}">
+      <button class="btn btn-outline btn-primary btn-sm btn-open" data-id="${chart.id}">
         <i class="fa-solid fa-pen"></i> Rediger
       </button>
     </div>

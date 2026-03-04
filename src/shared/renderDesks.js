@@ -137,11 +137,20 @@ function buildSlotElement(desk, slotIdx, slot, studentsById, opts, isRound) {
   }
 
   if (opts.interactive && opts.onStudentDrop) {
-    el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drag-over'); });
+    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
     el.addEventListener('drop', e => {
       e.preventDefault();
+      e.stopPropagation();
+      el.classList.remove('drag-over');
       const data = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
-      if (data.deskId !== undefined) {
+      if (data.fromSidebar) {
+        // Sidebar drop: handled by seating-editor's canvas-level listener
+        // Re-dispatch on slot so seating-editor can catch it
+        el.dataset.dropStudentId = data.studentId;
+        const customEvt = new CustomEvent('sidebar-drop', { bubbles: true, detail: { studentId: data.studentId, deskId: desk.id, slotIdx } });
+        el.dispatchEvent(customEvt);
+      } else if (data.deskId !== undefined) {
         opts.onStudentDrop(data.deskId, data.slotIdx, desk.id, slotIdx);
       }
     });

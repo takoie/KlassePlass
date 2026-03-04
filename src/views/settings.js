@@ -18,8 +18,8 @@ const TEMPLATE = `
         <div class="settings-hint">Bytt mellom mørk og lys modus</div>
       </div>
       <div class="theme-toggle" id="theme-toggle">
-        <button class="theme-btn" data-theme="dark" id="btn-theme-dark"><i class="fa-solid fa-moon"></i> Mørk</button>
-        <button class="theme-btn active" data-theme="light" id="btn-theme-light"><i class="fa-solid fa-sun"></i> Lys</button>
+        <button class="theme-btn" data-theme="dracula" id="btn-theme-dark"><i class="fa-solid fa-moon"></i> Mørk</button>
+        <button class="theme-btn" data-theme="light" id="btn-theme-light"><i class="fa-solid fa-sun"></i> Lys</button>
       </div>
     </div>
     <div class="settings-row">
@@ -27,25 +27,22 @@ const TEMPLATE = `
         <div class="settings-label">Standard visning</div>
         <div class="settings-hint">Vis klassekart med tavle nederst som standard</div>
       </div>
-      <label class="toggle-switch">
-        <input type="checkbox" id="setting-flip-display">
-        <span class="toggle-slider"></span>
-      </label>
+      <input type="checkbox" id="setting-flip-display" class="toggle toggle-primary">
     </div>
   </section>
   <section class="settings-section">
     <h2 class="settings-section-title">Database</h2>
     <div class="settings-row">
       <div><div class="settings-label">Sikkerhetskopi</div><div class="settings-hint">Lagre en kopi av databasen</div></div>
-      <button class="btn btn-secondary btn-sm" id="btn-backup-db"><i class="fa-solid fa-download"></i> Ta backup</button>
+      <button class="btn btn-outline btn-sm" id="btn-backup-db"><i class="fa-solid fa-download"></i> Ta backup</button>
     </div>
     <div class="settings-row">
       <div><div class="settings-label">Gjenopprett</div><div class="settings-hint">Last inn en tidligere sikkerhetskopi</div></div>
-      <button class="btn btn-secondary btn-sm" id="btn-restore-db"><i class="fa-solid fa-upload"></i> Gjenopprett</button>
+      <button class="btn btn-outline btn-sm" id="btn-restore-db"><i class="fa-solid fa-upload"></i> Gjenopprett</button>
     </div>
     <div class="settings-row">
       <div><div class="settings-label">Flytt database</div><div class="settings-hint">Lagre databasen på en annen plassering</div></div>
-      <button class="btn btn-secondary btn-sm" id="btn-move-db"><i class="fa-solid fa-folder-open"></i> Flytt</button>
+      <button class="btn btn-outline btn-sm" id="btn-move-db"><i class="fa-solid fa-folder-open"></i> Flytt</button>
     </div>
     <div class="settings-row">
       <div><div class="settings-label">Databaseplassering</div><div id="db-path-display" class="settings-hint code-hint"></div></div>
@@ -58,14 +55,14 @@ const TEMPLATE = `
         <div class="settings-label">Eksporter klasse</div>
         <div class="settings-hint">Eksporter en klasse med alle kart og historikk som JSON-fil</div>
       </div>
-      <button class="btn btn-secondary btn-sm" id="btn-export-class"><i class="fa-solid fa-file-export"></i> Eksporter</button>
+      <button class="btn btn-outline btn-sm" id="btn-export-class"><i class="fa-solid fa-file-export"></i> Eksporter</button>
     </div>
     <div class="settings-row">
       <div>
         <div class="settings-label">Importer klasse</div>
         <div class="settings-hint">Importer en tidligere eksportert klasse-bundle</div>
       </div>
-      <button class="btn btn-secondary btn-sm" id="btn-import-class"><i class="fa-solid fa-file-import"></i> Importer</button>
+      <button class="btn btn-outline btn-sm" id="btn-import-class"><i class="fa-solid fa-file-import"></i> Importer</button>
     </div>
   </section>
   <section class="settings-section">
@@ -93,9 +90,9 @@ async function loadSettings() {
   store.setState({ settings });
 
   // Tema-toggle
-  const isDark = (settings.theme ?? 'dark') === 'dark';
-  document.getElementById('btn-theme-dark')?.classList.toggle('active', isDark);
-  document.getElementById('btn-theme-light')?.classList.toggle('active', !isDark);
+  const currentTheme = settings.theme ?? 'dracula';
+  document.getElementById('btn-theme-dark')?.classList.toggle('active', currentTheme === 'dracula');
+  document.getElementById('btn-theme-light')?.classList.toggle('active', currentTheme === 'light');
 
   // Flip display
   const flipEl = document.getElementById('setting-flip-display');
@@ -103,7 +100,12 @@ async function loadSettings() {
 
   // DB-path
   const dbPathEl = document.getElementById('db-path-display');
-  if (dbPathEl) dbPathEl.textContent = '(vises ved neste oppstart)';
+  if (dbPathEl) {
+    try {
+      const dbPath = await window.api.getDbPath();
+      dbPathEl.textContent = dbPath ?? '—';
+    } catch { dbPathEl.textContent = '—'; }
+  }
 
   // App-versjon
   const verEl = document.getElementById('app-version');
@@ -117,7 +119,7 @@ async function loadSettings() {
 
 function bindEvents() {
   // Tema
-  document.getElementById('btn-theme-dark')?.addEventListener('click', () => setTheme('dark'));
+  document.getElementById('btn-theme-dark')?.addEventListener('click', () => setTheme('dracula'));
   document.getElementById('btn-theme-light')?.addEventListener('click', () => setTheme('light'));
 
   // Flip
@@ -214,9 +216,9 @@ async function importClass() {
 }
 
 async function setTheme(theme) {
-  document.getElementById('btn-theme-dark')?.classList.toggle('active', theme === 'dark');
+  document.getElementById('btn-theme-dark')?.classList.toggle('active', theme === 'dracula');
   document.getElementById('btn-theme-light')?.classList.toggle('active', theme === 'light');
-  document.documentElement.dataset.theme = theme === 'light' ? 'light' : '';
+  document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dracula';
   await window.api.saveSettings({ theme });
   const s = store.getState().settings;
   store.setState({ settings: { ...s, theme } });

@@ -14,7 +14,7 @@ const TEMPLATE = `
     <h1 class="view-title">Klasser</h1>
     <p class="view-subtitle">Administrer klasser og elevlister</p>
   </div>
-  <button class="btn btn-accent" id="btn-new-class">
+  <button class="btn btn-secondary btn-sm" id="btn-new-class">
     <i class="fa-solid fa-plus"></i> Ny klasse
   </button>
 </div>
@@ -31,7 +31,7 @@ const TEMPLATE = `
     <div class="panel-header">
       <input type="text" id="class-name-input" class="panel-title-input" placeholder="Klassenavn...">
       <div style="display:flex;gap:6px">
-        <button class="btn btn-danger btn-sm" id="btn-delete-class"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-error btn-sm btn-outline" id="btn-delete-class"><i class="fa-solid fa-trash"></i></button>
         <button class="btn btn-primary btn-sm" id="btn-save-class">
           <i class="fa-solid fa-floppy-disk"></i> Lagre
         </button>
