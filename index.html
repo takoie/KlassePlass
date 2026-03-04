@@ -19,11 +19,8 @@
 <body class="bg-transparent text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased">
   <div id="app-shell" style="height:100vh;padding:6px;box-sizing:border-box;background:transparent">
   <div id="app" class="flex flex-col overflow-hidden" style="height:100%;border-radius:12px;overflow:hidden;border:1px solid oklch(var(--b3)/0.8);box-shadow:0 20px 60px rgba(0,0,0,0.5)">
-    <!-- Title bar -->
-    <div class="titlebar flex items-center justify-between px-3 flex-shrink-0 bg-base-200" style="-webkit-app-region:drag;height:36px;border-bottom:1px solid oklch(var(--b3))">
-      <span style="font-size:1.05rem;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-0.01em">
-        <span style="color:#e0f2fe;text-shadow:0 0 10px rgba(59,130,246,0.8)">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 15px #f59e0b">Plass</span>
-      </span>
+    <!-- Title bar — only window controls, no duplicate logo -->
+    <div class="titlebar flex items-center justify-end px-2 flex-shrink-0 bg-base-200" style="-webkit-app-region:drag;height:28px;border-bottom:1px solid oklch(var(--b3)/0.5)">
       <div class="flex gap-1" style="-webkit-app-region:no-drag">
         <button class="win-btn win-btn-min" onclick="window.api.minimizeWindow()" title="Minimer">
           <i class="fa-solid fa-minus"></i>

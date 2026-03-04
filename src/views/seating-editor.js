@@ -107,7 +107,9 @@ async function initNewChart(params) {
 async function loadExistingChart(chartId) {
   const raw = await window.api.getSeating(chartId);
   if (!raw) { showToast('Fant ikke klassekart', 'error'); window.navTo('charts-dashboard'); return; }
+  const settings = await window.api.getSettings();
   _chart = await buildChartFromDb(raw, window.api.getClass);
+  _chart.flipForDisplay = settings.defaultFlipDisplay ?? false;
   render();
 }
 
@@ -497,13 +499,16 @@ function bindEvents() {
     e.currentTarget.classList.toggle('btn-active', _showGroups);
     render();
   });
-  document.getElementById('btn-flip-view')?.addEventListener('click', (e) => {
+  const flipBtn = document.getElementById('btn-flip-view');
+  flipBtn?.addEventListener('click', (e) => {
     if (_chart) {
       _chart.flipForDisplay = !_chart.flipForDisplay;
       e.currentTarget.classList.toggle('btn-active', _chart.flipForDisplay);
       render();
     }
   });
+  // Reflect initial flip state on the button
+  if (_chart?.flipForDisplay) flipBtn?.classList.add('btn-active');
   document.getElementById('btn-new-period')?.addEventListener('click', openNewPeriodModal);
 
   wireDesksForSidebarDrop();
