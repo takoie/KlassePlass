@@ -1,22 +1,18 @@
 /**
- * classes.js — Klasse- og elevadministrasjon.
- * Studentliste med notater, plasseringsprioritet og constraints.
+ * classes.js — Klasse- og elevadministrasjon: liste, åpne/lagre/slette klasser.
+ * Elevliste, notater, constraints og historikk: classes-student-panel.js
  */
 
-import { showToast, getPortal, normalizeStudents } from '../shared/utils.js';
+import { showToast, normalizeStudents } from '../shared/utils.js';
+import {
+  renderStudentList, renderConstraints, renderHistorySummary,
+  addConstraint, parseStudents,
+} from './classes-student-panel.js';
 
-let _classes    = [];
+let _classes     = [];
 let _activeClass = null;
 let _constraints = [];
-let _students   = [];  // Normalized student objects for active class
-
-const PLACEMENT_LABELS = {
-  'front':      'Fremst',
-  'back':       'Bakerst',
-  'middle':     'Midten',
-  'never-front':'Aldri fremst',
-  'never-back': 'Aldri bakerst',
-};
+let _students    = [];  // Normalized student objects for active class
 
 const TEMPLATE = `
 <div class="view-header">
@@ -148,173 +144,27 @@ async function openClass(cls) {
   document.getElementById('class-name-input').value = cls.name;
   document.getElementById('class-student-count').textContent = _students.length;
 
-  renderStudentList();
-  renderConstraints();
+  renderStudentList(_students, onStudentListChange);
+  renderConstraints(_constraints, _activeClass, onConstraintChange);
   renderHistorySummary(cls.id);
   renderClassList();
 }
 
-/* ---- Student list rendering ---- */
-
-function renderStudentList() {
-  const list  = document.getElementById('student-list');
-  const empty = document.getElementById('student-list-empty');
-  if (!list) return;
-
-  list.innerHTML = '';
-
-  if (_students.length === 0) {
-    empty?.classList.remove('hidden');
-    return;
-  }
-  empty?.classList.add('hidden');
-
-  _students.forEach((student, idx) => {
-    const row = document.createElement('div');
-    row.className = 'student-row';
-    row.dataset.idx = idx;
-
-    const p = student.placement ?? '';
-    const hasNote = !!(student.note?.trim());
-
-    row.innerHTML = `
-      <span class="student-name">${escHtml(student.name)}</span>
-      <div class="student-row-controls">
-        <select class="student-placement-select${p ? ' has-value' : ''}" data-idx="${idx}" title="Plasseringsprioritet">
-          <option value="">— Prioritet —</option>
-          <option value="front"      ${p==='front'      ?'selected':''}>Fremst</option>
-          <option value="back"       ${p==='back'       ?'selected':''}>Bakerst</option>
-          <option value="middle"     ${p==='middle'     ?'selected':''}>Midten</option>
-          <option value="never-front"${p==='never-front'?'selected':''}>Aldri fremst</option>
-          <option value="never-back" ${p==='never-back' ?'selected':''}>Aldri bakerst</option>
-        </select>
-        <button class="btn btn-ghost btn-xs btn-note-edit${hasNote ? ' has-note' : ''}" data-idx="${idx}" title="${hasNote ? escHtml(student.note) : 'Legg til notat'}">
-          <i class="fa-solid fa-${hasNote ? 'note-sticky' : 'pencil'}"></i>
-        </button>
-      </div>
-    `;
-
-    row.querySelector('.student-placement-select').addEventListener('change', (e) => {
-      _students[parseInt(e.target.dataset.idx, 10)].placement = e.target.value || null;
-      renderStudentList();
-    });
-
-    row.querySelector('.btn-note-edit').addEventListener('click', () => openNoteModal(idx));
-
-    list.appendChild(row);
-  });
+function onStudentListChange() {
+  document.getElementById('class-student-count').textContent = _students.length;
+  renderStudentList(_students, onStudentListChange);
 }
 
-function openNoteModal(idx) {
-  const student = _students[idx];
-  const backdrop = document.createElement('div');
-  backdrop.className = 'kp-backdrop';
-  backdrop.innerHTML = `
-    <div class="kp-modal">
-      <div class="modal-header">
-        <span class="modal-title">Notat for ${escHtml(student.name)}</span>
-      </div>
-      <textarea id="note-input" class="students-textarea" rows="4"
-        placeholder="F.eks: ADHD – sitter best fremst til venstre"
-        style="min-height:80px">${escHtml(student.note ?? '')}</textarea>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" id="note-cancel">Avbryt</button>
-        <button class="btn btn-primary" id="note-save">Lagre</button>
-      </div>
-    </div>
-  `;
-  getPortal().appendChild(backdrop);
-  backdrop.querySelector('#note-cancel').addEventListener('click', () => backdrop.remove());
-  backdrop.querySelector('#note-save').addEventListener('click', () => {
-    _students[idx].note = backdrop.querySelector('#note-input').value.trim();
-    backdrop.remove();
-    renderStudentList();
-  });
+function onConstraintChange() {
+  renderConstraints(_constraints, _activeClass, onConstraintChange);
 }
-
-/* ---- Constraints ---- */
-
-function renderConstraints() {
-  const list  = document.getElementById('constraints-list');
-  const empty = document.getElementById('constraints-empty');
-  if (!list) return;
-
-  list.innerHTML = '';
-
-  if (_constraints.length === 0) {
-    empty?.classList.remove('hidden');
-    return;
-  }
-  empty?.classList.add('hidden');
-
-  _constraints.forEach(c => {
-    const el = document.createElement('div');
-    el.className = 'constraint-item';
-    const isAlways  = c.type === 'always_together';
-    const badgeCls  = isAlways ? 'badge-always' : 'badge-never';
-    const typeLabel = isAlways ? 'Alltid sammen' : 'Aldri sammen';
-    const desc      = isAlways
-      ? `${escHtml(c.student_a)} og ${escHtml(c.student_b)} skal alltid sitte på samme bord`
-      : `${escHtml(c.student_a)} og ${escHtml(c.student_b)} skal aldri sitte på samme bord`;
-
-    el.innerHTML = `
-      <div class="constraint-item-main">
-        <span class="constraint-type-badge ${badgeCls}">${typeLabel}</span>
-        <span class="constraint-desc">${desc}</span>
-      </div>
-      <div class="constraint-item-actions">
-        <button class="btn btn-ghost btn-xs btn-toggle-constraint" data-id="${c.id}" title="Bytt til ${isAlways ? 'Aldri sammen' : 'Alltid sammen'}">
-          <i class="fa-solid fa-arrow-right-arrow-left"></i>
-        </button>
-        <button class="btn btn-ghost btn-xs btn-del-constraint" data-id="${c.id}" title="Slett regel">
-          <i class="fa-solid fa-xmark text-error"></i>
-        </button>
-      </div>
-    `;
-    el.querySelector('.btn-del-constraint').addEventListener('click', async () => {
-      await window.api.deleteConstraint(c.id);
-      _constraints = _constraints.filter(x => x.id !== c.id);
-      renderConstraints();
-    });
-    el.querySelector('.btn-toggle-constraint').addEventListener('click', async () => {
-      const newType = c.type === 'always_together' ? 'never_together' : 'always_together';
-      await window.api.deleteConstraint(c.id);
-      const result = await window.api.saveConstraint({
-        classId: _activeClass.id,
-        studentA: c.student_a,
-        studentB: c.student_b,
-        type: newType,
-      });
-      const idx = _constraints.findIndex(x => x.id === c.id);
-      if (idx !== -1) _constraints[idx] = { ...c, id: result.lastID, type: newType };
-      renderConstraints();
-    });
-    list.appendChild(el);
-  });
-}
-
-async function renderHistorySummary(classId) {
-  const summary = document.getElementById('class-history-summary');
-  if (!summary) return;
-  const history = await window.api.getHistory(classId, 5);
-  summary.textContent = history.length
-    ? `${history.length} klassekart i historikken`
-    : 'Ingen historikk ennå';
-}
-
-/* ---- Save ---- */
 
 async function saveClass() {
   if (!_activeClass) return;
   const name = document.getElementById('class-name-input')?.value.trim();
   if (!name) { showToast('Skriv inn klassenavn', 'error'); return; }
 
-  await window.api.saveClass({
-    id: _activeClass.id,
-    name,
-    students: JSON.stringify(_students),
-  });
-
+  await window.api.saveClass({ id: _activeClass.id, name, students: JSON.stringify(_students) });
   _activeClass.name     = name;
   _activeClass.students = JSON.stringify(_students);
   await loadClasses();
@@ -332,56 +182,6 @@ async function deleteClass() {
   showToast('Klasse slettet', 'info');
 }
 
-async function addConstraint() {
-  if (!_activeClass) return;
-  const names = _students.map(s => s.name);
-
-  const backdrop = document.createElement('div');
-  backdrop.className = 'kp-backdrop';
-  backdrop.innerHTML = `
-    <div class="kp-modal">
-      <div class="modal-header"><span class="modal-title">Ny plasserings-regel</span></div>
-      <div class="form-group" style="margin-bottom:12px">
-        <label class="form-label">Elev A</label>
-        <select id="c-student-a" class="select select-bordered w-full">
-          ${names.map(n => `<option>${escHtml(n)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:12px">
-        <label class="form-label">Elev B</label>
-        <select id="c-student-b" class="select select-bordered w-full">
-          ${names.map(n => `<option>${escHtml(n)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:16px">
-        <label class="form-label">Type</label>
-        <select id="c-type" class="select select-bordered w-full">
-          <option value="always_together">Alltid sammen</option>
-          <option value="never_together">Aldri sammen</option>
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" id="c-cancel">Avbryt</button>
-        <button class="btn btn-primary" id="c-save">Legg til</button>
-      </div>
-    </div>
-  `;
-  getPortal().appendChild(backdrop);
-
-  backdrop.querySelector('#c-cancel').addEventListener('click', () => backdrop.remove());
-  backdrop.querySelector('#c-save').addEventListener('click', async () => {
-    const a    = backdrop.querySelector('#c-student-a').value;
-    const b    = backdrop.querySelector('#c-student-b').value;
-    const type = backdrop.querySelector('#c-type').value;
-    if (a === b) { showToast('Velg to forskjellige elever', 'error'); return; }
-    const result = await window.api.saveConstraint({ classId: _activeClass.id, studentA: a, studentB: b, type });
-    _constraints.push({ id: result.lastID, class_id: _activeClass.id, student_a: a, student_b: b, type });
-    renderConstraints();
-    backdrop.remove();
-    showToast('Regel lagt til', 'success');
-  });
-}
-
 /* ---- Events ---- */
 
 function bindEvents() {
@@ -393,7 +193,8 @@ function bindEvents() {
   });
   document.getElementById('btn-save-class')?.addEventListener('click', saveClass);
   document.getElementById('btn-delete-class')?.addEventListener('click', deleteClass);
-  document.getElementById('btn-add-constraint')?.addEventListener('click', addConstraint);
+  document.getElementById('btn-add-constraint')?.addEventListener('click', () =>
+    addConstraint(_students, _constraints, _activeClass, onConstraintChange));
   document.getElementById('btn-view-history')?.addEventListener('click', () => {
     if (_activeClass) window.navTo('seating-history', { classId: _activeClass.id });
   });
@@ -403,7 +204,7 @@ function bindEvents() {
     if (!name) return;
     _students.push({ id: `new-${Date.now()}`, name, note: '', placement: null });
     document.getElementById('class-student-count').textContent = _students.length;
-    renderStudentList();
+    renderStudentList(_students, onStudentListChange);
   });
 
   document.getElementById('btn-toggle-bulk')?.addEventListener('click', () => {
@@ -421,7 +222,7 @@ function bindEvents() {
   });
 
   document.getElementById('btn-apply-bulk')?.addEventListener('click', () => {
-    const raw = document.getElementById('class-students-input')?.value ?? '';
+    const raw   = document.getElementById('class-students-input')?.value ?? '';
     const names = raw.split('\n').map(s => s.trim()).filter(Boolean);
     const existing = Object.fromEntries(_students.map(s => [s.name, s]));
     _students = names.map((name, i) =>
@@ -430,20 +231,10 @@ function bindEvents() {
     document.getElementById('class-student-count').textContent = _students.length;
     document.getElementById('student-bulk-view').classList.add('hidden');
     document.getElementById('student-list-view').classList.remove('hidden');
-    renderStudentList();
+    renderStudentList(_students, onStudentListChange);
   });
 }
 
-/* ---- Helpers ---- */
-
-function parseStudents(raw) {
-  if (!raw) return [];
-  try {
-    const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    return Array.isArray(p) ? p : String(raw).split('\n').filter(Boolean);
-  } catch { return String(raw).split('\n').filter(Boolean); }
-}
-
 function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
