@@ -38,11 +38,12 @@ export function buildStudentsById(students) {
 /**
  * Konverterer student-array fra legacy-format (bare strings) til objekt-format.
  * Eksisterende objekt-format returneres uendret.
+ * Kanonisk versjon — brukes av chartHelpers.js, seating-setup.js og classes.js.
  */
-export function normalizeStudents(raw) {
-  return raw.map((s, i) => {
-    if (typeof s === 'string') return { id: `legacy-${i}-${s}`, name: s, note: '', placement: null };
-    return { placement: null, ...s };
+export function normalizeStudents(arr) {
+  return (Array.isArray(arr) ? arr : []).map((s, i) => {
+    if (typeof s === 'string') return { id: `s-${i}-${s.replace(/\s/g, '')}`, name: s, note: '', placement: null };
+    return { placement: null, note: '', ...s, id: s.id ?? `s-${i}`, name: s.name ?? String(s) };
   });
 }
 

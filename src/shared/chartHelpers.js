@@ -2,19 +2,14 @@
  * chartHelpers.js — Hjelpefunksjoner for klassekart (lastin/normalisering).
  */
 
-import { buildStudentsById, uid } from './utils.js';
+import { buildStudentsById, uid, normalizeStudents } from './utils.js';
 import { DESK_TYPES } from './constants.js';
+
+export { normalizeStudents };
 
 export function parseJSON(str) {
   if (!str) return null;
   try { return typeof str === 'string' ? JSON.parse(str) : str; } catch { return null; }
-}
-
-export function normalizeStudents(arr) {
-  return (Array.isArray(arr) ? arr : []).map((s, i) => {
-    if (typeof s === 'string') return { id: `s-${i}-${s.replace(/\s/g,'')}`, name: s, note: '', placement: null };
-    return { placement: null, ...s, id: s.id ?? `s-${i}`, name: s.name ?? String(s), note: s.note ?? '' };
-  });
 }
 
 export function normalizeDeskSlots(desks, students) {

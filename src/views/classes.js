@@ -3,7 +3,7 @@
  * Studentliste med notater, plasseringsprioritet og constraints.
  */
 
-import { showToast, getPortal } from '../shared/utils.js';
+import { showToast, getPortal, normalizeStudents } from '../shared/utils.js';
 
 let _classes    = [];
 let _activeClass = null;
@@ -142,7 +142,7 @@ function renderClassList() {
 async function openClass(cls) {
   _activeClass = cls;
   _constraints = await window.api.getConstraints(cls.id);
-  _students = normalizeStudentsLocal(parseStudents(cls.students));
+  _students = normalizeStudents(parseStudents(cls.students));
 
   document.getElementById('class-detail-panel')?.classList.remove('hidden');
   document.getElementById('class-name-input').value = cls.name;
@@ -442,13 +442,6 @@ function parseStudents(raw) {
     const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
     return Array.isArray(p) ? p : String(raw).split('\n').filter(Boolean);
   } catch { return String(raw).split('\n').filter(Boolean); }
-}
-
-function normalizeStudentsLocal(arr) {
-  return arr.map((s, i) => {
-    if (typeof s === 'string') return { id: `s-${i}-${s}`, name: s, note: '', placement: null };
-    return { placement: null, note: '', ...s, id: s.id ?? `s-${i}` };
-  });
 }
 
 function escHtml(str) {

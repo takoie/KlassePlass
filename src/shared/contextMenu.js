@@ -2,9 +2,7 @@
  * contextMenu.js — Gjenbrukbar kontekst-meny-builder.
  */
 
-function getPortal() {
-  return document.getElementById('modal-portal') ?? document.body;
-}
+import { getPortal } from './utils.js';
 
 /**
  * Vis en kontekst-meny ved gitte koordinater.
