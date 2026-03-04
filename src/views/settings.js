@@ -5,6 +5,19 @@
 import { store } from '../store.js';
 import { showToast, getPortal } from '../shared/utils.js';
 
+const THEMES = {
+  dark: [
+    { id: 'night',   label: 'Natt',   bg: '#1a1f2e', primary: '#7c3aed' },
+    { id: 'dracula', label: 'Dracula', bg: '#282a36', primary: '#bd93f9' },
+    { id: 'coffee',  label: 'Kaffe',  bg: '#1e1512', primary: '#db924b' },
+  ],
+  light: [
+    { id: 'nord',      label: 'Nord',    bg: '#eceff4', primary: '#5e81ac' },
+    { id: 'winter',    label: 'Vinter',  bg: '#f6f8ff', primary: '#047aff' },
+    { id: 'corporate', label: 'Bedrift', bg: '#f9fafb', primary: '#4b6bfb' },
+  ],
+};
+
 const TEMPLATE = `
 <div class="view-header">
   <h1 class="view-title">Innstillinger</h1>
@@ -20,6 +33,14 @@ const TEMPLATE = `
       <div class="theme-toggle" id="theme-toggle">
         <button class="theme-btn" data-theme="dracula" id="btn-theme-dark"><i class="fa-solid fa-moon"></i> Mørk</button>
         <button class="theme-btn" data-theme="light" id="btn-theme-light"><i class="fa-solid fa-sun"></i> Lys</button>
+      </div>
+    </div>
+    <div class="settings-row" id="color-theme-row">
+      <div>
+        <div class="settings-label">Fargetema</div>
+        <div class="settings-hint">Velg fargepalett for gjeldende modus</div>
+      </div>
+      <div class="color-theme-swatches" id="color-theme-swatches">
       </div>
     </div>
     <div class="settings-row">
@@ -93,6 +114,9 @@ async function loadSettings() {
   const currentTheme = settings.theme ?? 'dracula';
   document.getElementById('btn-theme-dark')?.classList.toggle('active', currentTheme === 'dracula');
   document.getElementById('btn-theme-light')?.classList.toggle('active', currentTheme === 'light');
+  const mode = currentTheme === 'light' ? 'light' : 'dark';
+  const colorTheme = settings.colorTheme ?? (mode === 'light' ? 'nord' : 'night');
+  renderSwatches(mode, colorTheme);
 
   // Flip display
   const flipEl = document.getElementById('setting-flip-display');
@@ -115,6 +139,33 @@ async function loadSettings() {
       verEl.textContent = `v${version}`;
     } catch { verEl.textContent = '—'; }
   }
+}
+
+function renderSwatches(mode, activeThemeId) {
+  const container = document.getElementById('color-theme-swatches');
+  if (!container) return;
+  const themes = THEMES[mode] ?? THEMES.dark;
+  container.innerHTML = themes.map(t => `
+    <button
+      class="color-swatch${t.id === activeThemeId ? ' active' : ''}"
+      data-theme-id="${t.id}"
+      title="${t.label}"
+      style="background:${t.bg};border-color:${t.primary}"
+    >${t.label.slice(0, 2)}</button>
+  `).join('');
+  container.querySelectorAll('.color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => setColorTheme(btn.dataset.themeId));
+  });
+}
+
+async function setColorTheme(themeId) {
+  await window.api.saveSettings({ colorTheme: themeId });
+  const s = store.getState().settings;
+  const newSettings = { ...s, colorTheme: themeId };
+  store.setState({ settings: newSettings });
+  document.documentElement.dataset.theme = themeId;
+  const mode = s.theme === 'light' ? 'light' : 'dark';
+  renderSwatches(mode, themeId);
 }
 
 function bindEvents() {
@@ -216,10 +267,16 @@ async function importClass() {
 }
 
 async function setTheme(theme) {
-  document.getElementById('btn-theme-dark')?.classList.toggle('active', theme === 'dracula');
-  document.getElementById('btn-theme-light')?.classList.toggle('active', theme === 'light');
-  document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dracula';
-  await window.api.saveSettings({ theme });
+  const isDark = theme !== 'light';
+  const mode = isDark ? 'dark' : 'light';
+  const defaultColorTheme = THEMES[mode][0].id;
+
+  document.getElementById('btn-theme-dark')?.classList.toggle('active', isDark);
+  document.getElementById('btn-theme-light')?.classList.toggle('active', !isDark);
+  document.documentElement.dataset.theme = defaultColorTheme;
+
+  await window.api.saveSettings({ theme, colorTheme: defaultColorTheme });
   const s = store.getState().settings;
-  store.setState({ settings: { ...s, theme } });
+  store.setState({ settings: { ...s, theme, colorTheme: defaultColorTheme } });
+  renderSwatches(mode, defaultColorTheme);
 }

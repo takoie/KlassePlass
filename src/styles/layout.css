@@ -167,3 +167,36 @@
 
 /* ---- History summary ---- */
 .history-summary { font-size: 12px; color: oklch(var(--bc) / 0.5); }
+
+/* ---- Color theme swatches ---- */
+.color-theme-swatches {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.active {
+  border-color: oklch(var(--bc));
+  outline: 2px solid oklch(var(--p));
+  outline-offset: 2px;
+}
