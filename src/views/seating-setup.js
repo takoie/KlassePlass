@@ -4,10 +4,63 @@
 
 import { normalizeStudents, showToast } from '../shared/utils.js';
 
+const TEMPLATE = `
+<div class="view-header">
+  <div>
+    <h1 class="view-title">Nytt klassekart</h1>
+    <p class="view-subtitle">Velg klasse, rom og innstillinger</p>
+  </div>
+  <button class="btn btn-ghost" id="btn-setup-cancel">
+    <i class="fa-solid fa-arrow-left"></i> Avbryt
+  </button>
+</div>
+<div class="setup-form">
+  <div class="form-group">
+    <label class="form-label">Navn på klassekart</label>
+    <input type="text" id="setup-name" class="form-input" placeholder="f.eks. Klasse 1A — Uke 10">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Klasse</label>
+    <select id="setup-class" class="form-input"><option value="">Velg klasse...</option></select>
+    <div id="setup-class-info" class="form-hint hidden"></div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Rom</label>
+    <select id="setup-room" class="form-input"><option value="">Velg rom...</option></select>
+    <div id="setup-room-info" class="form-hint hidden"></div>
+  </div>
+  <div id="setup-mismatch-warning" class="alert alert-warning hidden">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span id="setup-mismatch-msg"></span>
+  </div>
+  <details class="form-advanced">
+    <summary class="form-advanced-toggle">Avanserte innstillinger</summary>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Unngå par fra siste</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="setup-avoid-n" class="form-input" value="3" min="0" max="20" style="width:70px">
+        <span style="color:var(--text-secondary);font-size:13px">kart</span>
+      </div>
+      <div class="form-hint">Randomiseringen vil forsøke å unngå gjentatte sidepartnere</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Visning</label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="setup-flip-display"> Vis tavle nederst på skjermen
+      </label>
+    </div>
+  </details>
+  <div class="form-actions">
+    <button class="btn btn-ghost" id="btn-setup-cancel2">Avbryt</button>
+    <button class="btn btn-accent btn-lg" id="btn-setup-create" disabled>
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Generer klassekart
+    </button>
+  </div>
+</div>`;
+
 export const seatingSetupView = {
   async mount(container) {
-    const html = await fetch('src/views/seating-setup.html').then(r => r.text());
-    container.innerHTML = html;
+    container.innerHTML = TEMPLATE;
     await loadSelects();
     bindEvents();
   },

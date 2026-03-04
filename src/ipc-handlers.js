@@ -20,6 +20,9 @@ function registerHandlers(winRef) {
   ipcMain.on('window-maximize', () => winRef.win?.isMaximized() ? winRef.win.unmaximize() : winRef.win.maximize());
   ipcMain.on('window-close',    () => winRef.win?.close());
 
+  // ---- App info ----
+  ipcMain.handle('get-version', async () => app.getVersion());
+
   // ---- Settings ----
   ipcMain.handle('get-settings',   async ()       => loadSettings());
   ipcMain.handle('save-settings',  async (_, d)   => { const s = loadSettings(); saveSettings({ ...s, ...d }); return true; });

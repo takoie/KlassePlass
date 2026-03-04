@@ -23,7 +23,7 @@ function createMainWindow() {
     },
   });
 
-  winRef.win.loadFile('index.html');
+  winRef.win.loadFile(path.join(__dirname, '..', 'index.html'));
   return winRef.win;
 }
 
@@ -49,7 +49,7 @@ function registerPresentationHandler() {
       },
     });
 
-    winRef.presentationWin.loadFile('presentation.html');
+    winRef.presentationWin.loadFile(path.join(__dirname, '..', 'presentation.html'));
     winRef.presentationWin.webContents.once('did-finish-load', () => {
       winRef.presentationWin.webContents.send('render-layout', JSON.parse(layoutDataJson));
     });

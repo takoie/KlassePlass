@@ -5,10 +5,83 @@
 import { store } from '../store.js';
 import { showToast } from '../shared/utils.js';
 
+const TEMPLATE = `
+<div class="view-header">
+  <h1 class="view-title">Innstillinger</h1>
+</div>
+<div class="settings-layout">
+  <section class="settings-section">
+    <h2 class="settings-section-title">Utseende</h2>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Tema</div>
+        <div class="settings-hint">Bytt mellom mørk og lys modus</div>
+      </div>
+      <div class="theme-toggle" id="theme-toggle">
+        <button class="theme-btn" data-theme="dark" id="btn-theme-dark"><i class="fa-solid fa-moon"></i> Mørk</button>
+        <button class="theme-btn active" data-theme="light" id="btn-theme-light"><i class="fa-solid fa-sun"></i> Lys</button>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Standard visning</div>
+        <div class="settings-hint">Vis klassekart med tavle nederst som standard</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="setting-flip-display">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </section>
+  <section class="settings-section">
+    <h2 class="settings-section-title">Database</h2>
+    <div class="settings-row">
+      <div><div class="settings-label">Sikkerhetskopi</div><div class="settings-hint">Lagre en kopi av databasen</div></div>
+      <button class="btn btn-secondary btn-sm" id="btn-backup-db"><i class="fa-solid fa-download"></i> Ta backup</button>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-label">Gjenopprett</div><div class="settings-hint">Last inn en tidligere sikkerhetskopi</div></div>
+      <button class="btn btn-secondary btn-sm" id="btn-restore-db"><i class="fa-solid fa-upload"></i> Gjenopprett</button>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-label">Flytt database</div><div class="settings-hint">Lagre databasen på en annen plassering</div></div>
+      <button class="btn btn-secondary btn-sm" id="btn-move-db"><i class="fa-solid fa-folder-open"></i> Flytt</button>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-label">Databaseplassering</div><div id="db-path-display" class="settings-hint code-hint"></div></div>
+    </div>
+  </section>
+  <section class="settings-section">
+    <h2 class="settings-section-title">Eksport og import</h2>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Eksporter klasse</div>
+        <div class="settings-hint">Eksporter en klasse med alle kart og historikk som JSON-fil</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-export-class"><i class="fa-solid fa-file-export"></i> Eksporter</button>
+    </div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Importer klasse</div>
+        <div class="settings-hint">Importer en tidligere eksportert klasse-bundle</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-import-class"><i class="fa-solid fa-file-import"></i> Importer</button>
+    </div>
+  </section>
+  <section class="settings-section">
+    <h2 class="settings-section-title">Om KlassePlass</h2>
+    <div class="settings-row">
+      <div><div class="settings-label">Versjon</div><div id="app-version" class="settings-hint"></div></div>
+    </div>
+    <div class="settings-row">
+      <div><div class="settings-label">Utvikler</div><div class="settings-hint">Stian Taknes — stian.taknes.no</div></div>
+    </div>
+  </section>
+</div>`;
+
 export const settingsView = {
   async mount(container) {
-    const html = await fetch('src/views/settings.html').then(r => r.text());
-    container.innerHTML = html;
+    container.innerHTML = TEMPLATE;
     await loadSettings();
     bindEvents();
   },
@@ -36,8 +109,8 @@ async function loadSettings() {
   const verEl = document.getElementById('app-version');
   if (verEl) {
     try {
-      const pkg = await fetch('package.json').then(r => r.json());
-      verEl.textContent = `v${pkg.version}`;
+      const version = await window.api.getVersion();
+      verEl.textContent = `v${version}`;
     } catch { verEl.textContent = '—'; }
   }
 }

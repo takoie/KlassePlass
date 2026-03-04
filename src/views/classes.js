@@ -8,10 +8,71 @@ let _classes    = [];
 let _activeClass = null;
 let _constraints = [];
 
+const TEMPLATE = `
+<div class="view-header">
+  <div>
+    <h1 class="view-title">Klasser</h1>
+    <p class="view-subtitle">Administrer klasser og elevlister</p>
+  </div>
+  <button class="btn btn-accent" id="btn-new-class">
+    <i class="fa-solid fa-plus"></i> Ny klasse
+  </button>
+</div>
+<div class="classes-layout">
+  <div class="classes-list-panel">
+    <div id="classes-list"></div>
+    <div id="classes-empty" class="empty-state hidden">
+      <i class="fa-solid fa-users"></i>
+      <h3>Ingen klasser ennå</h3>
+      <p>Opprett en klasse for å legge til elever.</p>
+    </div>
+  </div>
+  <div id="class-detail-panel" class="class-detail-panel hidden">
+    <div class="panel-header">
+      <input type="text" id="class-name-input" class="panel-title-input" placeholder="Klassenavn...">
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-danger btn-sm" id="btn-delete-class"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-primary btn-sm" id="btn-save-class">
+          <i class="fa-solid fa-floppy-disk"></i> Lagre
+        </button>
+      </div>
+    </div>
+    <div class="student-editor">
+      <div class="student-editor-header">
+        <span style="font-weight:600;font-size:13px">Elever</span>
+        <span id="class-student-count" class="badge"></span>
+      </div>
+      <textarea id="class-students-input" class="students-textarea"
+        placeholder="Skriv ett elevnavn per linje&#10;Ola Nordmann&#10;Kari Hansen&#10;..."></textarea>
+      <div class="form-hint">Én elev per linje. Tomme linjer ignoreres.</div>
+    </div>
+    <div class="constraints-section">
+      <div class="section-header">
+        <span style="font-weight:600;font-size:13px">Plasserings-regler</span>
+        <button class="btn btn-ghost btn-sm" id="btn-add-constraint">
+          <i class="fa-solid fa-plus"></i> Ny regel
+        </button>
+      </div>
+      <div id="constraints-list"></div>
+      <div id="constraints-empty" class="empty-state-inline hidden">
+        Ingen regler ennå. Legg til for å kontrollere plasseringer.
+      </div>
+    </div>
+    <div class="history-section">
+      <div class="section-header">
+        <span style="font-weight:600;font-size:13px">Historikk</span>
+        <button class="btn btn-ghost btn-sm" id="btn-view-history">
+          <i class="fa-solid fa-clock-rotate-left"></i> Se historikk
+        </button>
+      </div>
+      <div id="class-history-summary" class="history-summary"></div>
+    </div>
+  </div>
+</div>`;
+
 export const classesView = {
   async mount(container) {
-    const html = await fetch('src/views/classes.html').then(r => r.text());
-    container.innerHTML = html;
+    container.innerHTML = TEMPLATE;
     await loadClasses();
     bindEvents();
   },

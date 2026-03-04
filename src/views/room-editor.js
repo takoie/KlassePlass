@@ -10,10 +10,60 @@ let _room = null;  // { id, name, desks, decorations, designMode, roomHeight }
 let _selectedIds = new Set();
 let _dragState = null;
 
+const TEMPLATE = `
+<div class="editor-layout">
+  <div class="editor-toolbar">
+    <div class="toolbar-left">
+      <button class="btn btn-ghost btn-sm" id="btn-room-back"><i class="fa-solid fa-arrow-left"></i></button>
+      <input type="text" id="room-name-input" class="toolbar-title-input" placeholder="Romnavn...">
+    </div>
+    <div class="toolbar-center">
+      <div class="desk-picker" id="desk-picker">
+        <button class="desk-add-btn" data-type="single" title="Enkeltpult"><span class="desk-mini single"></span></button>
+        <button class="desk-add-btn" data-type="bench2" title="Benk (2)"><span class="desk-mini bench2"></span></button>
+        <button class="desk-add-btn" data-type="bench4" title="Benk (4)"><span class="desk-mini bench4"></span></button>
+        <button class="desk-add-btn" data-type="round3" title="Rundbord (3)"><span class="desk-mini round"></span></button>
+        <button class="desk-add-btn" data-type="round4" title="Rundbord (4)"><span class="desk-mini round"></span></button>
+        <button class="desk-add-btn" data-type="round6" title="Rundbord (6)"><span class="desk-mini round"></span></button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="deco-picker">
+        <button class="desk-add-btn" data-deco="wall" title="Vegg"><i class="fa-solid fa-minus"></i></button>
+        <button class="desk-add-btn" data-deco="cabinet" title="Skap"><i class="fa-solid fa-box"></i></button>
+        <button class="desk-add-btn" data-deco="window" title="Vindu"><i class="fa-regular fa-window-maximize"></i></button>
+        <button class="desk-add-btn" data-deco="door" title="Dør"><i class="fa-solid fa-door-open"></i></button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <button class="btn btn-secondary btn-sm" id="btn-auto-generate">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Auto
+      </button>
+    </div>
+    <div class="toolbar-right">
+      <div class="design-mode-toggle">
+        <label class="toggle-label">
+          <input type="radio" name="design-mode" value="board-top" id="mode-board-top" checked>
+          <span>Tavle øverst</span>
+        </label>
+        <label class="toggle-label">
+          <input type="radio" name="design-mode" value="board-bottom" id="mode-board-bottom">
+          <span>Tavle nederst</span>
+        </label>
+      </div>
+      <button class="btn btn-primary" id="btn-room-save">
+        <i class="fa-solid fa-floppy-disk"></i> Lagre
+      </button>
+    </div>
+  </div>
+  <div class="canvas-wrapper">
+    <div id="room-canvas" class="room-canvas">
+      <div id="room-front-board" class="front-board board-top">TAVLE</div>
+    </div>
+  </div>
+</div>`;
+
 export const roomEditorView = {
   async mount(container, params = {}) {
-    const html = await fetch('src/views/room-editor.html').then(r => r.text());
-    container.innerHTML = html;
+    container.innerHTML = TEMPLATE;
 
     if (params.roomId) {
       await loadRoom(params.roomId);

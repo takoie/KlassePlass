@@ -8,11 +8,44 @@ let _container = null;
 let _allCharts = [];
 let _allClasses = [];
 
+const TEMPLATE = `
+<div class="view-header">
+  <div>
+    <h1 class="view-title">Klassekart</h1>
+    <p class="view-subtitle">Oversikt over alle dine klassekart</p>
+  </div>
+  <button class="btn btn-accent" id="btn-new-chart">
+    <i class="fa-solid fa-plus"></i> Nytt klassekart
+  </button>
+</div>
+<div class="filter-bar">
+  <div class="filter-group">
+    <label class="filter-label">Klasse</label>
+    <select id="filter-class" class="filter-select"><option value="">Alle klasser</option></select>
+  </div>
+  <div class="filter-group">
+    <label class="filter-label">Sorter</label>
+    <select id="filter-sort" class="filter-select">
+      <option value="newest">Nyeste først</option>
+      <option value="oldest">Eldste først</option>
+      <option value="name">Alfabetisk</option>
+    </select>
+  </div>
+</div>
+<div id="charts-grid" class="cards-grid"></div>
+<div id="charts-empty" class="empty-state hidden">
+  <i class="fa-solid fa-chalkboard"></i>
+  <h3>Ingen klassekart ennå</h3>
+  <p>Opprett ditt første klassekart for å komme i gang.</p>
+  <button class="btn btn-primary" id="btn-new-chart-empty">
+    <i class="fa-solid fa-plus"></i> Opprett klassekart
+  </button>
+</div>`;
+
 export const chartsDashboardView = {
   async mount(container) {
     _container = container;
-    const html = await fetch('src/views/charts-dashboard.html').then(r => r.text());
-    container.innerHTML = html;
+    container.innerHTML = TEMPLATE;
     await loadData();
     bindEvents();
   },

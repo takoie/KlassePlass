@@ -13,11 +13,59 @@ import { buildChartFromParams, buildChartFromDb } from '../shared/chartHelpers.j
 let _chart     = null;  // { id, name, classId, roomId, desks, students, studentsById, ... }
 let _container = null;
 
+const TEMPLATE = `
+<div class="editor-layout">
+  <div class="editor-toolbar">
+    <div class="toolbar-left">
+      <button class="btn btn-ghost btn-sm" id="btn-editor-back"><i class="fa-solid fa-arrow-left"></i></button>
+      <span id="editor-chart-name" class="toolbar-title"></span>
+    </div>
+    <div class="toolbar-center">
+      <button class="btn btn-accent" id="btn-shuffle" title="Randomiser (Ctrl+R)">
+        <i class="fa-solid fa-shuffle"></i> Randomiser
+      </button>
+      <div class="toolbar-divider"></div>
+      <button class="btn btn-secondary btn-sm" id="btn-toggle-groups" title="Grupperingsmodus">
+        <i class="fa-solid fa-object-group"></i>
+      </button>
+      <button class="btn btn-secondary btn-sm" id="btn-toggle-numbers" title="Vis pultnumre">
+        <i class="fa-solid fa-hashtag"></i>
+      </button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-secondary btn-sm" id="btn-present" title="Åpne presentasjonsvindu">
+        <i class="fa-solid fa-tv"></i> Presenter
+      </button>
+      <button class="btn btn-primary" id="btn-save" title="Lagre (Ctrl+S)">
+        <i class="fa-solid fa-floppy-disk"></i> Lagre
+      </button>
+    </div>
+  </div>
+  <div id="constraint-report" class="constraint-banner hidden">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span id="constraint-report-msg"></span>
+    <button class="btn btn-ghost btn-sm" id="btn-close-constraint-report"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden">
+    <div class="canvas-wrapper" style="flex:1">
+      <div id="seating-canvas" class="seating-canvas">
+        <div id="front-board" class="front-board board-top">TAVLE</div>
+      </div>
+    </div>
+    <div id="student-sidebar" class="student-sidebar">
+      <div class="sidebar-header">
+        <span style="font-weight:600;font-size:13px">Elever</span>
+        <span id="student-count-badge" class="badge"></span>
+      </div>
+      <div id="unassigned-students" class="student-list"></div>
+    </div>
+  </div>
+</div>`;
+
 export const seatingEditorView = {
   async mount(container, params = {}) {
     _container = container;
-    const html = await fetch('src/views/seating-editor.html').then(r => r.text());
-    container.innerHTML = html;
+    container.innerHTML = TEMPLATE;
 
     if (params.mode === 'new') {
       await initNewChart(params);
@@ -272,13 +320,11 @@ function bindEvents() {
   document.getElementById('btn-save')?.addEventListener('click', saveChart);
   document.getElementById('btn-shuffle')?.addEventListener('click', () => shuffle(true));
   document.getElementById('btn-present')?.addEventListener('click', openPresentation);
-  document.getElementById('btn-toggle-numbers')?.addEventListener('click', () => {
-    // Toggle re-render med showNumbers
-    render();
+  document.getElementById('btn-close-constraint-report')?.addEventListener('click', () => {
+    document.getElementById('constraint-report')?.classList.add('hidden');
   });
-  document.getElementById('btn-toggle-groups')?.addEventListener('click', () => {
-    render();
-  });
+  document.getElementById('btn-toggle-numbers')?.addEventListener('click', () => { render(); });
+  document.getElementById('btn-toggle-groups')?.addEventListener('click', () => { render(); });
 
   // Forhindre Electron-native drag
   document.addEventListener('dragover', e => e.preventDefault());

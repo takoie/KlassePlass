@@ -53,6 +53,9 @@ contextBridge.exposeInMainWorld('api', {
   onUpdateReady:    (cb)     => ipcRenderer.on('update-ready', (_, info) => cb(info)),
   restartApp:       ()       => ipcRenderer.send('restart-app'),
 
+  // App info
+  getVersion:       ()       => ipcRenderer.invoke('get-version'),
+
   // Window controls
   minimizeWindow:   ()       => ipcRenderer.send('window-minimize'),
   maximizeWindow:   ()       => ipcRenderer.send('window-maximize'),
