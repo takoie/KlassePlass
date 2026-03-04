@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="no" data-theme="dracula" style="background:transparent !important">
+<html lang="no" data-theme="dracula">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,9 +20,9 @@
   <link rel="stylesheet" href="src/styles/classes.css">
   <link rel="stylesheet" href="src/styles/canvas.css">
 </head>
-<body class="text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;background:transparent !important">
-  <div id="app-shell" style="height:100vh;padding:8px;box-sizing:border-box;background:transparent">
-  <div id="app" class="flex flex-col" style="height:100%;border-radius:14px;overflow:hidden;border:1px solid oklch(var(--b3)/0.8);box-shadow:0 24px 64px rgba(0,0,0,0.6)">
+<body class="bg-base-200 text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;">
+  <div id="app-shell" style="height:100vh;box-sizing:border-box;">
+  <div id="app" class="flex flex-col" style="height:100%;overflow:hidden;">
     <!-- Title bar — only window controls, no duplicate logo -->
     <div class="titlebar flex items-center justify-end px-2 flex-shrink-0 bg-base-200" style="-webkit-app-region:drag;height:28px;border-bottom:1px solid oklch(var(--b3)/0.5)">
       <div class="flex gap-1" style="-webkit-app-region:no-drag">
@@ -99,9 +99,6 @@
   <div id="modal-portal"></div>
 
   <style>
-    /* Force transparent background on html/body so rounded window corners show through */
-    html, body { background: transparent !important; }
-
     .hidden { display: none !important; }
 
     /* Modal portal — plain container, no positioning so fixed children use viewport */
