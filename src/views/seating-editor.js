@@ -350,7 +350,7 @@ function openNoteModal(deskId, slotIdx) {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
-    <div class="modal">
+    <div class="kp-modal">
       <div class="modal-header">
         <span class="modal-title">Notat — ${escHtml(student.name)}</span>
         <button class="btn btn-ghost btn-sm" id="btn-note-close"><i class="fa-solid fa-xmark"></i></button>
@@ -389,7 +389,7 @@ function openNewPeriodModal() {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
-    <div class="modal" style="min-width:300px">
+    <div class="kp-modal" style="min-width:300px">
       <div class="modal-header"><span class="modal-title">Start ny periode</span></div>
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Fra uke</label>

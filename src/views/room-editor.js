@@ -464,7 +464,7 @@ function autoGenerate() {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
-    <div class="modal" style="min-width:320px">
+    <div class="kp-modal" style="min-width:320px">
       <div class="modal-header"><span class="modal-title">Auto-generer rom</span></div>
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Oppsett</label>

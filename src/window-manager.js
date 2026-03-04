@@ -25,7 +25,6 @@ function createMainWindow() {
   });
 
   winRef.win.loadFile(path.join(__dirname, '..', 'index.html'));
-  winRef.win.webContents.openDevTools({ mode: 'detach' });
   return winRef.win;
 }
 

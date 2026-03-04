@@ -570,7 +570,7 @@
   z-index: 9999;
   animation: fadeIn 0.15s ease;
 }
-.modal {
+.kp-modal {
   background: oklch(var(--b2));
   border: 1px solid oklch(var(--b3));
   border-radius: 16px;

@@ -162,7 +162,7 @@ async function exportClass() {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
-    <div class="modal">
+    <div class="kp-modal">
       <div class="modal-header"><span class="modal-title">Eksporter klasse</span></div>
       <div class="form-group" style="margin-bottom:16px">
         <label class="form-label">Velg klasse</label>

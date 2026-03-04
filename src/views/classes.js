@@ -210,7 +210,7 @@ function openNoteModal(idx) {
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
-    <div class="modal">
+    <div class="kp-modal">
       <div class="modal-header">
         <span class="modal-title">Notat for ${escHtml(student.name)}</span>
       </div>
@@ -333,14 +333,13 @@ async function deleteClass() {
 }
 
 async function addConstraint() {
-  console.log('[addConstraint] called, _activeClass=', _activeClass, 'portal=', document.getElementById('modal-portal'));
-  if (!_activeClass) { console.warn('[addConstraint] no active class'); return; }
+  if (!_activeClass) return;
   const names = _students.map(s => s.name);
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
-    <div class="modal">
+    <div class="kp-modal">
       <div class="modal-header"><span class="modal-title">Ny plasserings-regel</span></div>
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Elev A</label>
@@ -367,10 +366,7 @@ async function addConstraint() {
       </div>
     </div>
   `;
-  const portal = getPortal();
-  console.log('[addConstraint] appending to portal:', portal, 'backdrop:', backdrop);
-  portal.appendChild(backdrop);
-  console.log('[addConstraint] backdrop appended, portal children:', portal.children.length, 'backdrop rect:', JSON.stringify(backdrop.getBoundingClientRect()));
+  getPortal().appendChild(backdrop);
 
   backdrop.querySelector('#c-cancel').addEventListener('click', () => backdrop.remove());
   backdrop.querySelector('#c-save').addEventListener('click', async () => {
