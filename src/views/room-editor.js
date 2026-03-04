@@ -4,7 +4,7 @@
  */
 
 import { DESK_TYPES } from '../shared/constants.js';
-import { showToast, createDesk, uid } from '../shared/utils.js';
+import { showToast, getPortal, createDesk, uid } from '../shared/utils.js';
 
 let _room = null;  // { id, name, desks, decorations, designMode, roomHeight }
 let _selectedIds = new Set();
@@ -356,7 +356,7 @@ function showMenu(x, y, items) {
     menu.appendChild(el);
   });
 
-  document.body.appendChild(menu);
+  getPortal().appendChild(menu);
   setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
 }
 
@@ -486,7 +486,7 @@ function autoGenerate() {
       </div>
     </div>
   `;
-  document.body.appendChild(backdrop);
+  getPortal().appendChild(backdrop);
   backdrop.querySelector('#ag-cancel').addEventListener('click', () => backdrop.remove());
   backdrop.querySelector('#ag-ok').addEventListener('click', () => {
     const presetIdx  = parseInt(backdrop.querySelector('#ag-preset').value, 10);

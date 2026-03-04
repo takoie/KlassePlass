@@ -3,7 +3,7 @@
  * Studentliste med notater, plasseringsprioritet og constraints.
  */
 
-import { showToast } from '../shared/utils.js';
+import { showToast, getPortal } from '../shared/utils.js';
 
 let _classes    = [];
 let _activeClass = null;
@@ -223,7 +223,7 @@ function openNoteModal(idx) {
       </div>
     </div>
   `;
-  document.body.appendChild(backdrop);
+  getPortal().appendChild(backdrop);
   backdrop.querySelector('#note-cancel').addEventListener('click', () => backdrop.remove());
   backdrop.querySelector('#note-save').addEventListener('click', () => {
     _students[idx].note = backdrop.querySelector('#note-input').value.trim();
@@ -366,7 +366,7 @@ async function addConstraint() {
       </div>
     </div>
   `;
-  document.body.appendChild(backdrop);
+  getPortal().appendChild(backdrop);
 
   backdrop.querySelector('#c-cancel').addEventListener('click', () => backdrop.remove());
   backdrop.querySelector('#c-save').addEventListener('click', async () => {

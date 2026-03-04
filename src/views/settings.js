@@ -3,7 +3,7 @@
  */
 
 import { store } from '../store.js';
-import { showToast } from '../shared/utils.js';
+import { showToast, getPortal } from '../shared/utils.js';
 
 const TEMPLATE = `
 <div class="view-header">
@@ -176,7 +176,7 @@ async function exportClass() {
       </div>
     </div>
   `;
-  document.body.appendChild(backdrop);
+  getPortal().appendChild(backdrop);
   backdrop.querySelector('#exp-cancel').addEventListener('click', () => backdrop.remove());
   backdrop.querySelector('#exp-ok').addEventListener('click', async () => {
     const classId = parseInt(backdrop.querySelector('#export-class-sel').value);

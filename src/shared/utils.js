@@ -74,13 +74,23 @@ export function extractPairsFromLayout(desks, studentsById) {
   return pairs;
 }
 
+/**
+ * Returnerer modal-portalen (#modal-portal).
+ * Alle modaler og context-menyer legges hit slik at de aldri
+ * klippes av overflow:hidden inne i #app.
+ */
+export function getPortal() {
+  return document.getElementById('modal-portal') ?? document.body;
+}
+
 /** Toast-melding i UI */
 export function showToast(message, type = 'info') {
+  const portal = getPortal();
   const existing = document.getElementById('toast-container');
   const container = existing ?? (() => {
     const c = document.createElement('div');
     c.id = 'toast-container';
-    document.body.appendChild(c);
+    portal.appendChild(c);
     return c;
   })();
 

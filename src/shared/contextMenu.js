@@ -2,6 +2,10 @@
  * contextMenu.js — Gjenbrukbar kontekst-meny-builder.
  */
 
+function getPortal() {
+  return document.getElementById('modal-portal') ?? document.body;
+}
+
 /**
  * Vis en kontekst-meny ved gitte koordinater.
  * @param {number} x
@@ -15,7 +19,7 @@ export function showContextMenu(x, y, items, menuId = 'ctx-menu') {
     menu = document.createElement('div');
     menu.id = menuId;
     menu.className = 'context-menu';
-    document.body.appendChild(menu);
+    getPortal().appendChild(menu);
   }
 
   menu.innerHTML = '';

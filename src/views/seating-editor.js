@@ -8,7 +8,7 @@ import { renderDesks }        from '../shared/renderDesks.js';
 import { randomizeSeating }   from '../shared/randomize.js';
 import { getDisplayDesks }    from '../shared/transforms.js';
 import { DESK_COLORS }        from '../shared/constants.js';
-import { extractPairsFromLayout, showToast, getWeekNumber } from '../shared/utils.js';
+import { extractPairsFromLayout, showToast, getWeekNumber, getPortal } from '../shared/utils.js';
 import { showContextMenu }    from '../shared/contextMenu.js';
 import { buildChartFromParams, buildChartFromDb } from '../shared/chartHelpers.js';
 
@@ -317,7 +317,7 @@ function showDeskContextMenu(deskId, event) {
     });
   });
 
-  document.body.appendChild(menu);
+  getPortal().appendChild(menu);
   setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
 }
 
@@ -362,7 +362,7 @@ function openNoteModal(deskId, slotIdx) {
       </div>
     </div>
   `;
-  document.body.appendChild(backdrop);
+  getPortal().appendChild(backdrop);
 
   const close = () => backdrop.remove();
   backdrop.querySelector('#btn-note-close').addEventListener('click', close);
@@ -405,7 +405,7 @@ function openNewPeriodModal() {
       </div>
     </div>
   `;
-  document.body.appendChild(backdrop);
+  getPortal().appendChild(backdrop);
   backdrop.querySelector('#period-cancel').addEventListener('click', () => backdrop.remove());
   backdrop.querySelector('#period-ok').addEventListener('click', async () => {
     const from = parseInt(backdrop.querySelector('#period-from').value, 10);
