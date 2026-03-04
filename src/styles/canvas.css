@@ -712,3 +712,32 @@
 .constraint-item-actions {
   display: flex; gap: 2px; justify-content: flex-end;
 }
+
+/* ---- Canvas 180° rotation ---- */
+.seating-canvas.canvas-rotated,
+.room-canvas.canvas-rotated {
+  transform: rotate(180deg);
+  transform-origin: center center;
+}
+
+/* Counter-rotate all text inside a rotated canvas so it stays readable */
+.canvas-rotated .student-name,
+.canvas-rotated .desk-number,
+.canvas-rotated .desk-slot,
+.canvas-rotated .room-desk > span {
+  transform: rotate(-180deg);
+  display: inline-block;
+}
+
+/* Keep the TAVLE board label readable */
+.canvas-rotated .front-board {
+  transform: translateX(-50%) rotate(-180deg);
+}
+
+/* Decoration icons and labels */
+.canvas-rotated .decoration {
+  /* Decorations are absolutely positioned with their own rotation already applied inline.
+     We need their content (icons, text) to be counter-rotated.
+     We achieve this by adding the counter-rotation to the decoration's own transform
+     in JS, not CSS, because the inline style overrides CSS transform. See Task 3. */
+}
