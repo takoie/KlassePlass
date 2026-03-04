@@ -55,7 +55,7 @@ window.navTo = navTo;
 async function init() {
   const settings = await window.api.getSettings();
   store.setState({ settings });
-  applyTheme(settings.theme ?? 'dracula');
+  applyTheme(settings);
 
   // Lyt på auto-update
   window.api.onUpdateReady(info => {
