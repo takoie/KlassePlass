@@ -4,6 +4,7 @@
   "description": "Verktøy for organisering av klassekart",
   "author": "Stian Taknes",
   "main": "main.js",
+  "repository": "https://github.com/takoie/klasseplass",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
@@ -11,6 +12,7 @@
   },
   "license": "ISC",
   "dependencies": {
+    "electron-updater": "^6.1.8",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
@@ -24,9 +26,17 @@
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "takoie",
+        "repo": "klasseplass"
+      }
+    ],
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "artifactName": "KlassePlass.Setup.${version}.exe"
     },
     "nsis": {
       "oneClick": false,

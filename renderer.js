@@ -1,27 +1,12 @@
 const { ipcRenderer } = require('electron');
-
-const DESK_W = 85;
-const DESK_H = 55;
-const SNAP_THRESHOLD = 15;
-const GROUP_COLORS = [
-    '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
-    '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#84cc16',
-    '#06b6d4', '#d946ef', '#e11d48', '#22c55e', '#64748b'
-];
-const CANVAS_W = 920;
-
-// Desk type specifications
-const DESK_TYPES = {
-    single: { width: 85, height: 55, capacity: 1, name: 'Enkeltpult' },
-    round3: { width: 130, height: 130, capacity: 3, name: 'Rundbord (3)' },
-    round4: { width: 145, height: 145, capacity: 4, name: 'Rundbord (4)' },
-    round6: { width: 160, height: 160, capacity: 6, name: 'Rundbord (6)' },
-    bench2: { width: 170, height: 55, capacity: 2, name: 'Langbord (2)' },
-    bench4: { width: 340, height: 55, capacity: 4, name: 'Langbord (4)' }
-};
-
+const onboarding = require('./modules/onboarding');
+const classes = require('./modules/classes');
+const transforms = require('./modules/transforms');
+const { DESK_W, DESK_H, SNAP_THRESHOLD, CANVAS_W, ROOM_EDITOR_CANVAS_H, GROUP_COLORS, DESK_TYPES, state } = require('./modules/state');
 
 // --- APP STATE ---
+// Mutable state lives in state.js for cross-module access.
+// renderer.js uses local lets for backward compatibility; extracted modules use state.xxx directly.
 let editingId = null;
 let currentChart = { id: null, classId: null, roomId: null, layout: [], allStudents: [] };
 let modalCallback = null;
@@ -30,17 +15,29 @@ let confirmCallback = null;
 let rightClickedDesk = null;
 let selectedSeatingDeskIdx = null;
 let selectedStudentPos = null;
-
-// Group Mode State
 let isGroupMode = false;
 let selectedDesksForGroup = [];
 let groupCounter = 0;
-
-// Dropdown State
 let activeDropdown = null;
-
-// Room Editor Selection State
 let selectedDesks = [];
+
+// Keep state.js in sync for modules that read it
+function syncState() {
+    state.editingId = editingId;
+    state.currentChart = currentChart;
+    state.modalCallback = modalCallback;
+    state.deleteCallback = deleteCallback;
+    state.confirmCallback = confirmCallback;
+    state.rightClickedDesk = rightClickedDesk;
+    state.selectedSeatingDeskIdx = selectedSeatingDeskIdx;
+    state.selectedStudentPos = selectedStudentPos;
+    state.isGroupMode = isGroupMode;
+    state.selectedDesksForGroup = selectedDesksForGroup;
+    state.groupCounter = groupCounter;
+    state.activeDropdown = activeDropdown;
+    state.selectedDesks = selectedDesks;
+}
+
 
 // --- WINDOW CONTROLS ---
 function minimizeApp() { ipcRenderer.send('app:minimize'); }
@@ -146,39 +143,65 @@ async function toggleDefaultFlip() {
 async function applyDefaultFlip(canvasId) {
     const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
     const canvas = document.getElementById(canvasId);
-    if (canvas) {
-        if (isFlipped) {
-            canvas.classList.add('flipped');
-            // Adjust canvas height for flipped view
-            if (canvasId === 'seatingCanvas') {
-                setTimeout(() => adjustCanvasForFlipSeating(), 100);
-            }
-        } else {
+    if (!canvas) return;
+
+    // For seatingCanvas: use coordinate transform for board-top+flipped (no CSS flip, no empty space)
+    // board-bottom never uses flip
+    if (canvasId === 'seatingCanvas' && currentChart) {
+        const roomDesignMode = currentChart.roomDesignMode || 'board-top';
+        currentChart.shouldFlipForDisplay = isFlipped;
+        if (roomDesignMode === 'board-bottom' || (roomDesignMode === 'board-top' && isFlipped)) {
             canvas.classList.remove('flipped');
+            renderSeating(); // Re-render with correct coordinates
+            return;
         }
+        // board-top without flip: remove flipped class
+        canvas.classList.remove('flipped');
+        renderSeating();
+        return;
+    }
+
+    // displayCanvas and others
+    if (isFlipped) {
+        canvas.classList.add('flipped');
+    } else {
+        canvas.classList.remove('flipped');
     }
 }
 
-// Toggle design mode for room editor
+// Toggle design mode for room editor (coordinate transform, no CSS flip)
 function toggleDesignMode() {
-    const isChecked = document.getElementById('designModeToggle').checked;
     const canvas = document.getElementById('roomCanvas');
-    const board = canvas.querySelector('.front-board');
-    
-    if (isChecked) {
-        // Board-bottom mode: Move board to bottom
-        if (board) {
-            board.style.top = 'auto';
-            board.style.bottom = '10px';
-        }
-    } else {
-        // Board-top mode: Reset board to top
-        if (board) {
-            board.style.top = '10px';
-            board.style.bottom = 'auto';
-        }
-    }
+    if (!canvas) return;
+
+    // Never use CSS flip; remove if present
+    canvas.classList.remove('flipped');
+    if (canvas.style) canvas.style.setProperty('--flip-offset', '0px');
+
+    const isChecked = document.getElementById('designModeToggle').checked;
+    const layoutToShow = isChecked
+        ? transformCoordinatesForMode(roomEditorLayoutBoardTop, 'board-top', 'board-bottom', roomEditorCurrentHeight)
+        : roomEditorLayoutBoardTop;
+
+    renderRoomCanvas(layoutToShow);
+    setRoomEditorBoardPosition(isChecked);
 }
+
+// Prevent Electron from intercepting HTML5 drag-and-drop as native file drags.
+// Without this, Electron shows a forbidden cursor and blocks in-page drag-and-drop entirely.
+// Global drag event monitoring (Capture Phase)
+// Document-level preventDefault allows HTML5 drops to function and intercepts Electron file drops
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+    document.addEventListener(evt, (e) => {
+        // We MUST preventDefault on dragenter and dragover to allow drop
+        if (evt === 'dragover' || evt === 'dragenter') {
+            e.preventDefault();
+        }
+        if (evt === 'drop') {
+            e.preventDefault();
+        }
+    }, true);
+});
 
 document.addEventListener('DOMContentLoaded', async () => {
     const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
@@ -231,17 +254,21 @@ function closeConfirmModal(result) {
     if (confirmCallback) confirmCallback(result);
 }
 
+function showVippsNumber() {
+    openConfirmModal('Vipps', 'Telefonnummer: 970 33 580', () => { });
+}
+
 // ABOUT MODAL
 // Settings Modal with Tabs
 async function openSettingsModal() {
     document.getElementById('settingsModal').style.display = 'flex';
     switchTab('settings'); // Default to Settings tab
-    
+
     // Sync "Tavle nederst" toggle with settings
     const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
     const toggle = document.getElementById('defaultFlipToggle');
     if (toggle) toggle.checked = isFlipped;
-    
+
     // Load database path
     try {
         const dbPath = await ipcRenderer.invoke('get-db-path');
@@ -260,18 +287,18 @@ function switchTab(tabId, event) {
     document.querySelectorAll('.tab-pane').forEach(pane => {
         pane.classList.remove('active');
     });
-    
+
     // Remove active class from all tab buttons
     document.querySelectorAll('.tab-button').forEach(btn => {
         btn.classList.remove('active');
     });
-    
+
     // Show selected tab pane
     const targetPane = document.getElementById(`tab-${tabId}`);
     if (targetPane) {
         targetPane.classList.add('active');
     }
-    
+
     // Add active class to clicked button (if called from event)
     if (event && event.target) {
         const button = event.target.closest('.tab-button');
@@ -291,11 +318,11 @@ function switchTab(tabId, event) {
 async function backupDatabase() {
     try {
         const result = await ipcRenderer.invoke('backup-database');
-        
+
         if (result.canceled) {
             return; // User cancelled, do nothing
         }
-        
+
         if (result.success) {
             showToast(`✓ Database backed up: ${result.filename}`);
         } else {
@@ -313,20 +340,20 @@ async function restoreDatabase() {
         '⚠️ Dette vil erstatte ALL eksisterende data med data fra backup-filen. Denne handlingen kan ikke angres. Er du sikker?',
         async (confirmed) => {
             if (!confirmed) return;
-            
+
             try {
                 const result = await ipcRenderer.invoke('restore-database');
-                
+
                 if (result.canceled) {
                     return; // User cancelled, do nothing
                 }
-                
+
                 if (result.success) {
                     showToast('✓ Database gjenopprettet. Laster applikasjon på nytt...');
-                    
+
                     // Close settings modal
                     closeSettingsModal();
-                    
+
                     // Reload all data after short delay
                     setTimeout(() => {
                         location.reload();
@@ -348,20 +375,20 @@ async function moveDatabase() {
         'Dette vil flytte databasen til en ny plassering. Applikasjonen må startes på nytt etter flytting. Er du sikker?',
         async (confirmed) => {
             if (!confirmed) return;
-            
+
             try {
                 const result = await ipcRenderer.invoke('move-database');
-                
+
                 if (result.canceled) {
                     return; // User cancelled, do nothing
                 }
-                
+
                 if (result.success) {
                     showToast(`✓ Database flyttet til: ${result.newPath}`);
-                    
+
                     // Close settings modal
                     closeSettingsModal();
-                    
+
                     // Show message about restart requirement
                     setTimeout(() => {
                         openConfirmModal(
@@ -389,23 +416,30 @@ async function moveDatabase() {
 // =========================================================
 async function openPresentationWindow() {
     if (!currentChart || !currentChart.layout) return showToast("Ingen data å vise");
-    
+
     const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
-    
+
     // Get room design mode
     let designMode = 'board-top';
+    let roomHeight = 500;
     if (currentChart.roomId) {
         const room = await ipcRenderer.invoke('get-room', currentChart.roomId);
         if (room) {
             const roomLayout = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '{}'));
             designMode = roomLayout.designMode || 'board-top';
+            roomHeight = roomLayout.roomHeight || 500;
         }
     }
-    
-    const dataToSend = { 
-        layout: currentChart.layout, 
+
+    // Use coordinate transform for board-top + tavle nederst (no CSS flip, no empty space)
+    const layoutToSend = getRenderedLayoutForDisplay(currentChart.layout, designMode, isFlipped, roomHeight);
+    const showBoardAtBottom = designMode === 'board-bottom' || (designMode === 'board-top' && isFlipped);
+
+    const dataToSend = {
+        layout: layoutToSend,
         defaultFlipped: isFlipped,
-        designMode: designMode  // Pass design mode to presentation window
+        designMode: designMode,
+        showBoardAtBottom: showBoardAtBottom  // Don't use CSS flip - use coord transform
     };
     ipcRenderer.send('open-presentation-window', JSON.stringify(dataToSend));
 }
@@ -427,7 +461,7 @@ roomContainer.onmousedown = (e) => {
     }
 
     isSelecting = true;
-    
+
     // Get position relative to roomContainer
     const containerRect = roomContainer.getBoundingClientRect();
     selectionStart = {
@@ -489,62 +523,106 @@ window.addEventListener('mouseup', (e) => {
 });
 
 // =========================================================
-// CLASS LOGIC
+// CLASS LOGIC (extracted to modules/classes.js)
 // =========================================================
-async function loadClasses() {
-    const classes = await ipcRenderer.invoke('get-classes');
-    const grid = document.getElementById('classGrid'); grid.innerHTML = '';
-    classes.forEach(c => {
-        const count = c.students ? c.students.split('\n').filter(s => s.trim()).length : 0;
-        grid.innerHTML += `
-            <div class="info-card" onclick="editClass(${c.id})">
-                <h5 class="card-title-large">${c.name}</h5>
-                <span class="card-info-text">${count} Elever</span>
-                <button class="btn-action btn-danger btn-sm-action" style="position:absolute; bottom:15px; right:15px;" 
-                onclick="event.stopPropagation(); openDeleteModal(() => deleteClass(${c.id}))">Slett</button>
-            </div>`;
-    });
-}
-function openClassCreate() {
-    editingId = null;
-    document.getElementById('classIdInput').value = '';
-    document.getElementById('classNameInput').value = '';
-    document.getElementById('studentListInput').value = '';
-    document.getElementById('classEditorTitle').innerText = "Opprett gruppe";
-    document.getElementById('btnClassDelete').style.display = 'none';
-}
-async function editClass(id) {
-    editingId = id;
-    const c = await ipcRenderer.invoke('get-class', id);
-    document.getElementById('classIdInput').value = c.id;
-    document.getElementById('classEditorTitle').innerText = "Rediger: " + c.name;
-    document.getElementById('classNameInput').value = c.name;
-    document.getElementById('studentListInput').value = c.students;
-    document.getElementById('btnClassDelete').style.display = 'block';
-    navTo('view-group-editor');
-}
-async function saveClass() {
-    const name = document.getElementById('classNameInput').value;
-    const students = document.getElementById('studentListInput').value;
-    if (!name) return showToast("Mangler navn");
-    await ipcRenderer.invoke('save-class', editingId, name, students);
-    showToast("Lagret"); navTo('view-groups');
-}
-async function deleteClass(id) {
-    await ipcRenderer.invoke('delete-class', id || editingId);
-    showToast("Slettet"); navTo('view-groups');
-}
+classes.init({ showToast, navTo });
+
+// Expose class functions to window scope for HTML onclick handlers
+window.loadClasses = classes.loadClasses;
+window.editClass = classes.editClass;
+window.saveClass = classes.saveClass;
+window.deleteClass = classes.deleteClass;
+window.openClassCreate = classes.openClassCreate;
+window.addStudentsFromPaste = classes.addStudentsFromPaste;
+window.removeStudent = classes.removeStudent;
+window.renderStudentList = classes.renderStudentList;
+
+// Keep references for internal use
+const loadClasses = classes.loadClasses;
+const parseStudentsFromText = classes.parseStudentsFromText;
+const escapeHtml = classes.escapeHtml;
+const studentList = { get: classes.getStudentList, set: classes.setStudentList };
 
 // =========================================================
 // ROOM LOGIC
 // =========================================================
-function openRoomCreate() {
+
+// Room editor: layout always stored in board-top coords; display uses transform when "snu visning" is on (no CSS flip)
+let roomEditorLayoutBoardTop = state.roomEditorLayoutBoardTop;
+let roomEditorCurrentHeight = state.roomEditorCurrentHeight;
+
+function isRoomEditorDisplayFlipped() {
+    const t = document.getElementById('designModeToggle');
+    return t ? t.checked === true : false;
+}
+
+function readRoomEditorLayoutFromDOM() {
+    const desks = [];
+    document.querySelectorAll('#roomCanvas .desk').forEach(d => {
+        const type = d.dataset.type || 'single';
+        const spec = DESK_TYPES[type];
+        if (spec) {
+            desks.push({
+                x: parseInt(d.style.left || 0),
+                y: parseInt(d.style.top || 0),
+                rotation: parseInt(d.dataset.rotation || 0),
+                type: type,
+                capacity: spec.capacity
+            });
+        }
+    });
+    return desks;
+}
+
+function getCalculatedRoomHeight(desks) {
+    if (!desks || desks.length === 0) return 500;
+    let maxY = 0;
+    desks.forEach(d => {
+        const type = d.type || 'single';
+        const h = getDeskHeight(type);
+        if (d.y + h > maxY) maxY = d.y + h;
+    });
+    return Math.max(500, maxY + 150);
+}
+
+function syncRoomEditorLayoutFromDOM() {
+    const fromDOM = readRoomEditorLayoutFromDOM();
+    roomEditorLayoutBoardTop = isRoomEditorDisplayFlipped()
+        ? transformCoordinatesForMode(fromDOM, 'board-bottom', 'board-top', roomEditorCurrentHeight)
+        : fromDOM;
+    roomEditorCurrentHeight = getCalculatedRoomHeight(roomEditorLayoutBoardTop);
+}
+
+function setRoomEditorBoardPosition(atBottom) {
+    const canvas = document.getElementById('roomCanvas');
+    const board = canvas ? canvas.querySelector('.front-board') : null;
+    if (!board) return;
+    if (atBottom) {
+        board.style.top = 'auto';
+        board.style.bottom = '10px';
+    } else {
+        board.style.top = '10px';
+        board.style.bottom = 'auto';
+    }
+}
+
+async function openRoomCreate() {
     editingId = null;
     document.getElementById('roomEditorTitle').innerText = "Opprett rom";
     document.getElementById('roomNameInput').value = '';
     document.getElementById('btnRoomDelete').style.display = 'none';
-    clearCanvas();
+    roomEditorLayoutBoardTop = [];
+    roomEditorCurrentHeight = 500;
     selectedDesks = [];
+    clearCanvas();
+
+    // Sync design mode toggle with "Tavle nederst" setting
+    const defaultFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
+    const designModeToggle = document.getElementById('designModeToggle');
+    if (designModeToggle) {
+        designModeToggle.checked = defaultFlipped;
+    }
+    toggleDesignMode();
     attachRoomEditorKeyboardListeners();
 }
 async function loadRooms() {
@@ -554,7 +632,7 @@ async function loadRooms() {
         const layoutData = ensureRoomLayoutFormat(JSON.parse(r.layout_data || '[]'));
         const deskCount = layoutData.desks ? layoutData.desks.length : 0;
         const modeIcon = layoutData.designMode === 'board-bottom' ? '<i class="fas fa-arrow-down" style="color: #3b82f6;" title="Tavle nederst"></i> ' : '';
-        
+
         grid.innerHTML += `
             <div class="info-card" onclick="editRoom(${r.id})">
                 <span class="card-label-small">ROM</span>
@@ -572,25 +650,33 @@ async function editRoom(id) {
     document.getElementById('roomEditorTitle').innerText = "Rediger: " + r.name;
     document.getElementById('roomNameInput').value = r.name;
     document.getElementById('btnRoomDelete').style.display = 'block';
-    
+
     // Parse layout and ensure correct format
     const layoutData = ensureRoomLayoutFormat(JSON.parse(r.layout_data));
-    
-    // Set design mode toggle
+    roomEditorCurrentHeight = layoutData.roomHeight || 500;
+
+    // Store layout in board-top; set toggle and render in display space
+    roomEditorLayoutBoardTop = (layoutData.designMode === 'board-bottom')
+        ? transformCoordinatesForMode(layoutData.desks, 'board-bottom', 'board-top', roomEditorCurrentHeight)
+        : layoutData.desks;
+
     const designModeToggle = document.getElementById('designModeToggle');
     if (designModeToggle) {
         designModeToggle.checked = (layoutData.designMode === 'board-bottom');
     }
-    
-    renderRoomCanvas(layoutData.desks);
-    
-    // Apply design mode visually
-    toggleDesignMode();
-    
+
+    const layoutToShow = (layoutData.designMode === 'board-bottom')
+        ? transformCoordinatesForMode(roomEditorLayoutBoardTop, 'board-top', 'board-bottom', roomEditorCurrentHeight)
+        : roomEditorLayoutBoardTop;
+
+    renderRoomCanvas(layoutToShow);
+    setRoomEditorBoardPosition(layoutData.designMode === 'board-bottom');
+
     navTo('view-room-editor');
 }
 function renderRoomCanvas(layout) {
     const c = document.getElementById('roomCanvas');
+    c.classList.remove('flipped');
     c.innerHTML = '<div class="front-board">TAVLE</div>';
 
     layout.forEach(d => {
@@ -607,7 +693,11 @@ function renderRoomCanvas(layout) {
 
     updateDeskNumbers();
     selectedDesks = [];
+    setRoomEditorBoardPosition(isRoomEditorDisplayFlipped());
     attachRoomEditorKeyboardListeners();
+
+    // Ensure canvas expands to fit layout and shows background grid correctly
+    c.style.height = Math.max(500, roomEditorCurrentHeight) + 'px';
 }
 
 function ensureCanvasHeight(yPos) {
@@ -622,17 +712,17 @@ function ensureCanvasHeight(yPos) {
 function adjustCanvasForFlip() {
     const canvas = document.getElementById('roomCanvas');
     if (!canvas) return;
-    
+
     const isFlipped = canvas.classList.contains('flipped');
     if (!isFlipped) {
         // Reset to default if not flipped
         canvas.style.setProperty('--flip-offset', '0px');
         return;
     }
-    
+
     const desks = Array.from(canvas.querySelectorAll('.desk'));
     if (desks.length === 0) return;
-    
+
     // Find the highest Y position (bottom-most desk)
     let maxY = 0;
     desks.forEach(d => {
@@ -640,12 +730,12 @@ function adjustCanvasForFlip() {
         const h = parseInt(d.style.height || DESK_H);
         if (y + h > maxY) maxY = y + h;
     });
-    
+
     // Calculate needed offset for flipped view
     const baseHeight = 500;
     const buffer = 150; // Extra space at bottom when flipped
     const flipOffset = Math.max(0, maxY - baseHeight + buffer);
-    
+
     canvas.style.setProperty('--flip-offset', flipOffset + 'px');
     const newHeight = baseHeight + flipOffset;
     if (newHeight > parseInt(canvas.style.height || 500)) {
@@ -657,76 +747,42 @@ function adjustCanvasForFlip() {
 function adjustCanvasForFlipSeating() {
     const canvas = document.getElementById('seatingCanvas');
     if (!canvas) return;
-    
+
     const isFlipped = canvas.classList.contains('flipped');
     if (!isFlipped) {
         canvas.style.setProperty('--flip-offset', '0px');
         return;
     }
-    
+
     const desks = Array.from(canvas.querySelectorAll('.desk'));
     if (desks.length === 0) return;
-    
+
     // Find the highest Y position (bottom-most desk)
     let maxY = 0;
     desks.forEach(d => {
-        const rect = d.getBoundingClientRect();
-        const containerRect = canvas.getBoundingClientRect();
-        const y = rect.top - containerRect.top + canvas.scrollTop;
-        const h = rect.height;
+        const h = parseInt(d.style.height || DESK_H);
+        const y = parseInt(d.style.top || 0);
         if (y + h > maxY) maxY = y + h;
     });
-    
-    // Calculate needed offset for flipped view
-    const baseHeight = canvas.scrollHeight || 500;
-    const buffer = 200;
+
+    // Calculate needed offset for flipped view based purely on internal desk positions
+    const baseHeight = 500;
+    const buffer = 150;
     const flipOffset = Math.max(0, maxY - baseHeight + buffer);
-    
+
     canvas.style.setProperty('--flip-offset', flipOffset + 'px');
 }
 
 // =========================================================
-// COORDINATE TRANSFORMATION FOR DESIGN MODE
+// COORDINATE TRANSFORMATION (extracted to modules/transforms.js)
 // =========================================================
 
-// Get desk height based on type
-function getDeskHeight(type) {
-    const spec = DESK_TYPES[type];
-    return spec ? spec.height : DESK_H;
-}
+const getDeskHeight = transforms.getDeskHeight;
+const getDeskWidth = transforms.getDeskWidth;
+const transformCoordinatesForMode = transforms.transformCoordinatesForMode;
+const getRenderedLayoutForDisplay = transforms.getRenderedLayoutForDisplay;
+const ensureRoomLayoutFormat = transforms.ensureRoomLayoutFormat;
 
-// Transform coordinates between board-top and board-bottom modes
-function transformCoordinatesForMode(desks, fromMode, toMode) {
-    if (fromMode === toMode) return desks;
-    
-    const CANVAS_H = 500;
-    return desks.map(desk => ({
-        ...desk,
-        y: CANVAS_H - desk.y - getDeskHeight(desk.type || 'single')
-    }));
-}
-
-// Convert room layout from old array format to new object format
-function ensureRoomLayoutFormat(layout) {
-    // If already in new format
-    if (layout && layout.desks && layout.designMode !== undefined) {
-        return layout;
-    }
-    
-    // If old format (array), convert to new format
-    if (Array.isArray(layout)) {
-        return {
-            desks: layout,
-            designMode: 'board-top'
-        };
-    }
-    
-    // Default empty layout
-    return {
-        desks: [],
-        designMode: 'board-top'
-    };
-}
 
 function generateLayout() {
     const preset = document.getElementById('roomPreset').value;
@@ -744,16 +800,22 @@ function generateLayout() {
     const selectedType = 'single';
     const spec = DESK_TYPES.single;
 
-    const groups = preset.split(',').map(Number);
-    const gap = 10; // Gap between desks in same group
-    const aisle = 40; // Gap between groups
-    const rowGap = 30; // Gap between rows
+    const groups = preset.split(',').map(s => Number(String(s).trim())).filter(n => n > 0);
+    if (groups.length === 0) {
+        showToast('⚠️ Ugyldig struktur');
+        return;
+    }
+    const gap = 2; // Liten avstand mellom pulter i samme gruppe (2-2 = to og to inntil hverandre)
+    const aisle = 40; // Gang mellom gruppene
+    const rowGap = 30; // Avstand mellom rader
 
-    const totalCols = groups.reduce((a, b) => a + b, 0);
-    const totalAisles = Math.max(0, groups.length - 1);
-    let rowWidth = (totalCols * spec.width) + ((totalCols - 1) * gap) + (totalAisles * aisle);
+    // Radbredde = sum per gruppe (antall*bredde + (antall-1)*gap) + gang mellom gruppene
+    let rowWidth = 0;
+    groups.forEach((gSize, gIdx) => {
+        rowWidth += gSize * spec.width + Math.max(0, gSize - 1) * gap;
+        if (gIdx < groups.length - 1) rowWidth += aisle;
+    });
 
-    // Start 70px from top
     let startY = 70;
 
     for (let r = 0; r < rows; r++) {
@@ -764,12 +826,13 @@ function generateLayout() {
         groups.forEach((gSize, gIdx) => {
             for (let i = 0; i < gSize; i++) {
                 spawnDesk(currentX, startY, canvas, selectedType);
-                currentX += spec.width + gap;
+                currentX += spec.width + (i < gSize - 1 ? gap : 0);
             }
             if (gIdx < groups.length - 1) currentX += aisle;
         });
         startY += spec.height + rowGap;
     }
+    syncRoomEditorLayoutFromDOM();
     updateDeskNumbers();
     showToast(`✓ Layout generert med enkeltpulter`);
 }
@@ -797,11 +860,8 @@ function centerTables() {
     const currentCenterX = minX + (contentWidth / 2);
     const diffX = targetCenterX - currentCenterX;
 
-    // Check if canvas is flipped - adjust vertical centering accordingly
-    const canvas = document.getElementById('roomCanvas');
-    const isFlipped = canvas && canvas.classList.contains('flipped');
-    const CANVAS_H = 500;
-    const targetCenterY = isFlipped ? (CANVAS_H - 100) : (CANVAS_H / 2 + 15);
+    const isFlipped = isRoomEditorDisplayFlipped();
+    const targetCenterY = isFlipped ? (ROOM_EDITOR_CANVAS_H - 100) : (ROOM_EDITOR_CANVAS_H / 2 + 15);
     const currentCenterY = minY + (contentHeight / 2);
     const diffY = targetCenterY - currentCenterY;
 
@@ -811,11 +871,8 @@ function centerTables() {
         d.style.left = (currentX + diffX) + 'px';
         d.style.top = Math.max(60, currentY + diffY) + 'px';
     });
-    
-    // Adjust canvas height if flipped
-    if (isFlipped) {
-        adjustCanvasForFlip();
-    }
+
+    syncRoomEditorLayoutFromDOM();
 }
 
 function checkSnapping(x, y, otherDesks) {
@@ -917,6 +974,7 @@ function spawnDesk(x, y, container, type = 'single') {
             window.removeEventListener('mousemove', move);
             window.removeEventListener('mouseup', stop);
             selectedDesks.forEach(desk => desk.classList.remove('is-snapped'));
+            syncRoomEditorLayoutFromDOM();
             updateDeskNumbers();
         }
         window.addEventListener('mousemove', move);
@@ -949,16 +1007,18 @@ function updateDeskNumbers() {
 function deleteSelectedDesk() {
     if (rightClickedDesk) rightClickedDesk.remove();
     document.getElementById('deskContextMenu').style.display = 'none';
+    syncRoomEditorLayoutFromDOM();
     updateDeskNumbers();
 }
 
 function deleteSelectedDesks() {
     if (selectedDesks.length === 0) return;
-    
+
     const count = selectedDesks.length;
     selectedDesks.forEach(desk => desk.remove());
     selectedDesks = [];
-    
+
+    syncRoomEditorLayoutFromDOM();
     updateDeskNumbers();
     showToast(`✓ ${count} bord slettet`);
 }
@@ -971,26 +1031,26 @@ function attachRoomEditorKeyboardListeners() {
     if (roomEditorKeyHandler) {
         document.removeEventListener('keydown', roomEditorKeyHandler);
     }
-    
+
     roomEditorKeyHandler = (e) => {
         // Only handle if we're in room editor view
         const roomEditorView = document.getElementById('view-room-editor');
         if (!roomEditorView || !roomEditorView.classList.contains('active')) return;
-        
+
         // Delete or Backspace key
         if (e.key === 'Delete' || e.key === 'Backspace') {
             // Don't delete if user is typing in an input field
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
                 return;
             }
-            
+
             e.preventDefault();
-            
+
             if (selectedDesks.length > 0) {
                 deleteSelectedDesks();
             }
         }
-        
+
         // Escape key to deselect all
         if (e.key === 'Escape') {
             if (selectedDesks.length > 0) {
@@ -999,7 +1059,7 @@ function attachRoomEditorKeyboardListeners() {
                 showToast('Avmarkert');
             }
         }
-        
+
         // Ctrl+A to select all desks
         if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
@@ -1012,7 +1072,7 @@ function attachRoomEditorKeyboardListeners() {
             }
         }
     };
-    
+
     document.addEventListener('keydown', roomEditorKeyHandler);
     console.log('Room editor keyboard listeners attached');
 }
@@ -1066,42 +1126,38 @@ function findEmptySpot(newWidth, newHeight) {
     const desks = Array.from(document.querySelectorAll('#roomCanvas .desk'));
     const padding = 15;
     const startX = 20;
-    
-    // Check if canvas is flipped - start from bottom instead of top
-    const canvas = document.getElementById('roomCanvas');
-    const isFlipped = canvas && canvas.classList.contains('flipped');
-    const CANVAS_H = 500;
-    const startY = isFlipped ? (CANVAS_H - 200) : 60;
+    // Layout is in display space; "top" of room is always low Y
+    const startY = 60;
     const maxX = CANVAS_W - 20;
-    
+
     // Try to find a spot by scanning in a grid pattern
     for (let y = startY; y < 2000; y += 30) {
         for (let x = startX; x < maxX - newWidth; x += 30) {
             // Check if this position overlaps with any existing desk
             let overlaps = false;
-            
+
             for (let desk of desks) {
                 const deskX = parseInt(desk.style.left);
                 const deskY = parseInt(desk.style.top);
                 const deskWidth = parseInt(desk.style.width);
                 const deskHeight = parseInt(desk.style.height);
-                
+
                 // Check for overlap with padding
-                if (!(x + newWidth + padding < deskX || 
-                      x > deskX + deskWidth + padding ||
-                      y + newHeight + padding < deskY || 
-                      y > deskY + deskHeight + padding)) {
+                if (!(x + newWidth + padding < deskX ||
+                    x > deskX + deskWidth + padding ||
+                    y + newHeight + padding < deskY ||
+                    y > deskY + deskHeight + padding)) {
                     overlaps = true;
                     break;
                 }
             }
-            
+
             if (!overlaps) {
                 return { x, y };
             }
         }
     }
-    
+
     // Fallback: place at end of canvas
     if (desks.length > 0) {
         const last = desks[desks.length - 1];
@@ -1109,15 +1165,16 @@ function findEmptySpot(newWidth, newHeight) {
         const lastHeight = parseInt(last.style.height);
         return { x: startX, y: lastY + lastHeight + 40 };
     }
-    
+
     return { x: startX, y: startY };
 }
 
 function addDeskOfType(type) {
     const spec = DESK_TYPES[type];
     const position = findEmptySpot(spec.width, spec.height);
-    
+
     spawnDesk(position.x, position.y, document.getElementById('roomCanvas'), type);
+    syncRoomEditorLayoutFromDOM();
     updateDeskNumbers();
     showToast(`✓ ${DESK_TYPES[type].name} lagt til`);
 }
@@ -1127,33 +1184,23 @@ function addDesk() {
     addDeskOfType('single');
 }
 
-function clearCanvas() { document.getElementById('roomCanvas').innerHTML = '<div class="front-board">TAVLE</div>'; }
+function clearCanvas() {
+    roomEditorLayoutBoardTop = [];
+    document.getElementById('roomCanvas').innerHTML = '<div class="front-board">TAVLE</div>';
+    toggleDesignMode();
+}
 
 async function saveRoom() {
     const name = document.getElementById('roomNameInput').value;
-    const desks = [];
+    syncRoomEditorLayoutFromDOM();
 
-    document.querySelectorAll('#roomCanvas .desk').forEach(d => {
-        const type = d.dataset.type || 'single';
-        const spec = DESK_TYPES[type];
-
-        desks.push({
-            x: parseInt(d.style.left),
-            y: parseInt(d.style.top),
-            rotation: parseInt(d.dataset.rotation || 0),
-            type: type,
-            capacity: spec.capacity
-        });
-    });
-
-    // Get design mode from toggle
     const designModeToggle = document.getElementById('designModeToggle');
     const designMode = designModeToggle && designModeToggle.checked ? 'board-bottom' : 'board-top';
 
-    // Create layout object with new structure
     const layout = {
-        desks: desks,
-        designMode: designMode
+        desks: roomEditorLayoutBoardTop,
+        designMode: designMode,
+        roomHeight: roomEditorCurrentHeight
     };
 
     if (editingId) await ipcRenderer.invoke('update-room', editingId, name, JSON.stringify(layout));
@@ -1257,22 +1304,23 @@ function openSeatingSetup() {
     document.getElementById('setupClassSelect').value = '';
 }
 async function loadSetup() {
-    const cls = await ipcRenderer.invoke('get-classes'); 
+    const cls = await ipcRenderer.invoke('get-classes');
     const rms = await ipcRenderer.invoke('get-rooms');
-    
+
     // Klasser med antall elever
     const classOptions = cls.map(c => {
         const studentCount = c.students ? c.students.split('\n').filter(s => s.trim()).length : 0;
         return `<option value="${c.id}">${c.name} (${studentCount} elever)</option>`;
     }).join('');
     document.getElementById('setupClassSelect').innerHTML = '<option value="">Velg gruppe</option>' + classOptions;
-    
+
     // Rom med antall plasser
     const roomOptions = rms.map(r => {
         let totalCapacity = 0;
         try {
-            const layout = JSON.parse(r.layout_data || '[]');
-            totalCapacity = layout.reduce((sum, desk) => {
+            const layoutData = ensureRoomLayoutFormat(JSON.parse(r.layout_data || '[]'));
+            const desks = layoutData.desks || [];
+            totalCapacity = desks.reduce((sum, desk) => {
                 const deskType = desk.type || 'single';
                 const spec = DESK_TYPES[deskType];
                 const capacity = desk.capacity ?? spec?.capacity ?? 1;
@@ -1300,8 +1348,9 @@ async function createChart() {
     const rooms = await ipcRenderer.invoke('get-rooms'); const room = rooms.find(r => r.id == rid);
     if (!room) return showToast("Rom ikke funnet");
 
-    const rawLayout = JSON.parse(room.layout_data || '[]');
-    if (!Array.isArray(rawLayout) || rawLayout.length === 0) return showToast("Rommet har ingen bord – legg til bord i Mine rom først");
+    const layoutData = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '[]'));
+    const rawLayout = layoutData.desks || [];
+    if (!rawLayout.length) return showToast("Rommet har ingen bord – legg til bord i Mine rom først");
 
     const cls = await ipcRenderer.invoke('get-class', cid);
     const studentList = cls.students.split('\n').filter(s => s.trim());
@@ -1317,9 +1366,13 @@ async function createChart() {
         groupId: null
     }));
 
+    const shouldFlipForDisplay = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
     currentChart = {
         id: null, classId: cid, roomId: rid, layout: layout,
-        allStudents: studentList // STORE ALL STUDENTS
+        allStudents: studentList,
+        roomDesignMode: layoutData.designMode || 'board-top',
+        roomHeight: layoutData.roomHeight || 500,
+        shouldFlipForDisplay: shouldFlipForDisplay
     };
     document.getElementById('editChartName').value = name;
 
@@ -1341,21 +1394,26 @@ async function editChart(id) {
 
     // Fetch room data to check designMode
     let roomDesignMode = 'board-top';
+    let roomHeight = 500;
     if (c.room_id) {
         const room = await ipcRenderer.invoke('get-room', c.room_id);
         if (room) {
             const roomLayout = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '{}'));
             roomDesignMode = roomLayout.designMode || 'board-top';
+            roomHeight = roomLayout.roomHeight || 500;
         }
     }
 
+    const shouldFlipForDisplay = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
     currentChart = {
-        id: c.id, 
-        classId: c.class_id, 
-        roomId: c.room_id, 
+        id: c.id,
+        classId: c.class_id,
+        roomId: c.room_id,
         layout: JSON.parse(c.placements),
         allStudents: studentList,
-        roomDesignMode: roomDesignMode  // Store for rendering
+        roomDesignMode: roomDesignMode,
+        roomHeight: roomHeight,
+        shouldFlipForDisplay: shouldFlipForDisplay
     };
     document.getElementById('editChartName').value = c.name;
     document.getElementById('editChartComment').value = c.comment;
@@ -1416,14 +1474,15 @@ async function syncRoomLayout() {
 
             if (!room) return showToast("Finner ikke rommet");
 
-            const newLayoutBase = JSON.parse(room.layout_data || '[]');
+            const layoutData = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '[]'));
+            const newLayoutBase = layoutData.desks || [];
 
             const newLayout = newLayoutBase.map((pos, i) => {
                 const oldSpot = currentChart.layout[i];
                 const deskType = pos.type || 'single';
                 const spec = DESK_TYPES[deskType];
                 const deskCapacity = pos.capacity ?? spec?.capacity ?? 1;
-                
+
                 return {
                     x: pos.x,
                     y: pos.y,
@@ -1453,29 +1512,31 @@ async function syncRoomLayout() {
 function toggleGroupMode() {
     isGroupMode = !isGroupMode;
     const editorActions = document.querySelector('#view-seating-editor .editor-actions');
-    
+
     if (isGroupMode) {
         // Switch to grouping mode UI
         editorActions.classList.add('mode-grouping');
         editorActions.innerHTML = `
             <span class="mode-badge">Grupperingsmodus aktiv</span>
-            <button class="btn-action btn-secondary" onclick="resetGroups()">
+            <button class="btn-action btn-secondary btn-toolbar" onclick="resetGroups()">
                 <i class="fas fa-eraser"></i> Nullstill
             </button>
-            <button class="btn-action btn-primary" onclick="confirmGrouping()">
+            <button class="btn-action btn-primary btn-toolbar" onclick="confirmGrouping()">
                 <i class="fas fa-check"></i> Ferdig
             </button>
-            <button class="btn-action btn-secondary" onclick="cancelGroupMode()">
+            <button class="btn-action btn-secondary btn-toolbar" onclick="cancelGroupMode()">
                 <i class="fas fa-times"></i> Avbryt
             </button>
         `;
         document.getElementById('btnConfirmGroup').style.display = 'block';
+        document.getElementById('seatingCanvas').classList.add('group-mode-active');
         selectedDesksForGroup = [];
         showToast("Klikk på bord + ENTER for å lage en gruppe");
         window.addEventListener('keydown', handleGroupEnter);
     } else {
         cancelGroupMode();
     }
+    syncState();
 }
 
 function cancelGroupMode() {
@@ -1484,12 +1545,14 @@ function cancelGroupMode() {
     document.getElementById('btnConfirmGroup').style.display = 'none';
     window.removeEventListener('keydown', handleGroupEnter);
     document.querySelectorAll('.selected-for-group').forEach(el => el.classList.remove('selected-for-group'));
-    
+
     // Restore normal toolbar
     const editorActions = document.querySelector('#view-seating-editor .editor-actions');
     editorActions.classList.remove('mode-grouping');
+    document.getElementById('seatingCanvas').classList.remove('group-mode-active');
     loadNormalToolbar();
     renderSeating();
+    syncState();
 }
 
 function confirmGrouping() {
@@ -1507,7 +1570,7 @@ function loadNormalToolbar() {
     const editorActions = document.querySelector('#view-seating-editor .editor-actions');
     editorActions.innerHTML = `
         <div class="btn-group">
-            <button class="btn-action btn-secondary dropdown-toggle" onclick="toggleDropdown('toolsDropdown')">
+            <button class="btn-action btn-secondary btn-toolbar dropdown-toggle" onclick="toggleDropdown('toolsDropdown')">
                 <i class="fas fa-tools"></i> Verktøy
             </button>
             <div class="dropdown-menu" id="toolsDropdown">
@@ -1519,13 +1582,13 @@ function loadNormalToolbar() {
                 <a onclick="startNewPeriod()"><i class="fas fa-code-branch"></i> Ny periode</a>
             </div>
         </div>
-        <button class="btn-action btn-accent btn-lg" onclick="generateSeating()">
+        <button class="btn-action btn-accent btn-toolbar" onclick="generateSeating()">
             <i class="fas fa-random"></i> Shuffle
         </button>
-        <button class="btn-action btn-primary" onclick="saveChart()">
+        <button class="btn-action btn-primary btn-toolbar" onclick="saveChart()">
             <i class="fas fa-save"></i> Lagre
         </button>
-        <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">
+        <button class="btn-action btn-secondary btn-toolbar" onclick="navTo('view-charts-dashboard')">
             <i class="fas fa-times"></i>
         </button>
     `;
@@ -1534,7 +1597,7 @@ function loadNormalToolbar() {
 function toggleDropdown(dropdownId) {
     const dropdown = document.getElementById(dropdownId);
     if (!dropdown) return;
-    
+
     if (activeDropdown && activeDropdown !== dropdown) {
         activeDropdown.classList.remove('show');
     }
@@ -1561,7 +1624,7 @@ function showAddDeskModal() {
         activeDropdown.classList.remove('show');
         activeDropdown = null;
     }
-    
+
     const types = Object.keys(DESK_TYPES);
     const html = types.map(type => {
         const spec = DESK_TYPES[type];
@@ -1572,8 +1635,8 @@ function showAddDeskModal() {
             </button>
         `;
     }).join('');
-    
-    openModal("Legg til bord", "", () => {});
+
+    openModal("Legg til bord", "", () => { });
     const modalContent = document.querySelector('#customModal .modal-content');
     modalContent.innerHTML = `
         <div class="modal-title">Legg til bord</div>
@@ -1589,10 +1652,10 @@ function showAddDeskModal() {
 
 function addDeskToSeating(type) {
     if (!currentChart.layout) return;
-    
+
     const spec = DESK_TYPES[type];
     const position = findOptimalDeskPosition(currentChart.layout, type);
-    
+
     const newDesk = {
         x: position.x,
         y: position.y,
@@ -1605,17 +1668,17 @@ function addDeskToSeating(type) {
         groupId: null,
         rotation: 0
     };
-    
+
     currentChart.layout.push(newDesk);
     closeModal(false);
-    
+
     // Render først
     renderSeating();
-    
+
     // Deretter aktivere drag-mode med visuell feedback
     const newDeskIdx = currentChart.layout.length - 1;
     showToast(`${spec.name} lagt til - dra for å plassere`);
-    
+
     // Highlight new desk
     setTimeout(() => {
         const deskElements = document.querySelectorAll('#seatingCanvas .desk');
@@ -1623,10 +1686,10 @@ function addDeskToSeating(type) {
             const newDeskEl = deskElements[newDeskIdx];
             newDeskEl.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.8)';
             newDeskEl.style.border = '3px solid #3b82f6';
-            
+
             // Enable dragging immediately
             enableDeskDragging(newDeskEl, newDeskIdx);
-            
+
             // Remove highlight after 3 seconds
             setTimeout(() => {
                 newDeskEl.style.boxShadow = '';
@@ -1639,43 +1702,54 @@ function addDeskToSeating(type) {
 function enableDeskDragging(deskEl, idx) {
     let isDragging = false;
     let startX, startY, offsetX, offsetY;
-    
+
     deskEl.style.cursor = 'move';
-    
-    deskEl.onmousedown = function(e) {
+
+    deskEl.onmousedown = function (e) {
         if (isGroupMode) return;
         if (e.target.closest('.student-name-item') || e.target.closest('.bench-slot')) return;
-        
+
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
-        
+
         const rect = deskEl.getBoundingClientRect();
         const container = document.getElementById('seatingCanvas').getBoundingClientRect();
         offsetX = startX - rect.left - container.left;
         offsetY = startY - rect.top - container.top;
-        
+
         deskEl.style.opacity = '0.7';
         deskEl.style.zIndex = '1000';
-        
+
         function onMouseMove(e) {
             if (!isDragging) return;
-            
+
             const containerRect = document.getElementById('seatingCanvas').getBoundingClientRect();
             let newX = e.clientX - containerRect.left - offsetX;
             let newY = e.clientY - containerRect.top - offsetY;
-            
+
             // Bounds checking
             newX = Math.max(10, Math.min(newX, containerRect.width - 100));
             newY = Math.max(60, Math.min(newY, containerRect.height - 70));
-            
+
             deskEl.style.left = newX + 'px';
             deskEl.style.top = newY + 'px';
-            
-            currentChart.layout[idx].x = Math.round(newX);
-            currentChart.layout[idx].y = Math.round(newY);
+
+            // Save to layout - inverse transform if using coordinate transform (tavle nederst)
+            let saveX = Math.round(newX);
+            let saveY = Math.round(newY);
+            if (currentChart.shouldFlipForDisplay && (currentChart.roomDesignMode || 'board-top') === 'board-top') {
+                const deskType = currentChart.layout[idx].type || 'single';
+                const roomHeight = currentChart.roomHeight || 500;
+                saveX = CANVAS_W - newX - getDeskWidth(deskType);
+                saveX = Math.round(saveX);
+                saveY = roomHeight - newY - getDeskHeight(deskType);
+                saveY = Math.round(saveY);
+            }
+            currentChart.layout[idx].x = saveX;
+            currentChart.layout[idx].y = saveY;
         }
-        
+
         function onMouseUp() {
             if (!isDragging) return;
             isDragging = false;
@@ -1684,10 +1758,10 @@ function enableDeskDragging(deskEl, idx) {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
         }
-        
+
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
-        
+
         e.preventDefault();
     };
 }
@@ -1696,34 +1770,34 @@ function findOptimalDeskPosition(layout, deskType) {
     const spec = DESK_TYPES[deskType];
     const width = spec.width || 85;
     const height = spec.height || 55;
-    
+
     if (layout.length === 0) {
         return { x: 100, y: 100 };
     }
-    
+
     // Find rightmost and bottommost positions
     let maxX = -Infinity;
     let maxY = -Infinity;
     let avgY = 0;
-    
+
     layout.forEach(desk => {
         if (desk.x > maxX) maxX = desk.x;
         if (desk.y > maxY) maxY = desk.y;
         avgY += desk.y;
     });
-    
+
     avgY = Math.floor(avgY / layout.length);
-    
+
     // Try to place to the right of rightmost desk
     const newX = maxX + 100;
     const newY = avgY;
-    
+
     // Check if it fits in view (simple check)
     if (newX > 800) {
         // If too far right, place below
         return { x: 100, y: maxY + 100 };
     }
-    
+
     return { x: newX, y: newY };
 }
 
@@ -1809,7 +1883,13 @@ function updateUnplacedDock() {
         chip.draggable = true;
 
         chip.ondragstart = (e) => {
+            const canvas = document.getElementById('seatingCanvas');
+            if (canvas) canvas.classList.add('drag-active');
             e.dataTransfer.setData("text/plain", name);
+        };
+        chip.ondragend = () => {
+            const canvas = document.getElementById('seatingCanvas');
+            if (canvas) canvas.classList.remove('drag-active');
         };
 
         dock.appendChild(chip);
@@ -1821,7 +1901,7 @@ function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
     const sourceDeskIdx = e.dataTransfer.getData('source-desk-idx');
     const sourceStudentPos = e.dataTransfer.getData('source-student-pos');
 
-    console.log('🎯 handleStudentSwap:', name, 'from', sourceDeskIdx, ':', sourceStudentPos, 'to', targetDeskIdx, ':', targetStudentPos);
+
 
     if (!name || !sourceDeskIdx || !sourceStudentPos) {
         // This is a drop from unplaced dock or external source
@@ -1847,7 +1927,7 @@ function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
     const srcPos = parseInt(sourceStudentPos);
 
     if (srcIdx === targetDeskIdx && srcPos === targetStudentPos) {
-        console.log('⚠️ Cannot swap student with itself');
+
         return;
     }
 
@@ -1856,16 +1936,22 @@ function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
 
     if (!sourceDesk || !targetDesk) return;
 
-    const draggedStudent = sourceDesk.students && sourceDesk.students[srcPos];
-    const targetStudent = targetDesk.students && targetDesk.students[targetStudentPos];
+    // Ensure both are objects (handle legacy string arrays from DB)
+    if (typeof sourceDesk.students[srcPos] === 'string') {
+        sourceDesk.students[srcPos] = { name: sourceDesk.students[srcPos], note: '', locked: false, position: srcPos };
+    }
+    if (typeof targetDesk.students[targetStudentPos] === 'string') {
+        targetDesk.students[targetStudentPos] = { name: targetDesk.students[targetStudentPos], note: '', locked: false, position: targetStudentPos };
+    }
+
+    const draggedStudent = sourceDesk.students[srcPos];
+    const targetStudent = targetDesk.students[targetStudentPos];
 
     if (!draggedStudent || !targetStudent) return;
     if (draggedStudent.locked || targetStudent.locked) {
         showToast('Kan ikke bytte med låst elev');
         return;
     }
-
-    console.log('🔄 Swapping:', draggedStudent.name, '↔', targetStudent.name);
 
     const tempName = draggedStudent.name;
     const tempNote = draggedStudent.note || '';
@@ -1891,23 +1977,23 @@ function handleStudentSwap(e, targetDeskIdx, targetStudentPos) {
 function applyAutoScaling(deskElement, students, deskType) {
     // Only apply to round tables with multiple students
     if (!deskType.startsWith('round') || !students || students.length === 0) return;
-    
+
     const validStudents = students.filter(s => s);
     if (validStudents.length === 0) return;
-    
+
     // Calculate average name length
     const avgNameLength = validStudents.reduce((sum, s) => sum + (s.name || s).length, 0) / validStudents.length;
     const studentCount = validStudents.length;
-    
+
     // Base font sizes for different capacities
     const baseFontSizes = {
         round3: 0.7,
         round4: 0.68,
         round6: 0.65
     };
-    
+
     let fontSize = baseFontSizes[deskType] || 0.7;
-    
+
     // PRIMARY: Scale based on average name length (longer names = smaller font)
     // This is the most important factor
     if (avgNameLength > 15) {
@@ -1922,7 +2008,7 @@ function applyAutoScaling(deskElement, students, deskType) {
         fontSize *= 0.95;
     }
     // Short names (≤6 chars) keep full size
-    
+
     // SECONDARY: Minor adjustment based on student count
     // Only reduce significantly if both many students AND long names
     if (studentCount >= 6 && avgNameLength > 8) {
@@ -1930,10 +2016,10 @@ function applyAutoScaling(deskElement, students, deskType) {
     } else if (studentCount >= 5 && avgNameLength > 10) {
         fontSize *= 0.92;
     }
-    
+
     // Apply minimum font size
     fontSize = Math.max(fontSize, 0.45);
-    
+
     // Apply to all student name items in this desk
     const nameItems = deskElement.querySelectorAll('.student-name-item');
     nameItems.forEach(item => {
@@ -1946,19 +2032,33 @@ function renderSeating() {
     const c = document.getElementById('seatingCanvas');
     c.innerHTML = '<div class="front-board">TAVLE</div>';
 
-    // Check if room is designed with board-bottom mode
+    // Check if room is designed with board-bottom mode and if tavle nederst is set
     const roomDesignMode = currentChart.roomDesignMode || 'board-top';
+    const shouldFlipForDisplay = currentChart.shouldFlipForDisplay === true;
     const board = c.querySelector('.front-board');
-    
-    if (roomDesignMode === 'board-bottom') {
-        // Native board-bottom mode: Place board at bottom
+
+    // Get layout with coordinate transform when board-top + tavle nederst (no CSS flip - eliminates empty space)
+    const layoutToRender = getRenderedLayoutForDisplay(
+        currentChart.layout,
+        roomDesignMode,
+        shouldFlipForDisplay,
+        currentChart.roomHeight || 500
+    );
+
+    // Place board at bottom when: board-bottom design OR (board-top + tavle nederst via coord transform)
+    if (roomDesignMode === 'board-bottom' || (roomDesignMode === 'board-top' && shouldFlipForDisplay)) {
         if (board) {
             board.style.top = 'auto';
             board.style.bottom = '10px';
         }
-        // Don't use CSS flip transform for native board-bottom rooms
+        // Don't use CSS flip - we use coordinate transform for board-top+flipped
+        c.classList.remove('flipped');
     } else {
-        // Legacy board-top mode: Use defaultFlipped setting with CSS transform
+        // Board-top without tavle nederst
+        if (board) {
+            board.style.top = '10px';
+            board.style.bottom = 'auto';
+        }
         applyDefaultFlip('seatingCanvas');
     }
 
@@ -1970,7 +2070,7 @@ function renderSeating() {
             selectedStudentPos = studentPos;
             const spot = currentChart.layout[idx];
             const m = document.getElementById('seatingContextMenu');
-            
+
             // Sjekk om det er en elev å låse
             let hasStudent = false;
             let isLocked = false;
@@ -1987,12 +2087,12 @@ function renderSeating() {
                 hasStudent = true;
                 isLocked = spot.student.locked;
             }
-            
+
             // Oppdater meny-tekster
             document.getElementById('ctxLockText').innerText = isLocked ? "Lås opp plassering" : "Lås plassering";
             document.getElementById('ctxNoteAction').style.display = hasStudent ? 'block' : 'none';
             document.getElementById('ctxLockAction').style.display = hasStudent ? 'block' : 'none';
-            
+
             const ungroupItem = document.getElementById('ctxUngroupAction');
             ungroupItem.style.display = spot.groupId ? 'block' : 'none';
             m.style.display = 'block';
@@ -2011,9 +2111,10 @@ function renderSeating() {
             d.classList.add(`rotated-${desk.rotation}`);
         }
 
-        // Set position and dimensions
-        d.style.left = desk.x + 'px';
-        d.style.top = desk.y + 'px';
+        // Set position and dimensions (use layoutToRender for transformed coords when tavle nederst)
+        const pos = layoutToRender[idx] || desk;
+        d.style.left = pos.x + 'px';
+        d.style.top = pos.y + 'px';
         const spec = DESK_TYPES[deskType];
         d.style.width = spec.width + 'px';
         d.style.height = spec.height + 'px';
@@ -2055,13 +2156,26 @@ function renderSeating() {
                 }
             };
             nameSpan.oncontextmenu = (e) => showSeatingContextMenu(e, 0);
+
+            // Allow drops on the nameSpan itself (critical for single desks where nameSpan covers the desk)
+            nameSpan.ondragover = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+            nameSpan.ondrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleStudentSwap(e, idx, 0);
+            };
+
             d.appendChild(nameSpan);
 
+            // CRITICAL: Use insertAdjacentHTML instead of innerHTML += to preserve nameSpan's event handlers
             if (studentData.note) {
-                d.innerHTML += `<i class="fas fa-sticky-note note-icon"></i>`;
+                d.insertAdjacentHTML('beforeend', `<i class="fas fa-sticky-note note-icon"></i>`);
             }
             if (isLocked) {
-                d.innerHTML += `<i class="fas fa-lock lock-icon" style="top:2px; right:3px; left:auto;"></i>`;
+                d.insertAdjacentHTML('beforeend', `<i class="fas fa-lock lock-icon"></i>`);
             }
 
             // Hele bordet draggable – treff hvorsomhelst (kun hvis ikke låst)
@@ -2075,13 +2189,15 @@ function renderSeating() {
                 };
                 d.ondragstart = (e) => {
                     if (isGroupMode) return;
+                    c.classList.add('drag-active');
                     d.classList.add('drag-source');
                     nameSpan.style.opacity = '0.5';
+                    e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', studentName);
                     e.dataTransfer.setData('source-desk-idx', idx.toString());
                     e.dataTransfer.setData('source-student-pos', '0');
                 };
-                d.ondragend = () => { d.classList.remove('drag-source'); nameSpan.style.opacity = '1'; };
+                d.ondragend = () => { c.classList.remove('drag-active'); d.classList.remove('drag-source'); nameSpan.style.opacity = '1'; };
             } else {
                 d.style.cursor = 'default';
                 d.ondblclick = () => showToast('Eleven er låst og kan ikke flyttes');
@@ -2120,8 +2236,8 @@ function renderSeating() {
                         studentData = srcDesk?.students?.[srcPos];
                     }
                 }
-                
-                const newStudent = studentData 
+
+                const newStudent = studentData
                     ? { ...studentData, position: 0 }
                     : { name: name, note: '', locked: false, position: 0 };
                 desk.students = [newStudent];
@@ -2150,181 +2266,43 @@ function renderSeating() {
             // Ingen kontekstmeny på tomme slots
             d.appendChild(slotDiv);
         } else if (deskType === 'bench2' || deskType === 'bench4' || deskType === 'round3' || deskType === 'round4' || deskType === 'round6') {
-                // Sluker for bench og round – tomme som "+"-drop-soner
-                const nameContainer = document.createElement('div');
-                nameContainer.className = 'student-names-list';
-                const slots = capacity;
-                for (let pos = 0; pos < slots; pos++) {
-                    const slotDiv = document.createElement('div');
-                    slotDiv.className = 'bench-slot';
-                    slotDiv.dataset.slot = pos.toString();
-                    const student = students[pos];
-                    if (student) {
-                        const studentName = student.name || student;
-                        const nameDiv = document.createElement('div');
-                        nameDiv.className = 'student-name-item';
-                        
-                        // Create text node for name
-                        const nameSpan = document.createElement('span');
-                        nameSpan.className = 'student-name-text';
-                        nameSpan.textContent = studentName;
-                        nameDiv.appendChild(nameSpan);
-                        
-                        nameDiv.title = studentName; // Tooltip for full name
-                        const isLocked = !!student.locked;
-                        nameDiv.draggable = !isLocked;
-                        nameDiv.style.cursor = isLocked ? 'default' : 'grab';
-                        nameDiv.style.pointerEvents = isGroupMode ? 'none' : 'auto';
-                        nameDiv.onmousedown = (e) => { 
-                            if (isGroupMode) return; // La klikk gå til desk
-                            e.stopPropagation(); 
-                        };
-                        nameDiv.ondragstart = (e) => {
-                            if (isLocked) { 
-                                e.preventDefault(); 
-                                showToast('Eleven er låst og kan ikke flyttes');
-                                return; 
-                            }
-                            e.stopPropagation();
-                            d.classList.add('drag-source');
-                            nameDiv.style.opacity = '0.5';
-                            e.dataTransfer.effectAllowed = 'move';
-                            e.dataTransfer.setData("text/plain", studentName);
-                            e.dataTransfer.setData("source-desk-idx", idx.toString());
-                            e.dataTransfer.setData("source-student-pos", pos.toString());
-                        };
-                        nameDiv.ondragend = () => { d.classList.remove('drag-source'); nameDiv.style.opacity = '1'; };
-                        nameDiv.ondragover = (e) => { e.preventDefault(); if (!isLocked) nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; };
-                        nameDiv.ondragleave = () => { nameDiv.style.background = ''; };
-                        nameDiv.ondrop = (e) => { e.preventDefault(); nameDiv.style.background = ''; handleStudentSwap(e, idx, pos); };
-                        nameDiv.oncontextmenu = (ev) => showSeatingContextMenu(ev, pos);
-                        
-                        // Create icon container
-                        const iconContainer = document.createElement('div');
-                        iconContainer.className = 'student-icons';
-                        iconContainer.style.display = 'inline-flex';
-                        iconContainer.style.gap = '2px';
-                        iconContainer.style.marginLeft = '3px';
-                        iconContainer.style.pointerEvents = 'none';
-                        
-                        if (student.note) {
-                            const noteIcon = document.createElement('i');
-                            noteIcon.className = 'fas fa-sticky-note';
-                            noteIcon.style.fontSize = '0.5rem';
-                            noteIcon.style.color = '#fcd34d';
-                            iconContainer.appendChild(noteIcon);
-                        }
-                        if (isLocked) {
-                            const lockIcon = document.createElement('i');
-                            lockIcon.className = 'fas fa-lock';
-                            lockIcon.style.fontSize = '0.5rem';
-                            lockIcon.style.color = '#fbbf24';
-                            iconContainer.appendChild(lockIcon);
-                        }
-                        
-                        if (iconContainer.children.length > 0) {
-                            nameDiv.appendChild(iconContainer);
-                        }
-                        
-                        slotDiv.appendChild(nameDiv);
-                    } else {
-                        slotDiv.classList.add('bench-slot-empty');
-                        slotDiv.innerHTML = '<span class="bench-slot-hint">+</span>';
-                        slotDiv.ondragover = (e) => { e.preventDefault(); slotDiv.classList.add('drop-target-active'); };
-                        slotDiv.ondragleave = () => slotDiv.classList.remove('drop-target-active');
-                        slotDiv.ondrop = (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            slotDiv.classList.remove('drop-target-active');
-                            const name = e.dataTransfer.getData("text/plain");
-                            const sourceDeskIdx = e.dataTransfer.getData("source-desk-idx");
-                            const sourceStudentPos = e.dataTransfer.getData("source-student-pos");
-                            if (!name) return;
-                            if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
-                                const srcIdx = parseInt(sourceDeskIdx);
-                                const srcPos = parseInt(sourceStudentPos);
-                                const srcDesk = currentChart.layout[srcIdx];
-                                const srcStudent = srcDesk?.students?.[srcPos];
-                                if (srcStudent?.locked) {
-                                    showToast('Eleven er låst og kan ikke flyttes');
-                                    return;
-                                }
-                            }
-                            const spec = DESK_TYPES[deskType];
-                            const maxSlots = desk.capacity || spec?.capacity || capacity;
-                            desk.students = desk.students || Array(maxSlots).fill(null);
-                            
-                            // Get student data from source if available
-                            let studentData = null;
-                            if (sourceDeskIdx && sourceStudentPos) {
-                                const srcIdx = parseInt(sourceDeskIdx);
-                                const srcPos = parseInt(sourceStudentPos);
-                                if (srcIdx !== idx && currentChart.layout[srcIdx]) {
-                                    const srcDesk = currentChart.layout[srcIdx];
-                                    studentData = srcDesk?.students?.[srcPos];
-                                }
-                            }
-                            
-                            const newStudent = studentData 
-                                ? { ...studentData, position: pos }
-                                : { name: name, note: '', locked: false, position: pos };
-                            desk.students[pos] = newStudent;
-                            const firstStudent = desk.students.find(s => s);
-                            if (firstStudent) desk.student = firstStudent;
-                            if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
-                                const srcIdx = parseInt(sourceDeskIdx);
-                                const srcPos = parseInt(sourceStudentPos);
-                                if (srcIdx !== idx && currentChart.layout[srcIdx]) {
-                                    const srcDesk = currentChart.layout[srcIdx];
-                                    if (srcDesk.students?.[srcPos]) {
-                                        // For single desks, clear the array; for multi-student desks, set to null
-                                        if (srcDesk.type === 'single') {
-                                            srcDesk.students = [null];
-                                            srcDesk.student = null;
-                                        } else {
-                                            srcDesk.students[srcPos] = null;
-                                            const firstStudent = srcDesk.students.find(s => s);
-                                            srcDesk.student = firstStudent || null;
-                                        }
-                                    }
-                                }
-                            }
-                            renderSeating();
-                        };
-                        // Ingen kontekstmeny på tomme slots
-                    }
-                    nameContainer.appendChild(slotDiv);
-                }
-                d.appendChild(nameContainer);
-                
-                // Auto-scale font size based on student count and name lengths
-                applyAutoScaling(d, students, deskType);
-        } else if (students.length > 0) {
-                // Vanlige bord (single med flere – uvanlig, men fallback)
-                const nameContainer = document.createElement('div');
-                nameContainer.className = 'student-names-list';
-                students.forEach((student, pos) => {
-                    if (!student) return;
+            // Sluker for bench og round – tomme som "+"-drop-soner
+            const nameContainer = document.createElement('div');
+            nameContainer.className = 'student-names-list';
+            const slots = capacity;
+            for (let pos = 0; pos < slots; pos++) {
+                const slotDiv = document.createElement('div');
+                slotDiv.className = 'bench-slot';
+                slotDiv.dataset.slot = pos.toString();
+                const student = students[pos];
+                if (student) {
+                    const studentName = student.name || student;
                     const nameDiv = document.createElement('div');
                     nameDiv.className = 'student-name-item';
-                    const studentName = student.name || student;
-                    const isLocked = !!student.locked;
-                    nameDiv.textContent = studentName;
+
+                    // Create text node for name
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'student-name-text';
+                    nameSpan.textContent = studentName;
+                    nameDiv.appendChild(nameSpan);
+
                     nameDiv.title = studentName; // Tooltip for full name
+                    const isLocked = !!student.locked;
                     nameDiv.draggable = !isLocked;
                     nameDiv.style.cursor = isLocked ? 'default' : 'grab';
                     nameDiv.style.pointerEvents = isGroupMode ? 'none' : 'auto';
-                    nameDiv.onmousedown = (e) => { 
+                    nameDiv.onmousedown = (e) => {
                         if (isGroupMode) return; // La klikk gå til desk
-                        e.stopPropagation(); 
+                        e.stopPropagation();
                     };
                     nameDiv.ondragstart = (e) => {
-                        if (isLocked) { 
-                            e.preventDefault(); 
+                        if (isLocked) {
+                            e.preventDefault();
                             showToast('Eleven er låst og kan ikke flyttes');
-                            return; 
+                            return;
                         }
                         e.stopPropagation();
+                        c.classList.add('drag-active');
                         d.classList.add('drag-source');
                         nameDiv.style.opacity = '0.5';
                         e.dataTransfer.effectAllowed = 'move';
@@ -2332,38 +2310,184 @@ function renderSeating() {
                         e.dataTransfer.setData("source-desk-idx", idx.toString());
                         e.dataTransfer.setData("source-student-pos", pos.toString());
                     };
-                    nameDiv.ondragend = () => { d.classList.remove('drag-source'); nameDiv.style.opacity = '1'; };
-                    nameDiv.ondragover = (e) => { e.preventDefault(); nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; };
+                    nameDiv.ondragend = () => { c.classList.remove('drag-active'); d.classList.remove('drag-source'); nameDiv.style.opacity = '1'; };
+                    nameDiv.ondragover = (e) => { e.preventDefault(); if (!isLocked) nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; };
                     nameDiv.ondragleave = () => { nameDiv.style.background = ''; };
-                    nameDiv.ondrop = (e) => { e.preventDefault(); nameDiv.style.background = ''; handleStudentSwap(e, idx, pos); };
-                    nameDiv.oncontextmenu = showSeatingContextMenu;
+                    nameDiv.ondrop = (e) => { e.preventDefault(); e.stopPropagation(); nameDiv.style.background = ''; handleStudentSwap(e, idx, pos); };
+                    nameDiv.oncontextmenu = (ev) => showSeatingContextMenu(ev, pos);
+
+                    // Create icon container
+                    const iconContainer = document.createElement('div');
+                    iconContainer.className = 'student-icons';
+                    iconContainer.style.display = 'inline-flex';
+                    iconContainer.style.gap = '2px';
+                    iconContainer.style.marginLeft = '3px';
+                    iconContainer.style.pointerEvents = 'none';
+
                     if (student.note) {
                         const noteIcon = document.createElement('i');
                         noteIcon.className = 'fas fa-sticky-note';
-                        noteIcon.style.marginLeft = '3px';
                         noteIcon.style.fontSize = '0.5rem';
                         noteIcon.style.color = '#fcd34d';
-                        noteIcon.style.pointerEvents = 'none';
-                        nameDiv.appendChild(noteIcon);
+                        iconContainer.appendChild(noteIcon);
                     }
                     if (isLocked) {
                         const lockIcon = document.createElement('i');
                         lockIcon.className = 'fas fa-lock';
-                        lockIcon.style.marginLeft = '3px';
                         lockIcon.style.fontSize = '0.5rem';
                         lockIcon.style.color = '#fbbf24';
-                        lockIcon.style.pointerEvents = 'none';
-                        nameDiv.appendChild(lockIcon);
+                        iconContainer.appendChild(lockIcon);
                     }
-                    nameContainer.appendChild(nameDiv);
-                });
-                d.appendChild(nameContainer);
+
+                    if (iconContainer.children.length > 0) {
+                        nameDiv.appendChild(iconContainer);
+                    }
+
+                    slotDiv.appendChild(nameDiv);
+                } else {
+                    slotDiv.classList.add('bench-slot-empty');
+                    slotDiv.innerHTML = '<span class="bench-slot-hint">+</span>';
+                    slotDiv.ondragover = (e) => { e.preventDefault(); slotDiv.classList.add('drop-target-active'); };
+                    slotDiv.ondragleave = () => slotDiv.classList.remove('drop-target-active');
+                    slotDiv.ondrop = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        slotDiv.classList.remove('drop-target-active');
+                        const name = e.dataTransfer.getData("text/plain");
+                        const sourceDeskIdx = e.dataTransfer.getData("source-desk-idx");
+                        const sourceStudentPos = e.dataTransfer.getData("source-student-pos");
+                        if (!name) return;
+                        if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
+                            const srcIdx = parseInt(sourceDeskIdx);
+                            const srcPos = parseInt(sourceStudentPos);
+                            const srcDesk = currentChart.layout[srcIdx];
+                            const srcStudent = srcDesk?.students?.[srcPos];
+                            if (srcStudent?.locked) {
+                                showToast('Eleven er låst og kan ikke flyttes');
+                                return;
+                            }
+                        }
+                        const spec = DESK_TYPES[deskType];
+                        const maxSlots = desk.capacity || spec?.capacity || capacity;
+                        desk.students = desk.students || Array(maxSlots).fill(null);
+
+                        // Get student data from source if available
+                        let studentData = null;
+                        if (sourceDeskIdx && sourceStudentPos) {
+                            const srcIdx = parseInt(sourceDeskIdx);
+                            const srcPos = parseInt(sourceStudentPos);
+                            if (currentChart.layout[srcIdx]) {
+                                const srcDesk = currentChart.layout[srcIdx];
+                                studentData = srcDesk?.students?.[srcPos];
+                            }
+                        }
+
+                        const newStudent = studentData
+                            ? { ...studentData, position: pos }
+                            : { name: name, note: '', locked: false, position: pos };
+                        desk.students[pos] = newStudent;
+                        const firstStudent = desk.students.find(s => s);
+                        if (firstStudent) desk.student = firstStudent;
+                        if (sourceDeskIdx !== '' && sourceStudentPos !== '') {
+                            const srcIdx = parseInt(sourceDeskIdx);
+                            const srcPos = parseInt(sourceStudentPos);
+                            if (currentChart.layout[srcIdx] && !(srcIdx === idx && srcPos === pos)) {
+                                const srcDesk = currentChart.layout[srcIdx];
+                                if (srcDesk.students?.[srcPos]) {
+                                    // For single desks, clear the array; for multi-student desks, set to null
+                                    if (srcDesk.type === 'single') {
+                                        srcDesk.students = [null];
+                                        srcDesk.student = null;
+                                    } else {
+                                        srcDesk.students[srcPos] = null;
+                                        const firstStudent = srcDesk.students.find(s => s);
+                                        srcDesk.student = firstStudent || null;
+                                    }
+                                }
+                            }
+                        }
+                        renderSeating();
+                    };
+                    // Ingen kontekstmeny på tomme slots
+                }
+                nameContainer.appendChild(slotDiv);
             }
+            d.appendChild(nameContainer);
+
+            // Auto-scale font size based on student count and name lengths
+            applyAutoScaling(d, students, deskType);
+        } else if (students.length > 0) {
+            // Vanlige bord (single med flere – uvanlig, men fallback)
+            const nameContainer = document.createElement('div');
+            nameContainer.className = 'student-names-list';
+            students.forEach((student, pos) => {
+                if (!student) return;
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'student-name-item';
+                const studentName = student.name || student;
+                const isLocked = !!student.locked;
+                nameDiv.textContent = studentName;
+                nameDiv.title = studentName; // Tooltip for full name
+                nameDiv.draggable = !isLocked;
+                nameDiv.style.cursor = isLocked ? 'default' : 'grab';
+                nameDiv.style.pointerEvents = isGroupMode ? 'none' : 'auto';
+                nameDiv.onmousedown = (e) => {
+                    if (isGroupMode) return; // La klikk gå til desk
+                    e.stopPropagation();
+                };
+                nameDiv.ondragstart = (e) => {
+                    if (isLocked) {
+                        e.preventDefault();
+                        showToast('Eleven er låst og kan ikke flyttes');
+                        return;
+                    }
+                    e.stopPropagation();
+                    d.classList.add('drag-source');
+                    nameDiv.style.opacity = '0.5';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData("text/plain", studentName);
+                    e.dataTransfer.setData("source-desk-idx", idx.toString());
+                    e.dataTransfer.setData("source-student-pos", pos.toString());
+                };
+                nameDiv.ondragend = () => { d.classList.remove('drag-source'); nameDiv.style.opacity = '1'; };
+                nameDiv.ondragover = (e) => { e.preventDefault(); nameDiv.style.background = 'rgba(14, 165, 233, 0.3)'; };
+                nameDiv.ondragleave = () => { nameDiv.style.background = ''; };
+                nameDiv.ondrop = (e) => { e.preventDefault(); e.stopPropagation(); nameDiv.style.background = ''; handleStudentSwap(e, idx, pos); };
+                nameDiv.oncontextmenu = showSeatingContextMenu;
+                if (student.note) {
+                    const noteIcon = document.createElement('i');
+                    noteIcon.className = 'fas fa-sticky-note';
+                    noteIcon.style.marginLeft = '3px';
+                    noteIcon.style.fontSize = '0.5rem';
+                    noteIcon.style.color = '#fcd34d';
+                    noteIcon.style.pointerEvents = 'none';
+                    nameDiv.appendChild(noteIcon);
+                }
+                if (isLocked) {
+                    const lockIcon = document.createElement('i');
+                    lockIcon.className = 'fas fa-lock';
+                    lockIcon.style.marginLeft = '3px';
+                    lockIcon.style.fontSize = '0.5rem';
+                    lockIcon.style.color = '#fbbf24';
+                    lockIcon.style.pointerEvents = 'none';
+                    nameDiv.appendChild(lockIcon);
+                }
+                nameContainer.appendChild(nameDiv);
+            });
+            d.appendChild(nameContainer);
+        }
 
         // ENABLE DROP ON DESK
-        d.ondragover = (e) => e.preventDefault();
+        d.ondragenter = (e) => {
+            e.preventDefault();
+        };
+        d.ondragover = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        };
         d.ondrop = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const name = e.dataTransfer.getData("text/plain");
             const sourceDeskIdx = e.dataTransfer.getData("source-desk-idx");
             const sourceStudentPos = e.dataTransfer.getData("source-student-pos");
@@ -2373,25 +2497,19 @@ function renderSeating() {
                 const capacity = desk.capacity || 1;
                 const currentStudents = (desk.students || []).filter(s => s);
 
+
                 if (currentStudents.length < capacity) {
+
                     // Get student data from source desk if available
                     let studentData = null;
                     if (sourceDeskIdx && sourceStudentPos) {
                         const srcIdx = parseInt(sourceDeskIdx);
                         const srcPos = parseInt(sourceStudentPos);
-                        if (srcIdx !== idx && currentChart.layout[srcIdx]) {
+                        if (currentChart.layout[srcIdx]) {
                             const sourceDesk = currentChart.layout[srcIdx];
                             if (sourceDesk.students && sourceDesk.students[srcPos]) {
                                 studentData = sourceDesk.students[srcPos]; // Preserve student object
-                                // For single desks, clear the array; for multi-student desks, set to null
-                                if (sourceDesk.type === 'single') {
-                                    sourceDesk.students = [null];
-                                    sourceDesk.student = null;
-                                } else {
-                                    sourceDesk.students[srcPos] = null;
-                                    const firstStudent = sourceDesk.students.find(s => s);
-                                    sourceDesk.student = firstStudent || null;
-                                }
+                                // We will clear the source slot momentarily, but we must protect against self-overwrites below.
                             }
                         }
                     }
@@ -2417,10 +2535,26 @@ function renderSeating() {
                     // Find first available slot
                     const firstEmptySlot = desk.students.findIndex(s => !s);
                     if (firstEmptySlot !== -1) {
-                        const newStudent = studentData 
+                        const newStudent = studentData
                             ? { ...studentData, position: firstEmptySlot }
                             : { name: name, note: '', locked: false, position: firstEmptySlot };
                         desk.students[firstEmptySlot] = newStudent;
+
+                        if (sourceDeskIdx && sourceStudentPos) {
+                            const srcIdx = parseInt(sourceDeskIdx);
+                            const srcPos = parseInt(sourceStudentPos);
+                            if (currentChart.layout[srcIdx] && !(srcIdx === idx && srcPos === firstEmptySlot)) {
+                                const sourceDesk = currentChart.layout[srcIdx];
+                                if (sourceDesk.type === 'single') {
+                                    sourceDesk.students = [null];
+                                    sourceDesk.student = null;
+                                } else {
+                                    sourceDesk.students[srcPos] = null;
+                                    const firstStudent = sourceDesk.students.find(s => s);
+                                    sourceDesk.student = firstStudent || null;
+                                }
+                            }
+                        }
 
                         // Update backwards compat field
                         const firstStudent = desk.students.find(s => s);
@@ -2430,13 +2564,14 @@ function renderSeating() {
                     renderSeating();
                 } else {
                     // SWAP CASE: Desk is full, swap students
+
                     if (sourceDeskIdx && sourceStudentPos) {
                         const srcIdx = parseInt(sourceDeskIdx);
                         const srcPos = parseInt(sourceStudentPos);
 
                         // Don't swap if dragging within same desk
                         if (srcIdx === idx) {
-                            console.log('⚠️ Cannot swap within same desk');
+
                             return;
                         }
 
@@ -2465,7 +2600,7 @@ function renderSeating() {
                                 return;
                             }
 
-                            console.log('🔄 Swapping:', draggedStudent.name, '↔', replacedStudent.name);
+
 
                             // Remove dragged student from source (set to null, not splice)
                             if (sourceDesk.type === 'single') {
@@ -2521,6 +2656,7 @@ function renderSeating() {
             }
         };
 
+
         if (deskType === 'bench2' || deskType === 'bench4' || deskType === 'round3' || deskType === 'round4' || deskType === 'round6') {
             // Dynamically fetch names when hovering instead of caching at render time
             d.addEventListener('mouseenter', () => {
@@ -2538,6 +2674,9 @@ function renderSeating() {
 
     // UPDATE DOCK WHEN RENDERED
     updateUnplacedDock();
+
+    // Ensure canvas expands to fit layout and shows background grid correctly
+    c.style.height = Math.max(500, currentChart.roomHeight || 500) + 'px';
 }
 
 async function generateSeating(keepLocked = true) {
@@ -2588,11 +2727,11 @@ async function generateSeating(keepLocked = true) {
             } else if (studentIndex < availableStudents.length) {
                 const studentName = availableStudents[studentIndex++];
                 const existingData = studentDataMap.get(studentName);
-                desk.students[pos] = { 
-                    name: studentName, 
-                    note: existingData?.note || '', 
+                desk.students[pos] = {
+                    name: studentName,
+                    note: existingData?.note || '',
                     locked: existingData?.locked || false,
-                    position: pos 
+                    position: pos
                 };
             }
         }
@@ -2626,7 +2765,7 @@ async function openChartDisplay(id) {
     document.getElementById('printTitle').innerText = c.name;
     document.getElementById('printSubtitle').innerText = c.comment || '';
 
-    // Get room design mode
+    // Get room design mode and defaultFlipped
     let designMode = 'board-top';
     if (c.room_id) {
         const room = await ipcRenderer.invoke('get-room', c.room_id);
@@ -2635,28 +2774,30 @@ async function openChartDisplay(id) {
             designMode = roomLayout.designMode || 'board-top';
         }
     }
+    const isFlipped = await ipcRenderer.invoke('get-setting', 'defaultFlipped');
 
     const container = document.getElementById('displayCanvas');
     container.innerHTML = '<div class="front-board">TAVLE</div>';
 
     const board = container.querySelector('.front-board');
-    
-    // Check if room is designed with board-bottom mode
-    if (designMode === 'board-bottom') {
-        // Native board-bottom mode: Place board at bottom
+
+    // Use coordinate transform for board-top + tavle nederst (no CSS flip, no empty space)
+    const rawLayout = JSON.parse(c.placements);
+    const layoutToRender = getRenderedLayoutForDisplay(rawLayout, designMode, isFlipped);
+
+    if (designMode === 'board-bottom' || (designMode === 'board-top' && isFlipped)) {
         if (board) {
             board.classList.add('bottom');
             board.style.top = 'auto';
             board.style.bottom = '10px';
         }
-        // Don't use CSS flip for native board-bottom rooms
+        container.classList.remove('flipped');
     } else {
-        // Legacy board-top mode: Use defaultFlipped setting
         applyDefaultFlip('displayCanvas');
     }
 
     // OPPDATER CURRENTCHART SLIK AT ZOOM FUNGERER FOR DENNE VISNINGEN OGSÅ
-    currentChart.layout = JSON.parse(c.placements);
+    currentChart.layout = rawLayout;
 
     // Use DESK_TYPES for consistent sizing
     const DESK_SPECS = {
@@ -2667,7 +2808,7 @@ async function openChartDisplay(id) {
         bench2: { w: DESK_TYPES.bench2.width, h: DESK_TYPES.bench2.height },
         bench4: { w: DESK_TYPES.bench4.width, h: DESK_TYPES.bench4.height }
     };
-    JSON.parse(c.placements).forEach((spot, idx) => {
+    layoutToRender.forEach((spot, idx) => {
         const d = document.createElement('div');
         let colorClass = spot.color || 'bg-default';
         const deskType = spot.type || 'single';
@@ -2686,7 +2827,7 @@ async function openChartDisplay(id) {
 
         const students = spot.students || (spot.student ? [spot.student] : []);
         const capacity = spot.capacity || spec.capacity || 1;
-        
+
         // Single desk rendering
         if (deskType === 'single' && students[0]) {
             const studentData = students[0];
@@ -2694,27 +2835,27 @@ async function openChartDisplay(id) {
             nameSpan.textContent = studentData.name || studentData;
             nameSpan.style.fontWeight = '600';
             d.appendChild(nameSpan);
-        } 
+        }
         // Multi-student desk rendering (bench/round)
         else if (deskType === 'bench2' || deskType === 'bench4' || deskType === 'round3' || deskType === 'round4' || deskType === 'round6') {
             const nameContainer = document.createElement('div');
             nameContainer.className = 'student-names-list';
-            
+
             for (let pos = 0; pos < capacity; pos++) {
                 const slotDiv = document.createElement('div');
                 slotDiv.className = 'bench-slot';
                 const student = students[pos];
-                
+
                 if (student) {
                     const studentName = student.name || student;
                     const nameDiv = document.createElement('div');
                     nameDiv.className = 'student-name-item';
-                    
+
                     const nameSpan = document.createElement('span');
                     nameSpan.className = 'student-name-text';
                     nameSpan.textContent = studentName;
                     nameDiv.appendChild(nameSpan);
-                    
+
                     slotDiv.appendChild(nameDiv);
                 } else {
                     slotDiv.classList.add('bench-slot-empty');
@@ -2723,19 +2864,19 @@ async function openChartDisplay(id) {
                 nameContainer.appendChild(slotDiv);
             }
             d.appendChild(nameContainer);
-            
+
             // Apply autoscaling for round tables
             if (deskType.startsWith('round')) {
                 applyAutoScaling(d, students, deskType);
             }
         }
-        
+
         container.appendChild(d);
     });
 
     navTo('view-chart-display');
 }
-function flipView() { 
+function flipView() {
     document.getElementById('displayCanvas').classList.toggle('flipped');
     // No need to adjust canvas here since displayCanvas is read-only view
 }
@@ -2786,7 +2927,7 @@ function saveStudentNote() {
 function toggleStudentLock() {
     if (selectedSeatingDeskIdx === null) return;
     const desk = currentChart.layout[selectedSeatingDeskIdx];
-    
+
     // Finn eleven som skal låses
     let student = null;
     if (selectedStudentPos !== null && desk?.students?.[selectedStudentPos]) {
@@ -2796,9 +2937,9 @@ function toggleStudentLock() {
     } else if (desk?.student) {
         student = desk.student;
     }
-    
+
     if (!student) return;
-    
+
     student.locked = !student.locked;
     renderSeating();
     document.getElementById('seatingContextMenu').style.display = 'none';
@@ -2818,7 +2959,7 @@ document.addEventListener('click', (e) => {
         document.getElementById('deskContextMenu').style.display = 'none';
         document.getElementById('seatingContextMenu').style.display = 'none';
     }
-    
+
     // Close dropdown when clicking outside
     if (!e.target.closest('.btn-group') && activeDropdown) {
         activeDropdown.classList.remove('show');
@@ -2826,272 +2967,47 @@ document.addEventListener('click', (e) => {
     }
 });
 
+
 // =========================================================
-// ONBOARDING WIZARD
+// ONBOARDING WIZARD (extracted to modules/onboarding.js)
 // =========================================================
-let wizardStep = 1;
-let wizardData = {
-    className: '',
-    students: [],
-    roomTemplate: 'standard'
+onboarding.init({
+    showToast,
+    navTo,
+    loadNormalToolbar,
+    getWeekNumber,
+    generateSeating,
+    renderSeating,
+    setCurrentChart: (chart) => { currentChart = chart; }
+});
+
+// Expose onboarding functions to window scope for HTML onclick handlers
+
+// =========================================================
+// AUTO UPDATER LOGIC
+// =========================================================
+ipcRenderer.on('update-downloaded-ready', (event, info) => {
+    console.log('Update downloaded:', info);
+    const notification = document.getElementById('updateNotification');
+    if (notification) {
+        notification.style.display = 'flex';
+        // Small delay to allow display flex to apply before transitioning opacity/transform
+        setTimeout(() => notification.classList.add('show'), 50);
+    }
+});
+
+window.restartAppForUpdate = function () {
+    ipcRenderer.send('restart-app');
 };
+window.startOnboardingWizard = onboarding.startOnboardingWizard;
+window.wizardNext = onboarding.wizardNext;
+window.wizardPrev = onboarding.wizardPrev;
+window.wizardSkip = onboarding.wizardSkip;
+window.selectTemplate = onboarding.selectTemplate;
+window.closeWizard = onboarding.closeWizard;
 
-function startOnboardingWizard(
-
-) {
-    document.getElementById('onboardingWizard').style.display = 'flex';
-    wizardStep = 1;
-    wizardData = { className: '', students: [], roomTemplate: 'standard' };
-    renderWizardStep();
-}
-
-function renderWizardStep() {
-    const content = document.getElementById('wizardContent');
-    updateWizardProgress();
-
-    switch (wizardStep) {
-        case 1:
-            content.innerHTML = `
-                <h2>Velkommen til KlassePlass! 👋</h2>
-                <p>La oss lage ditt første klassekart sammen. Først må vi opprette en klasse.</p>
-                
-                <div style="margin-top: 25px;">
-                    <label class="form-label">Klassenavn</label>
-                    <input type="text" id="wizardClassName" class="dark-input" placeholder="f.eks. 8A" value="${wizardData.className}">
-                </div>
-                
-                <div style="margin-top: 20px;">
-                    <label class="form-label">Elever (ett navn per linje)</label>
-                    <textarea id="wizardStudents" class="dark-input" rows="8" placeholder="Ola Nordmann
-Kari Hansen
-Per Jensen
-Anne Olsen
-...">${wizardData.students.join('\n')}</textarea>
-                </div>
-            `;
-            document.getElementById('btnWizPrev').style.display = 'none';
-            document.getElementById('btnWizNext').innerHTML = 'Neste <i class="fas fa-arrow-right"></i>';
-            break;
-
-        case 2:
-            const templates = [
-                { id: 'standard', name: 'Standard', desc: '24 bord (4×6)' },
-                { id: 'large', name: 'Stort', desc: '30 bord (5×6)' },
-                { id: 'small', name: 'Lite', desc: '20 bord (4×5)' },
-                { id: 'groups', name: 'Gruppebord', desc: '6 grupper à 4' }
-            ];
-
-            content.innerHTML = `
-                <h2>Velg klasserom 🏫</h2>
-                <p>Hvilket rom passer best for klassen <strong>${wizardData.className}</strong> med <strong>${wizardData.students.length} elever</strong>?</p>
-                
-                <div class="template-grid">
-                    ${templates.map(t => `
-                        <div class="template-card ${wizardData.roomTemplate === t.id ? 'selected' : ''}" onclick="selectTemplate('${t.id}')">
-                            <h3>${t.name}</h3>
-                            <p>${t.desc}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            document.getElementById('btnWizPrev').style.display = 'inline-block';
-            document.getElementById('btnWizNext').innerHTML = 'Neste <i class="fas fa-arrow-right"></i>';
-            break;
-
-        case 3:
-            content.innerHTML = `
-                <h2>Nesten ferdig! 🎉</h2>
-                <p>Vi oppretter nå klassekartet for <strong>${wizardData.className}</strong> i et <strong>${getTemplateName(wizardData.roomTemplate)}</strong> klasserom.</p>
-                
-                <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 10px; padding: 20px; margin-top: 25px;">
-                    <p style="margin: 0; color: #cbd5e1;">
-                        <i class="fas fa-info-circle" style="color: var(--accent);"></i>
-                        Elevene vil bli randomisert automatisk. Du kan alltid endre plassering senere!
-                    </p>
-                </div>
-                
-                <div style="margin-top: 25px;">
-                    <strong style="display: block; margin-bottom: 10px;">Dine elever:</strong>
-                    <div style="max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; font-size: 0.9rem; color: #94a3b8;">
-                        ${wizardData.students.map((s, i) => `${i + 1}. ${s}`).join('<br>')}
-                    </div>
-                </div>
-            `;
-            document.getElementById('btnWizNext').innerHTML = '<i class="fas fa-check"></i> Opprett klassekart';
-            break;
-    }
-
-    updateWizardButtons();
-}
-
-function updateWizardProgress() {
-    for (let i = 1; i <= 3; i++) {
-        const step = document.getElementById(`wizStep${i}`);
-        if (i < wizardStep) {
-            step.classList.remove('active');
-            step.classList.add('completed');
-        } else if (i === wizardStep) {
-            step.classList.remove('completed');
-            step.classList.add('active');
-        } else {
-            step.classList.remove('active', 'completed');
-        }
-    }
-}
-
-function updateWizardButtons() {
-    // Handled in renderWizardStep
-}
-
-function wizardNext() {
-    // Validate current step
-    if (wizardStep === 1) {
-        wizardData.className = document.getElementById('wizardClassName').value.trim();
-        wizardData.students = document.getElementById('wizardStudents').value
-            .split('\n')
-            .map(s => s.trim())
-            .filter(s => s.length > 0);
-
-        if (!wizardData.className) {
-            showToast('Vennligst fyll ut klassenavn');
-            return;
-        }
-        if (wizardData.students.length === 0) {
-            showToast('Vennligst legg til minst én elev');
-            return;
-        }
-    }
-
-    if (wizardStep === 3) {
-        wizardFinish();
-        return;
-    }
-
-    wizardStep++;
-    renderWizardStep();
-}
-
-function wizardPrev() {
-    wizardStep--;
-    if (wizardStep < 1) wizardStep = 1;
-    renderWizardStep();
-}
-
-function wizardSkip() {
-    if (confirm('Er du sikker på at du vil hoppe over veiledningen?')) {
-        closeWizard();
-    }
-}
-
-function selectTemplate(templateId) {
-    wizardData.roomTemplate = templateId;
-    renderWizardStep(); // Re-render to update selected state
-}
-
-function getTemplateName(id) {
-    const names = { standard: 'standard', large: 'stort', small: 'lite', groups: 'gruppebord' };
-    return names[id] || id;
-}
-
-function generateTemplateLayout(template) {
-    const layouts = {
-        standard: { rows: 4, cols: [6] },
-        large: { rows: 5, cols: [6] },
-        small: { rows: 4, cols: [5] },
-        groups: { rows: 3, cols: [2, 2, 2] }  // 3x(2+2+2) = 24 bord, 6 grupper à 4
-    };
-
-    const config = layouts[template] || layouts.standard;
-    const desks = [];
-
-    const aisle = 30;
-    const rowGap = 20;
-    let startY = 70;
-
-    for (let r = 0; r < config.rows; r++) {
-        const totalCols = config.cols.reduce((a, b) => a + b, 0);
-        const totalAisles = Math.max(0, config.cols.length - 1);
-        const rowWidth = (totalCols * DESK_W) + (totalAisles * aisle);
-        let startX = (CANVAS_W - rowWidth) / 2;
-
-        if (startX < 20) startX = 20;
-
-        let currentX = startX;
-        config.cols.forEach((groupSize, gIdx) => {
-            for (let i = 0; i < groupSize; i++) {
-                desks.push({ x: currentX, y: startY });
-                currentX += DESK_W;
-            }
-            if (gIdx < config.cols.length - 1) currentX += aisle;
-        });
-
-        startY += DESK_H + rowGap;
-    }
-
-    return desks;
-}
-
-async function wizardFinish() {
-    try {
-        // Opprett klasse
-        const classId = await ipcRenderer.invoke('save-class', null,
-            wizardData.className, wizardData.students.join('\n'));
-
-        // Opprett rom fra template
-        const layout = generateTemplateLayout(wizardData.roomTemplate);
-        const roomId = await ipcRenderer.invoke('save-room',
-            getTemplateName(wizardData.roomTemplate) + ' rom', JSON.stringify(layout));
-
-        // Opprett klassekart
-        const chartName = `${wizardData.className} Klassekart`;
-        const currentWeek = getWeekNumber(new Date());
-
-        const chartLayout = layout.map(p => ({
-            ...p,
-            type: p.type || 'single',
-            capacity: p.capacity ?? 1,
-            students: null,
-            student: null,
-            color: 'bg-default',
-            locked: false,
-            groupId: null
-        }));
-
-        currentChart = {
-            id: null,
-            classId: classId,
-            roomId: roomId,
-            layout: chartLayout,
-            allStudents: wizardData.students
-        };
-
-        document.getElementById('editChartName').value = chartName;
-        document.getElementById('editChartComment').value = `Uke ${currentWeek} - ${currentWeek + 4}`;
-
-        await generateSeating(false);
-        renderSeating();
-
-        // Merk wizard som fullført
-        await ipcRenderer.invoke('save-setting', 'onboardingCompleted', true);
-
-        // Lukk wizard og naviger til editor
-        document.getElementById('onboardingWizard').style.display = 'none';
-        navTo('view-seating-editor');
-        loadNormalToolbar();
-
-        showToast('🎉 Ditt første klassekart er klart!');
-
-    } catch (err) {
-        console.error(err);
-        showToast('Feil: ' + err.message);
-    }
-}
-
-async function closeWizard() {
-    document.getElementById('onboardingWizard').style.display = 'none';
-    await ipcRenderer.invoke('save-setting', 'onboardingCompleted', true);
-    navTo('view-charts-dashboard');
-}
+// Also keep as global functions for internal use
+const startOnboardingWizard = onboarding.startOnboardingWizard;
 
 // STARTUP CALL
 navTo('view-charts-dashboard');

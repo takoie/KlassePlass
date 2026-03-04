@@ -708,26 +708,23 @@
         ipcRenderer.on('render-layout', (event, data) => {
 
             const layoutData = data.layout;
-            const shouldFlip = data.defaultFlipped;
-            const designMode = data.designMode || 'board-top';  // Get design mode
+            const showBoardAtBottom = data.showBoardAtBottom === true;
 
             const DESK_SPECS = { single: { w: 85, h: 55 }, round3: { w: 130, h: 130 }, round4: { w: 145, h: 145 }, round6: { w: 160, h: 160 }, bench2: { w: 170, h: 55 }, bench4: { w: 340, h: 55 } };
 
             content.innerHTML = '<div class="front-board">TAVLE</div>';
             
             const board = content.querySelector('.front-board');
-            
-            // Check if room is designed with board-bottom mode
-            if (designMode === 'board-bottom') {
-                // Native board-bottom mode: Place board at bottom, don't flip
+
+            // Use coordinate transform for board-bottom or board-top+tavle nederst (no CSS flip, no empty space)
+            if (showBoardAtBottom) {
                 if (board) {
                     board.style.top = 'auto';
                     board.style.bottom = '10px';
                 }
-                state.flipped = false;  // Don't use CSS flip for native board-bottom rooms
+                state.flipped = false;
             } else {
-                // Legacy board-top mode: Use defaultFlipped setting with CSS transform
-                state.flipped = shouldFlip;
+                state.flipped = data.defaultFlipped || false;
             }
             
             updateTransform();

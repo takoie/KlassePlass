@@ -3,6 +3,11 @@
 ## Formål
 Dette dokumentet holder oversikt over fremtidige planer, funksjoner og forbedringer for KlassePlass.
 
+> **STATUS (2026-03-04): REBUILD BESLUTTET**
+> Kodebasen skrives om fra scratch. Alle nye funksjoner under implementeres i v2-arkitekturen.
+> Eksisterende "Sprint 1/2/3"-backlog videreføres, men integreres i rebuild — ikke som patches på v1.
+> Plan: `c:\Users\stian.TAKO\.cursor\plans\klasseplass_rebuild_1efa4c4e.plan.md`
+
 ---
 
 ## 🎯 Status-nøkkel
@@ -171,6 +176,41 @@ Dette dokumentet holder oversikt over fremtidige planer, funksjoner og forbedrin
 **Beskrivelse:** Støtte for engelsk og andre språk.  
 **Teknisk:** i18n-bibliotek eller custom løsning.  
 **Estimat:** Stor
+
+---
+
+---
+
+## 🆕 Nye krav (2026-03-04) — innbygges i v2
+
+#### 🟢 Faste elevpar og "sitter ikke sammen"-regler
+**Status:** Godkjent — bygges i v2  
+**Beskrivelse:** Constraint-editor per klasse. Definer par som alltid/aldri skal sitte sammen.  
+**Teknisk:** `student_constraints`-tabell, `constraints.js` sjekker ved randomisering.
+
+#### 🟢 Historikk — unngå par fra siste X kart
+**Status:** Godkjent — bygges i v2  
+**Beskrivelse:** Ved randomisering unngår algoritmen å gjenta par fra de siste 1/2/3/5 kartene.  
+**Teknisk:** `seating_history`-tabell, soft constraints i `randomize.js`.
+
+#### 🟢 Morsomme randomiseringsanimasjoner
+**Status:** Godkjent — bygges i v2  
+**Beskrivelse:** "Trekke"-modus: elever og plasser trekkes som en aktivitet på projektor.  
+**Teknisk:** `animate.js`, styres fra presentasjonsvinduet.
+
+#### 🟢 Romdekorasjoner (skillevegger, skap, vinduer, dører)
+**Status:** Godkjent — bygges i v2  
+**Beskrivelse:** Tegn inn faste elementer i klasserommet som ikke er pulter.  
+**Teknisk:** `decorations[]`-felt på rom, egne typer: `wall`, `cabinet`, `window`, `door`.
+
+#### 🟢 JSON eksport/import med historikk
+**Status:** Godkjent — bygges i v2  
+**Beskrivelse:** Eksporter en klasse med alle kart og historikk som JSON. Importér på ny maskin.  
+**Teknisk:** IPC `export-class-bundle` og `import-class-bundle`.
+
+#### 🟢 Dark mode / Light mode
+**Status:** Godkjent — bygges i v2  
+**Beskrivelse:** CSS custom properties fra start, toggle i settings.
 
 ---
 

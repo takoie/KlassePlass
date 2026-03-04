@@ -1,7 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 const sqlite3 = require('sqlite3').verbose();
+const { autoUpdater } = require('electron-updater');
 
 // --- SETTINGS MANAGEMENT ---
 function getSettingsPath() {
@@ -75,6 +77,8 @@ function initDatabase() {
 }
 
 let win;
+let pythonProcess = null;
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1400, height: 820,
@@ -84,6 +88,13 @@ function createWindow() {
     webPreferences: { nodeIntegration: true, contextIsolation: false }
   });
   win.loadFile('index.html');
+
+  // When main window closes, close all other windows so app quits (no process left in background)
+  win.on('close', () => {
+    BrowserWindow.getAllWindows().forEach((w) => {
+      if (w !== win && !w.isDestroyed()) w.close();
+    });
+  });
 }
 
 ipcMain.on('app:minimize', () => win.minimize());
@@ -116,27 +127,27 @@ ipcMain.handle('delete-room', async (e, id) => new Promise((res, rej) => db.run(
 ipcMain.handle('migrate-room-structure', async () => new Promise((res, rej) => {
   db.all("SELECT * FROM rooms", [], (err, rooms) => {
     if (err) return rej(err);
-    
+
     let migrated = 0;
     const promises = rooms.map(room => {
       return new Promise((resolve, reject) => {
         try {
           const layout = JSON.parse(room.layout_data);
-          
+
           // Check if already migrated
           if (layout.designMode !== undefined) {
             return resolve();
           }
-          
+
           // Old format: array of desks
           if (Array.isArray(layout)) {
             const newLayout = {
               desks: layout,
               designMode: 'board-top' // Default for existing rooms
             };
-            
-            db.run("UPDATE rooms SET layout_data = ? WHERE id = ?", 
-              [JSON.stringify(newLayout), room.id], 
+
+            db.run("UPDATE rooms SET layout_data = ? WHERE id = ?",
+              [JSON.stringify(newLayout), room.id],
               (updateErr) => {
                 if (updateErr) reject(updateErr);
                 else {
@@ -153,7 +164,7 @@ ipcMain.handle('migrate-room-structure', async () => new Promise((res, rej) => {
         }
       });
     });
-    
+
     Promise.all(promises)
       .then(() => res({ success: true, migrated }))
       .catch(rej);
@@ -206,7 +217,7 @@ ipcMain.handle('backup-database', async () => {
   try {
     const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     const defaultFilename = `klassekart_backup_${date}.db`;
-    
+
     const result = await dialog.showSaveDialog(win, {
       title: 'Backup database',
       defaultPath: defaultFilename,
@@ -222,9 +233,9 @@ ipcMain.handle('backup-database', async () => {
 
     // Copy database file to chosen location
     fs.copyFileSync(dbPath, result.filePath);
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       filePath: result.filePath,
       filename: path.basename(result.filePath)
     };
@@ -249,7 +260,7 @@ ipcMain.handle('restore-database', async () => {
     }
 
     const selectedFile = result.filePaths[0];
-    
+
     // Validate file size (reject files > 100MB)
     const stats = fs.statSync(selectedFile);
     if (stats.size > 100 * 1024 * 1024) {
@@ -315,7 +326,7 @@ ipcMain.handle('move-database', async () => {
 
     const newDirectory = result.filePaths[0];
     const newDbPath = path.join(newDirectory, 'klassekart_database.db');
-    
+
     // Check if file already exists at new location
     if (fs.existsSync(newDbPath)) {
       return { success: false, error: 'En database finnes allerede på denne plasseringen' };
@@ -345,18 +356,18 @@ ipcMain.handle('move-database', async () => {
     try {
       // Copy database to new location
       fs.copyFileSync(dbPath, newDbPath);
-      
+
       // Verify the copy was successful by checking file size
       const oldStats = fs.statSync(dbPath);
       const newStats = fs.statSync(newDbPath);
-      
+
       if (oldStats.size !== newStats.size) {
         throw new Error('Filstørrelse matcher ikke etter kopiering');
       }
 
       // Delete old database file
       fs.unlinkSync(dbPath);
-      
+
       // Save new path to config file for next startup
       const configPath = path.join(app.getPath('userData'), 'db-location.json');
       fs.writeFileSync(configPath, JSON.stringify({ dbPath: newDbPath }));
@@ -368,8 +379,8 @@ ipcMain.handle('move-database', async () => {
 
       console.log('Database moved successfully to', newDbPath);
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         newPath: newDbPath,
         requiresRestart: true
       };
@@ -381,11 +392,11 @@ ipcMain.handle('move-database', async () => {
         }
         fs.unlinkSync(backupPath);
       }
-      
+
       // Reopen database at old location
       const oldDb = new sqlite3.Database(dbPath);
       Object.assign(db, oldDb);
-      
+
       throw error;
     }
   } catch (error) {
@@ -415,7 +426,7 @@ ipcMain.on('open-presentation-window', (event, layoutData) => {
   });
 });
 
-app.whenReady().then(() => { 
+app.whenReady().then(() => {
   // Register settings handlers after app is ready
   ipcMain.handle('get-settings', async () => {
     return loadSettings();
@@ -432,8 +443,71 @@ app.whenReady().then(() => {
     return settings[key];
   });
 
-  initDatabase(); 
-  createWindow(); 
+  initDatabase();
+  createWindow();
+
+  // Optionally start backend app.py if it exists (Electron will kill it on quit)
+  const appPy = path.join(__dirname, 'backend', 'app.py');
+  if (fs.existsSync(appPy)) {
+    const backendDir = path.join(__dirname, 'backend');
+    try {
+      pythonProcess = spawn(process.platform === 'win32' ? 'python' : 'python3', [appPy], {
+        cwd: backendDir,
+        stdio: 'ignore'
+      });
+      pythonProcess.on('error', (err) => console.error('Backend app.py start error:', err));
+    } catch (err) {
+      console.error('Failed to start backend app.py:', err);
+    }
+  }
+
+  // --- AUTO UPDATER ---
+  autoUpdater.checkForUpdatesAndNotify();
 });
 
-app.on('window-all-closed', () => { db.close(); app.quit(); });
+function quitApp() {
+  if (db) {
+    try { db.close(); } catch (e) { }
+  }
+
+  // FORCE KILL PYTHON BACKEND
+  if (pythonProcess) {
+    try {
+      if (process.platform === 'win32') {
+        spawn('taskkill', ['/pid', pythonProcess.pid, '/f', '/t']);
+      } else {
+        process.kill(-pythonProcess.pid); // Kill process group
+        pythonProcess.kill('SIGKILL');
+      }
+    } catch (e) { console.error('Failed to kill python process:', e); }
+  }
+
+  app.quit();
+}
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    quitApp();
+  } else {
+    quitApp();
+  }
+});
+
+// --- UPDATER IPC ---
+autoUpdater.on('update-downloaded', (info) => {
+  if (mainWindow) {
+    mainWindow.webContents.send('update-downloaded-ready', info);
+  }
+});
+
+ipcMain.on('restart-app', () => {
+  // Ensure we kill python before updating
+  if (pythonProcess) {
+    try {
+      if (process.platform === 'win32') {
+        spawn('taskkill', ['/pid', pythonProcess.pid, '/f', '/t']);
+      }
+    } catch (e) { }
+  }
+  autoUpdater.quitAndInstall();
+});

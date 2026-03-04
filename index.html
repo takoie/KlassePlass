@@ -25,6 +25,49 @@
             background: transparent;
         }
 
+        /* Update Notification Popup */
+        #updateNotification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 9999;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        #updateNotification.show {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .update-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #38bdf8;
+        }
+
+        .update-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -207,6 +250,20 @@
         .rotate-icon {
             transform: rotate(180deg);
             transition: transform 0.3s;
+        }
+
+        .vipps-link {
+            color: #FF5B24;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: opacity 0.2s, border-color 0.2s;
+        }
+
+        .vipps-link:hover {
+            opacity: 0.9;
+            border-bottom-color: #FF5B24;
         }
 
         /* OM KNAPP / BUNN STIL */
@@ -526,6 +583,13 @@
             padding: 10px 20px;
             font-size: 1rem;
             font-weight: 600;
+        }
+
+        .btn-toolbar {
+            padding: 6px 12px !important;
+            font-size: 0.85rem !important;
+            margin-right: 0 !important;
+            margin-bottom: 0 !important;
         }
 
         .btn-action.btn-accent {
@@ -949,6 +1013,240 @@
             flex-wrap: wrap;
         }
 
+        /* Room editor compact overrides */
+        #view-room-editor.room-editor-compact {
+            margin-top: -8px;
+        }
+
+        .room-editor-compact .room-editor-panel {
+            padding: 10px 12px 12px;
+        }
+
+        .room-editor-compact .room-editor-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .room-editor-compact .room-editor-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .room-editor-compact .room-editor-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .room-editor-compact .room-editor-controls {
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .room-editor-compact .control-sections-row {
+            gap: 10px;
+        }
+
+        .room-editor-compact .control-section {
+            padding: 10px 12px;
+        }
+
+        .room-editor-compact .section-header-compact {
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .room-editor-compact .section-header-compact i {
+            font-size: 0.95rem;
+        }
+
+        .room-editor-compact .control-row-inline {
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .room-editor-compact .form-label-compact {
+            margin-bottom: 2px;
+            font-size: 0.8rem;
+        }
+
+        .room-editor-compact .dark-input-compact {
+            padding: 6px 10px;
+            font-size: 0.9rem;
+        }
+
+        .room-editor-compact .toggle-switch-compact {
+            width: 32px;
+            height: 16px;
+        }
+
+        .room-editor-compact .toggle-switch-compact .slider {
+            border-radius: 16px;
+        }
+
+        .room-editor-compact .toggle-switch-compact .slider:before {
+            height: 10px;
+            width: 10px;
+            left: 2px;
+            bottom: 2px;
+        }
+
+        .room-editor-compact .toggle-switch-compact input:checked+.slider:before {
+            transform: translateX(16px);
+        }
+
+        .room-editor-compact .btn-sm-action {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+
+        .room-editor-compact .desk-type-grid-inline {
+            gap: 6px;
+            padding: 3px 0;
+        }
+
+        .room-editor-compact .desk-type-selector-inline {
+            min-height: 38px;
+            padding: 6px;
+        }
+
+        .room-editor-compact .room-canvas-container {
+            margin-top: 12px;
+        }
+
+        .room-editor-compact .control-row-compact {
+            gap: 8px;
+        }
+
+        .room-editor-compact .control-row-compact .control-input-group {
+            min-width: 100px;
+        }
+
+        .room-editor-compact .control-row-compact .btn-action {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+
+        /* Group editor compact overrides */
+        #view-group-editor.group-editor-compact {
+            margin-top: -8px;
+        }
+
+        .group-editor-compact .group-editor-panel {
+            padding: 10px 12px 12px;
+        }
+
+        .group-editor-compact .group-editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .group-editor-compact .group-editor-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .group-editor-compact .group-editor-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .group-editor-compact .group-editor-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .group-editor-compact .group-editor-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .group-editor-compact .form-label-compact {
+            margin-bottom: 0;
+            font-size: 0.8rem;
+        }
+
+        .group-editor-compact .dark-input-compact {
+            padding: 6px 10px;
+            font-size: 0.9rem;
+        }
+
+        .group-editor-compact .student-list-toolbar {
+            margin-bottom: 8px;
+        }
+
+        .group-editor-compact .student-paste-input {
+            min-height: 56px;
+        }
+
+        .group-editor-compact .btn-sm-action {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+
+        .group-editor-compact .student-list-items {
+            gap: 8px;
+            max-height: 280px;
+        }
+
+        /* Seating setup (Nytt klassekart) compact */
+        .seating-setup-compact {
+            margin-top: -8px;
+        }
+
+        .seating-setup-compact .seating-setup-panel {
+            max-width: 500px;
+            padding: 10px 12px 12px;
+        }
+
+        .seating-setup-compact .seating-setup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .seating-setup-compact .seating-setup-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .seating-setup-compact .seating-setup-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .seating-setup-compact .seating-setup-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .seating-setup-compact .form-label-compact {
+            margin-bottom: 0;
+            font-size: 0.8rem;
+        }
+
+        .seating-setup-compact .dark-input-compact {
+            padding: 6px 10px;
+            font-size: 0.9rem;
+        }
+
         .control-input-group {
             display: flex;
             flex-direction: column;
@@ -959,6 +1257,104 @@
 
         .control-input-group .dark-input {
             width: 100%;
+        }
+
+        /* STUDENT LIST (GROUP EDITOR) */
+        .student-list-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .student-paste-input {
+            flex: 1;
+            min-height: 70px;
+            resize: vertical;
+        }
+
+        .student-list-toolbar .btn-action {
+            flex-shrink: 0;
+        }
+
+        .student-list-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .student-list-items:empty::after {
+            content: "Ingen elever lagt til ennå – lim inn og klikk Legg til";
+            grid-column: 1 / -1;
+            color: #64748b;
+            font-size: 0.9rem;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .student-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px 12px;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .student-card:hover {
+            background: rgba(51, 65, 85, 0.6);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .student-card-num {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(59, 130, 246, 0.25);
+            color: #93c5fd;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 6px;
+        }
+
+        .student-card-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .student-card-remove {
+            flex-shrink: 0;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            border-radius: 6px;
+            opacity: 0.7;
+        }
+
+        .student-card-remove:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            opacity: 1;
         }
 
         /* CANVAS AREA */
@@ -972,6 +1368,29 @@
             position: relative;
             overflow: auto;
             margin: 20px auto 0 auto;
+        }
+
+        .room-canvas-clear-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            background: rgba(220, 38, 38, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(220, 38, 38, 0.4);
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .room-canvas-clear-btn:hover {
+            background: #dc2626;
+            color: white;
         }
 
         .room-canvas-content {
@@ -994,6 +1413,19 @@
         .room-canvas-content.flipped .desk,
         .room-canvas-content.flipped .front-board {
             transform: rotate(180deg);
+        }
+
+        /* Counter-rotate desk numbers so they stay readable when canvas is flipped */
+        .room-canvas-content.flipped .desk .desk-number {
+            transform: translateX(-50%) rotate(-180deg) !important;
+            transform-origin: center center;
+        }
+
+        .room-canvas-content.flipped .desk.rotated-90 .desk-number,
+        .room-canvas-content.flipped .desk.rotated-180 .desk-number,
+        .room-canvas-content.flipped .desk.rotated-270 .desk-number {
+            transform: translateX(-50%) rotate(-180deg) !important;
+            transform-origin: center center;
         }
 
         /* DESK */
@@ -1022,6 +1454,16 @@
 
         .desk:active {
             cursor: grabbing;
+        }
+
+        /* During drag operations or group mode, disable pointer-events on children so they don't block interactions */
+        .drag-active .note-icon,
+        .drag-active .lock-icon,
+        .group-mode-active .student-name-item,
+        .group-mode-active .student-name-single,
+        .group-mode-active .bench-slot,
+        .group-mode-active .student-icons {
+            pointer-events: none !important;
         }
 
         /* ROTATION CLASSES */
@@ -1088,8 +1530,32 @@
         }
 
         @keyframes drag-source-pulse {
-            from { box-shadow: 0 0 8px rgba(245, 158, 11, 0.6), inset 0 0 6px rgba(245, 158, 11, 0.15); }
-            to { box-shadow: 0 0 16px rgba(245, 158, 11, 0.9), inset 0 0 10px rgba(245, 158, 11, 0.25); }
+            from {
+                box-shadow: 0 0 8px rgba(245, 158, 11, 0.6), inset 0 0 6px rgba(245, 158, 11, 0.15);
+            }
+
+            to {
+                box-shadow: 0 0 16px rgba(245, 158, 11, 0.9), inset 0 0 10px rgba(245, 158, 11, 0.25);
+            }
+        }
+
+        .heart-pulse {
+            display: inline-block;
+            animation: heart-pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes heart-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 0.85;
+            }
         }
 
         .bench-tooltip {
@@ -1367,7 +1833,7 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .desk.type-round6 .bench-slot {
             width: 100%;
             max-width: 100%;
@@ -1488,10 +1954,25 @@
         }
 
         /* Bakoverkompatibilitet med lagrede farger */
-        .bg-red { background: #7f1d1d; border-color: #991b1b; }
-        .bg-yellow { background: #78350f; border-color: #92400e; }
-        .bg-green { background: #064e3b; border-color: #065f46; }
-        .bg-blue { background: #1e3a8a; border-color: #1e40af; }
+        .bg-red {
+            background: #7f1d1d;
+            border-color: #991b1b;
+        }
+
+        .bg-yellow {
+            background: #78350f;
+            border-color: #92400e;
+        }
+
+        .bg-green {
+            background: #064e3b;
+            border-color: #065f46;
+        }
+
+        .bg-blue {
+            background: #1e3a8a;
+            border-color: #1e40af;
+        }
 
         /* MODALS */
         .app-modal {
@@ -1523,15 +2004,16 @@
         }
 
         .modal-content-large {
-            background: rgba(30, 41, 59, 0.95);
-            backdrop-filter: blur(20px);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: var(--glass-border);
             width: 700px;
             max-width: 90vw;
             height: 600px;
             max-height: 85vh;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -1539,25 +2021,32 @@
 
         .modal-header {
             padding: 20px 25px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(15, 23, 42, 0.5);
+            background: transparent;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 1.1rem;
         }
 
         .modal-close-btn {
             background: transparent;
             border: none;
             color: #94a3b8;
-            font-size: 2rem;
+            font-size: 1.75rem;
             cursor: pointer;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 6px;
+            border-radius: 8px;
             transition: 0.2s;
         }
 
@@ -1568,21 +2057,22 @@
 
         .tab-navigation {
             display: flex;
-            background: rgba(15, 23, 42, 0.8);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 6px;
+            padding: 12px 20px 0;
+            border-bottom: var(--glass-border);
+            background: transparent;
         }
 
         .tab-button {
-            flex: 1;
-            padding: 15px 20px;
+            padding: 10px 18px;
             background: transparent;
-            border: none;
+            border: 1px solid transparent;
+            border-radius: 8px;
             color: #94a3b8;
             cursor: pointer;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             font-weight: 500;
             transition: 0.2s;
-            border-bottom: 3px solid transparent;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1590,14 +2080,14 @@
         }
 
         .tab-button:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
         }
 
         .tab-button.active {
-            color: var(--accent);
-            border-bottom-color: var(--accent);
-            background: rgba(59, 130, 246, 0.1);
+            color: white;
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.4);
         }
 
         .tab-content {
@@ -1624,7 +2114,7 @@
         .data-option-card {
             background: rgba(30, 35, 50, 0.7);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: var(--glass-border);
             border-radius: 12px;
             padding: 30px 20px;
             text-align: center;
@@ -1641,7 +2131,7 @@
         .data-info {
             background: rgba(30, 35, 50, 0.6);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: var(--glass-border);
             border-radius: 8px;
             padding: 20px;
             display: flex;
@@ -1959,6 +2449,37 @@
             justify-content: flex-end;
         }
 
+        .chart-editor-compact {
+            margin-top: -8px;
+        }
+
+        .chart-editor-compact .chart-editor-header {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+        }
+
+        .chart-editor-compact .chart-editor-actions {
+            gap: 8px;
+            align-items: center;
+        }
+
+        .chart-editor-compact .chart-editor-actions .btn-action {
+            min-height: 34px;
+        }
+
+        .chart-editor-compact #displayTitle {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chart-editor-compact #displaySubtitle {
+            font-size: 0.8rem;
+            margin-top: 2px;
+        }
+
         /* PRINT STYLES */
         .print-logo {
             display: none;
@@ -2009,6 +2530,7 @@
             #btnConfirmGroup,
             .header-input-group,
             #unplacedDock,
+            .room-canvas-clear-btn,
             .settings-row {
                 display: none !important;
             }
@@ -2063,25 +2585,25 @@
                 border-style: solid !important;
                 box-shadow: none !important;
             }
-            
+
             .desk .student-name-item,
             .desk .student-name-text {
                 color: black !important;
             }
-            
+
             .desk .desk-number {
                 color: white !important;
                 background: black !important;
             }
-            
+
             .desk .student-icons i {
                 color: black !important;
             }
-            
+
             .desk .bench-slot-empty {
                 display: none !important;
             }
-            
+
             .desk .student-names-list {
                 display: flex !important;
             }
@@ -2219,22 +2741,41 @@
                 <div id="classGrid" class="card-grid"></div>
             </div>
 
-            <div id="view-group-editor" class="view-section">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 id="classEditorTitle" class="m-0">Opprett gruppe</h2>
-                    <div class="d-flex gap-2">
-                        <button class="btn-action btn-danger" id="btnClassDelete" style="display:none;"
-                            onclick="openDeleteModal(deleteClass)">Slett</button>
-                        <button class="btn-action btn-secondary" onclick="navTo('view-groups')">Avbryt</button>
-                        <button class="btn-action btn-primary" onclick="saveClass()">Lagre</button>
+            <div id="view-group-editor" class="view-section group-editor-compact">
+                <div class="glass-panel group-editor-panel">
+                    <div class="group-editor-header">
+                        <h2 id="classEditorTitle" class="group-editor-title">Opprett gruppe</h2>
+                        <div class="group-editor-actions">
+                            <button class="btn-action btn-danger btn-sm-action" id="btnClassDelete"
+                                style="display:none;" onclick="openDeleteModal(deleteClass)">Slett</button>
+                            <button class="btn-action btn-secondary btn-sm-action"
+                                onclick="navTo('view-groups')">Avbryt</button>
+                            <button class="btn-action btn-primary btn-sm-action" onclick="saveClass()">
+                                <i class="fas fa-save"></i> Lagre
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div class="glass-panel">
-                    <input type="hidden" id="classIdInput">
-                    <div class="mb-3"><label class="form-label">Gruppenavn</label><input type="text" id="classNameInput"
-                            class="dark-input" spellcheck="false"></div>
-                    <div class="mb-3"><label class="form-label">Elever (En per linje)</label><textarea
-                            id="studentListInput" class="dark-input" rows="15" spellcheck="false"></textarea></div>
+                    <div class="group-editor-body">
+                        <input type="hidden" id="classIdInput">
+                        <div class="group-editor-field">
+                            <label class="form-label form-label-compact">Gruppenavn</label>
+                            <input type="text" id="classNameInput" class="dark-input dark-input-compact"
+                                spellcheck="false" placeholder="F.eks. 1ST5, Psykologi 1...">
+                        </div>
+                        <div class="group-editor-field">
+                            <label class="form-label form-label-compact">Elever</label>
+                            <div class="student-list-toolbar">
+                                <textarea id="studentPasteInput"
+                                    class="dark-input student-paste-input dark-input-compact" rows="2"
+                                    placeholder="Lim inn fra Excel, CSV eller liste..." spellcheck="false"></textarea>
+                                <button type="button" class="btn-action btn-accent btn-sm-action"
+                                    onclick="addStudentsFromPaste()">
+                                    <i class="fas fa-plus"></i> Legg til
+                                </button>
+                            </div>
+                            <div id="studentListItems" class="student-list-items"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2243,46 +2784,45 @@
                 <div id="roomGrid" class="card-grid"></div>
             </div>
 
-            <div id="view-room-editor" class="view-section">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 id="roomEditorTitle" class="m-0">Opprett rom</h2>
-                    <div class="d-flex gap-2">
-                        <button class="btn-action btn-danger" id="btnRoomDelete" style="display:none;"
-                            onclick="openDeleteModal(deleteRoom)">Slett</button>
-                        <button class="btn-action btn-primary" onclick="saveRoom()">Lagre</button>
-                    </div>
-                </div>
-                <div class="glass-panel full-width">
-                    <div class="mb-3">
-                        <label class="form-label">Romnavn</label>
-                        <input type="text" id="roomNameInput" class="dark-input" placeholder="Klasserom 101, Datarom, Naturfagrom..."
-                            spellcheck="false">
-                    </div>
-
-                    <!-- Design Mode Toggle -->
-                    <div class="settings-row" style="padding: 15px 0; margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                        <div>
-                            <span style="color: var(--text-main); font-weight: 500;">Design med tavle nederst</span>
-                            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Plasser tavle nederst i rommet (vises naturlig uten rotasjon)</p>
+            <div id="view-room-editor" class="view-section room-editor-compact">
+                <div class="glass-panel full-width room-editor-panel">
+                    <div class="room-editor-panel-header">
+                        <h2 id="roomEditorTitle" class="room-editor-title">Opprett rom</h2>
+                        <div class="room-editor-actions">
+                            <button class="btn-action btn-danger btn-sm-action" id="btnRoomDelete" style="display:none;"
+                                onclick="openDeleteModal(deleteRoom)">Slett</button>
+                            <button class="btn-action btn-primary btn-sm-action" onclick="saveRoom()">
+                                <i class="fas fa-save"></i> Lagre
+                            </button>
                         </div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="designModeToggle" onchange="toggleDesignMode()">
-                            <span class="slider"></span>
-                        </label>
                     </div>
-
                     <div class="room-editor-controls">
                         <div class="control-sections-row">
                             <!-- Layout-bygging Section -->
                             <div class="control-section control-section-compact">
-                                <div class="section-header">
+                                <div class="section-header section-header-compact">
                                     <i class="fas fa-chair"></i>
                                     <span>Bygg klasserom</span>
                                 </div>
-                                <div class="control-row">
-                                    <div class="control-input-group">
-                                        <label class="form-label">Struktur</label>
-                                        <select id="roomPreset" class="dark-input">
+                                <div class="control-row control-row-inline">
+                                    <div class="control-input-group control-input-compact"
+                                        style="flex: 2; min-width: 140px;">
+                                        <label class="form-label form-label-compact">Romnavn</label>
+                                        <input type="text" id="roomNameInput" class="dark-input dark-input-compact"
+                                            placeholder="Klasserom 101..." spellcheck="false">
+                                    </div>
+                                    <div class="control-input-group control-input-compact" style="flex: 0 0 auto;">
+                                        <label class="form-label form-label-compact">Snu visning</label>
+                                        <label class="toggle-switch toggle-switch-compact">
+                                            <input type="checkbox" id="designModeToggle" onchange="toggleDesignMode()">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="control-row control-row-compact">
+                                    <div class="control-input-group control-input-compact">
+                                        <label class="form-label form-label-compact">Struktur</label>
+                                        <select id="roomPreset" class="dark-input dark-input-compact">
                                             <option value="">Velg...</option>
                                             <option value="2,2">2 - 2 (4 pulter)</option>
                                             <option value="2,2,2">2 - 2 - 2 (6 pulter)</option>
@@ -2294,55 +2834,61 @@
                                             <option value="1,1,1,1">Eksamen (4 pulter)</option>
                                         </select>
                                     </div>
-                                    <div class="control-input-group">
-                                        <label class="form-label">Rader</label>
-                                        <input type="number" id="roomRows" class="dark-input" min="1" max="10" value="4">
+                                    <div class="control-input-group control-input-compact" style="min-width: 70px;">
+                                        <label class="form-label form-label-compact">Rader</label>
+                                        <input type="number" id="roomRows" class="dark-input dark-input-compact" min="1"
+                                            max="10" value="4">
                                     </div>
-                                    <button class="btn-action btn-accent" onclick="generateLayout()" style="align-self: flex-end;">
+                                    <button class="btn-action btn-accent" onclick="generateLayout()"
+                                        style="align-self: flex-end;">
                                         <i class="fas fa-magic"></i> Generer
                                     </button>
-                                    <button class="btn-action btn-secondary" onclick="centerTables()" style="align-self: flex-end;">
+                                    <button class="btn-action btn-secondary" onclick="centerTables()"
+                                        style="align-self: flex-end;">
                                         <i class="fas fa-expand-arrows-alt"></i> Sentrer
-                                    </button>
-                                    <button class="btn-action btn-danger" onclick="clearCanvas()" style="align-self: flex-end;">
-                                        <i class="fas fa-trash"></i> Tøm
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Manuell tillegging Section -->
                             <div class="control-section control-section-compact">
-                                <div class="section-header">
+                                <div class="section-header section-header-compact">
                                     <i class="fas fa-hand-pointer"></i>
                                     <span>Legg til bord</span>
                                 </div>
                                 <div class="desk-type-grid-inline">
-                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('single');" title="Enkeltpult">
+                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('single');"
+                                        title="Enkeltpult">
                                         <div class="desk-preview-inline type-single">
                                             <span class="desk-capacity">1</span>
                                         </div>
                                     </div>
-                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('bench2');" title="Langbord (2)">
+                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('bench2');"
+                                        title="Langbord (2)">
                                         <div class="desk-preview-inline type-bench2">
                                             <span class="desk-capacity">2</span>
                                         </div>
                                     </div>
-                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('bench4');" title="Langbord (4)">
+                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('bench4');"
+                                        title="Langbord (4)">
                                         <div class="desk-preview-inline type-bench4">
                                             <span class="desk-capacity">4</span>
                                         </div>
                                     </div>
-                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('round3');" title="Rundbord (3)">
+                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('round3');"
+                                        title="Rundbord (3)">
                                         <div class="desk-preview-inline type-round3">
                                             <span class="desk-capacity">3</span>
                                         </div>
                                     </div>
-                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('round4');" title="Rundbord (4)">
+                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('round4');"
+                                        title="Rundbord (4)">
                                         <div class="desk-preview-inline type-round4">
                                             <span class="desk-capacity">4</span>
                                         </div>
                                     </div>
-                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('round6');" title="Rundbord (6)">
+                                    <div class="desk-type-selector-inline" onclick="addDeskOfType('round6');"
+                                        title="Rundbord (6)">
                                         <div class="desk-preview-inline type-round6">
                                             <span class="desk-capacity">6</span>
                                         </div>
@@ -2353,6 +2899,10 @@
                     </div>
 
                     <div class="room-canvas-container" id="roomContainer">
+                        <button type="button" class="room-canvas-clear-btn" onclick="clearCanvas()"
+                            title="Tøm klasserom">
+                            <i class="fas fa-trash"></i> Tøm
+                        </button>
                         <div id="roomCanvas" class="room-canvas-content">
                             <div class="front-board">TAVLE</div>
                         </div>
@@ -2365,21 +2915,34 @@
                 <div id="chartGrid" class="card-grid"></div>
             </div>
 
-            <div id="view-seating-setup" class="view-section">
-                <h2>Nytt klassekart</h2>
-                <div class="glass-panel" style="max-width:500px">
-                    <div class="mb-3"><label class="form-label">NAVN (1ST5, Psykologi 1, Biologi 2)</label><input
-                            type="text" id="chartNameInput" class="dark-input" spellcheck="false"></div>
-                    <div class="mb-3"><label class="form-label">Gruppe</label><select id="setupClassSelect"
-                            class="dark-input"></select></div>
-                    <div class="mb-3"><label class="form-label">Rom</label><select id="setupRoomSelect"
-                            class="dark-input"></select></div>
-                    <button class="btn-action btn-primary" onclick="createChart()">Opprett</button>
+            <div id="view-seating-setup" class="view-section seating-setup-compact">
+                <div class="glass-panel seating-setup-panel">
+                    <div class="seating-setup-header">
+                        <h2 class="seating-setup-title">Nytt klassekart</h2>
+                        <button class="btn-action btn-primary btn-sm-action" onclick="createChart()">
+                            <i class="fas fa-plus"></i> Opprett
+                        </button>
+                    </div>
+                    <div class="seating-setup-body">
+                        <div class="seating-setup-field">
+                            <label class="form-label form-label-compact">Navn</label>
+                            <input type="text" id="chartNameInput" class="dark-input dark-input-compact"
+                                spellcheck="false" placeholder="F.eks. 1ST5, Psykologi 1, Biologi 2">
+                        </div>
+                        <div class="seating-setup-field">
+                            <label class="form-label form-label-compact">Gruppe</label>
+                            <select id="setupClassSelect" class="dark-input dark-input-compact"></select>
+                        </div>
+                        <div class="seating-setup-field">
+                            <label class="form-label form-label-compact">Rom</label>
+                            <select id="setupRoomSelect" class="dark-input dark-input-compact"></select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div id="view-seating-editor" class="view-section">
-                <div class="editor-header">
+            <div id="view-seating-editor" class="view-section chart-editor-compact">
+                <div class="editor-header chart-editor-header">
                     <div class="editor-inputs">
                         <div class="header-input-group">
                             <span style="font-size:0.7rem; color:#94a3b8; font-weight:700;">NAVN:</span>
@@ -2394,27 +2957,29 @@
                                 spellcheck="false">
                         </div>
                     </div>
-                    <div class="editor-actions">
+                    <div class="editor-actions chart-editor-actions">
                         <div class="btn-group">
-                            <button class="btn-action btn-secondary dropdown-toggle" onclick="toggleDropdown('toolsDropdown')">
+                            <button class="btn-action btn-secondary btn-toolbar dropdown-toggle"
+                                onclick="toggleDropdown('toolsDropdown')">
                                 <i class="fas fa-tools"></i> Verktøy
                             </button>
                             <div class="dropdown-menu" id="toolsDropdown">
                                 <a onclick="showAddDeskModal()"><i class="fas fa-plus"></i> Legg til bord</a>
                                 <a onclick="syncRoomLayout()"><i class="fas fa-sync-alt"></i> Oppdater fra rom</a>
                                 <hr>
-                                <a onclick="openPresentationWindow()"><i class="fas fa-desktop"></i> Fullskjermvisning</a>
+                                <a onclick="openPresentationWindow()"><i class="fas fa-desktop"></i>
+                                    Fullskjermvisning</a>
                                 <a onclick="toggleGroupMode()"><i class="fas fa-object-group"></i> Lag grupper</a>
                                 <a onclick="startNewPeriod()"><i class="fas fa-code-branch"></i> Ny periode</a>
                             </div>
                         </div>
-                        <button class="btn-action btn-accent btn-lg" onclick="generateSeating()">
+                        <button class="btn-action btn-accent btn-toolbar" onclick="generateSeating()">
                             <i class="fas fa-random"></i> Shuffle
                         </button>
-                        <button class="btn-action btn-primary" onclick="saveChart()">
+                        <button class="btn-action btn-primary btn-toolbar" onclick="saveChart()">
                             <i class="fas fa-save"></i> Lagre
                         </button>
-                        <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">
+                        <button class="btn-action btn-secondary btn-toolbar" onclick="navTo('view-charts-dashboard')">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -2429,18 +2994,20 @@
                 </div>
             </div>
 
-            <div id="view-chart-display" class="view-section">
-                <div class="editor-header">
+            <div id="view-chart-display" class="view-section chart-editor-compact">
+                <div class="editor-header chart-editor-header">
                     <div>
                         <h2 id="displayTitle" class="m-0">Visning</h2>
                         <div id="displaySubtitle" style="color:#94a3b8"></div>
                     </div>
-                    <div class="editor-actions">
-                        <button class="btn-action btn-secondary" onclick="openPresentationWindow()"><i
+                    <div class="editor-actions chart-editor-actions">
+                        <button class="btn-action btn-secondary btn-toolbar" onclick="openPresentationWindow()"><i
                                 class="fas fa-desktop"></i> Fullskjermvisning</button>
-                        <button class="btn-action btn-secondary" onclick="flipView()">Snu visning</button>
-                        <button class="btn-action btn-secondary" onclick="window.print()">Print / PDF</button>
-                        <button class="btn-action btn-secondary" onclick="navTo('view-charts-dashboard')">Lukk</button>
+                        <button class="btn-action btn-secondary btn-toolbar" onclick="flipView()">Snu visning</button>
+                        <button class="btn-action btn-secondary btn-toolbar" onclick="window.print()">Print /
+                            PDF</button>
+                        <button class="btn-action btn-secondary btn-toolbar"
+                            onclick="navTo('view-charts-dashboard')">Lukk</button>
                     </div>
                 </div>
                 <div class="room-canvas-container" id="displayContainer">
@@ -2493,14 +3060,14 @@
     <div id="settingsModal" class="app-modal">
         <div class="modal-content-large">
             <div class="modal-header">
-                <h3 style="margin: 0; color: var(--text-main);">Innstillinger</h3>
+                <h3>Innstillinger</h3>
                 <button class="modal-close-btn" onclick="closeSettingsModal()">×</button>
             </div>
-            
+
             <!-- Tab Navigation -->
             <div class="tab-navigation">
                 <button class="tab-button active" onclick="switchTab('about', event)">
-                    <i class="fas fa-info-circle"></i> Om KlassePlass
+                    <i class="fas fa-info-circle"></i> Om
                 </button>
                 <button class="tab-button" onclick="switchTab('settings', event)">
                     <i class="fas fa-sliders-h"></i> Innstillinger
@@ -2508,8 +3075,11 @@
                 <button class="tab-button" onclick="switchTab('data', event)">
                     <i class="fas fa-database"></i> Data
                 </button>
+                <button class="tab-button" onclick="switchTab('licenses', event)">
+                    <i class="fas fa-file-alt"></i> Lisenser
+                </button>
             </div>
-            
+
             <!-- Tab Content -->
             <div class="tab-content">
                 <!-- About Tab -->
@@ -2521,25 +3091,36 @@
                         <p style="color: #cbd5e1; font-size: 1rem; margin: 20px 0;">
                             Et verktøy for å organisere klassekart og elevplassering
                         </p>
-                        <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div
+                            style="margin-top: 40px; padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                             <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 5px;">Laget av</p>
                             <p style="color: #e0f2fe; font-size: 0.95rem; font-weight: 600;">Stian Taknæs</p>
+                            <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 16px;">
+                                Liker du appen? <span class="vipps-link" onclick="showVippsNumber()"
+                                    title="Vis telefonnummer">Vipps</span> meg gjerne en kaffe <i
+                                    class="fas fa-heart heart-pulse" style="color: #f43f5e;"></i>
+                            </p>
+                            <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 14px;">
+                                Tilbakemeldinger? Ta gjerne kontakt på <a href="mailto:stian@taknes.no"
+                                    style="color: var(--accent); text-decoration: none;">stian@taknes.no</a>
+                            </p>
                             <p style="color: #64748b; font-size: 0.75rem; margin-top: 20px;">Versjon 1.0.0</p>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Settings Tab -->
                 <div id="tab-settings" class="tab-pane">
                     <div style="padding: 40px 30px; text-align: center;">
                         <i class="fas fa-sliders-h" style="font-size: 3rem; color: #64748b; margin-bottom: 20px;"></i>
                         <h4 style="color: var(--text-main); margin-bottom: 15px;">Applikasjonsinnstillinger</h4>
-                        
+
                         <!-- Tavle nederst toggle -->
-                        <div class="settings-row" style="padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <div class="settings-row" style="padding: 15px 0; border-bottom: var(--glass-border);">
                             <div>
                                 <span style="color: var(--text-main); font-weight: 500;">Tavle nederst</span>
-                                <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Fullskjermvisning starter med tavle nederst</p>
+                                <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Fullskjermvisning
+                                    starter med tavle nederst</p>
                             </div>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="defaultFlipToggle" onchange="toggleDefaultFlip()">
@@ -2548,7 +3129,66 @@
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Licenses Tab -->
+                <div id="tab-licenses" class="tab-pane">
+                    <div style="padding: 30px 40px;">
+                        <h4 style="color: var(--text-main); margin-bottom: 24px;">
+                            <i class="fas fa-file-alt" style="margin-right: 8px; color: var(--accent);"></i> Lisenser
+                        </h4>
+                        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 28px;">
+                            KlassePlass og de bibliotekene som brukes, er utgitt under åpne lisenser. Her er en
+                            oversikt.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                            <div class="license-card"
+                                style="background: rgba(255,255,255,0.04); border: var(--glass-border); border-radius: 10px; padding: 18px 20px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <strong style="color: var(--text-main); font-size: 1rem;">KlassePlass</strong>
+                                        <p style="color: #94a3b8; font-size: 0.85rem; margin: 6px 0 0 0;">Selve
+                                            applikasjonen</p>
+                                    </div>
+                                    <span style="color: var(--accent); font-weight: 600; font-size: 0.9rem;">ISC</span>
+                                </div>
+                            </div>
+                            <div class="license-card"
+                                style="background: rgba(255,255,255,0.04); border: var(--glass-border); border-radius: 10px; padding: 18px 20px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <strong style="color: var(--text-main); font-size: 1rem;">Electron</strong>
+                                        <p style="color: #94a3b8; font-size: 0.85rem; margin: 6px 0 0 0;">
+                                            Desktop-rammeverk</p>
+                                    </div>
+                                    <a href="https://github.com/electron/electron/blob/main/LICENSE" target="_blank"
+                                        rel="noopener noreferrer" style="color: var(--accent); font-size: 0.9rem;">MIT
+                                        →</a>
+                                </div>
+                            </div>
+                            <div class="license-card"
+                                style="background: rgba(255,255,255,0.04); border: var(--glass-border); border-radius: 10px; padding: 18px 20px;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <strong style="color: var(--text-main); font-size: 1rem;">node-sqlite3</strong>
+                                        <p style="color: #94a3b8; font-size: 0.85rem; margin: 6px 0 0 0;">SQLite-binding
+                                            for Node.js</p>
+                                    </div>
+                                    <a href="https://github.com/TryGhost/node-sqlite3/blob/master/LICENSE"
+                                        target="_blank" rel="noopener noreferrer"
+                                        style="color: var(--accent); font-size: 0.9rem;">BSD-3 →</a>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="color: #64748b; font-size: 0.8rem; margin-top: 24px;">
+                            Full lisensbruk for hvert bibliotek finner du på lenkene over eller i deres respektive
+                            repositorier.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Data Tab -->
                 <div id="tab-data" class="tab-pane">
                     <div style="padding: 30px;">
@@ -2557,7 +3197,8 @@
                             <div class="data-option-card">
                                 <i class="fas fa-download fa-2x" style="color: var(--accent); margin-bottom: 15px;"></i>
                                 <h5 style="color: var(--text-main); margin-bottom: 10px;">Backup database</h5>
-                                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Lag en sikkerhetskopi av databasen til valgt plassering</p>
+                                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Lag en sikkerhetskopi
+                                    av databasen til valgt plassering</p>
                                 <button class="btn-action btn-primary" onclick="backupDatabase()">
                                     <i class="fas fa-download"></i> Backup nå
                                 </button>
@@ -2565,7 +3206,8 @@
                             <div class="data-option-card">
                                 <i class="fas fa-upload fa-2x" style="color: #ef4444; margin-bottom: 15px;"></i>
                                 <h5 style="color: var(--text-main); margin-bottom: 10px;">Gjenopprett database</h5>
-                                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Gjenopprett database fra en tidligere backup</p>
+                                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Gjenopprett database
+                                    fra en tidligere backup</p>
                                 <button class="btn-action btn-danger" onclick="restoreDatabase()">
                                     <i class="fas fa-upload"></i> Gjenopprett
                                 </button>
@@ -2573,7 +3215,8 @@
                             <div class="data-option-card">
                                 <i class="fas fa-folder-open fa-2x" style="color: #f59e0b; margin-bottom: 15px;"></i>
                                 <h5 style="color: var(--text-main); margin-bottom: 10px;">Flytt database</h5>
-                                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Flytt databasen til en ny plassering (f.eks. ekstern disk eller sky-mappe)</p>
+                                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Flytt databasen til
+                                    en ny plassering (f.eks. ekstern disk eller sky-mappe)</p>
                                 <button class="btn-action btn-accent" onclick="moveDatabase()">
                                     <i class="fas fa-arrows-alt"></i> Flytt
                                 </button>
@@ -2583,7 +3226,9 @@
                             <i class="fas fa-info-circle" style="color: var(--accent); margin-right: 8px;"></i>
                             <div>
                                 <strong style="color: var(--text-main);">Database-plassering:</strong>
-                                <p id="dbPathDisplay" style="color: #94a3b8; font-size: 0.85rem; margin: 5px 0 0 0; word-break: break-all;">Laster...</p>
+                                <p id="dbPathDisplay"
+                                    style="color: #94a3b8; font-size: 0.85rem; margin: 5px 0 0 0; word-break: break-all;">
+                                    Laster...</p>
                             </div>
                         </div>
                     </div>
@@ -2643,20 +3288,24 @@ Eksempel:
     </div>
     <div id="seatingContextMenu">
         <div id="ctxLockAction" style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px;">
-            <div class="ctx-item" onclick="toggleStudentLock()"><i class="fas fa-lock"></i> <span id="ctxLockText">Lås plassering</span></div>
+            <div class="ctx-item" onclick="toggleStudentLock()"><i class="fas fa-lock"></i> <span id="ctxLockText">Lås
+                    plassering</span></div>
         </div>
         <div id="ctxUngroupAction"
             style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px; display:none;">
             <div class="ctx-item" onclick="ungroupDesk()"><i class="fas fa-unlink"></i> Fjern fra gruppe</div>
         </div>
-        <div id="ctxNoteAction" style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px; display:none;">
+        <div id="ctxNoteAction"
+            style="border-bottom:1px solid #334155; padding-bottom:5px; margin-bottom:5px; display:none;">
             <div class="ctx-item" onclick="editStudentNote()"><i class="fas fa-sticky-note"></i> Rediger notat</div>
         </div>
         <div class="ctx-header mt-2">Farge</div>
         <div class="ctx-colors">
-            <div class="color-dot" style="background:#2d3748" onclick="setDeskColor('bg-default')" title="Standard"></div>
+            <div class="color-dot" style="background:#2d3748" onclick="setDeskColor('bg-default')" title="Standard">
+            </div>
             <div class="color-dot" style="background:#57534e" onclick="setDeskColor('bg-sand')" title="Sand"></div>
-            <div class="color-dot" style="background:#9a3412" onclick="setDeskColor('bg-terracotta')" title="Terrakotta"></div>
+            <div class="color-dot" style="background:#9a3412" onclick="setDeskColor('bg-terracotta')"
+                title="Terrakotta"></div>
             <div class="color-dot" style="background:#166534" onclick="setDeskColor('bg-sage')" title="Sage"></div>
             <div class="color-dot" style="background:#334155" onclick="setDeskColor('bg-slate')" title="Skifer"></div>
             <div class="color-dot" style="background:#92400e" onclick="setDeskColor('bg-amber')" title="Rav"></div>
@@ -2668,6 +3317,18 @@ Eksempel:
         <div class="bench-tooltip-title">Elever ved bordet</div>
         <div class="bench-tooltip-names"></div>
     </div>
+
+    <!-- Updater UI -->
+    <div id="updateNotification">
+        <div class="update-title"><i class="fas fa-gift"></i> Ny versjon er klar!</div>
+        <div class="update-desc">En oppdatering for KlassePlass har blitt lastet ned og er klar til å installeres.</div>
+        <div class="d-flex justify-content-end gap-2 mt-1">
+            <button class="btn btn-outline-secondary btn-sm"
+                onclick="document.getElementById('updateNotification').classList.remove('show')">Senere</button>
+            <button class="btn btn-primary btn-sm" onclick="restartAppForUpdate()">Oppdater og restart</button>
+        </div>
+    </div>
+
     <script src="renderer.js"></script>
 </body>
 

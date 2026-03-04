@@ -3,20 +3,36 @@
 ## Formål
 Denne agenten overvåker og dokumenterer frontend-arkitekturen for KlassePlass.
 
+> **STATUS (2026-03-04): REBUILD BESLUTTET**
+> Eksisterende frontend skrives om fra scratch. Se `.agent/changelog.md` (2026-03-04) for full begrunnelse.
+> Ny plan: `c:\Users\stian.TAKO\.cursor\plans\klasseplass_rebuild_1efa4c4e.plan.md`
+
 ---
 
-## Arkitektur
+## Nåværende tilstand (v1 — avvikles)
 
-### 📂 Filstruktur
-- **index.html** (1384 linjer) - Hovedgrensesnitt
-- **renderer.js** (1167 linjer) - Frontend-logikk
-- **presentation.html** - Presentasjonsvindu
+### Faktisk filstørrelse per 2026-03-04
+- **index.html** — 3335 linjer (alle views + ~2000 linjer inline CSS)
+- **renderer.js** — ~3000 linjer (all UI-logikk i én fil)
+- **presentation.html** — separat Electron-vindu
+- **modules/** — påbegynt, uferdig refaktorering (state.js, classes.js, transforms.js, onboarding.js)
+
+### Kjente arkitekturproblemer
+- Dual state: `let`-variabler i `renderer.js` + `state.js` synkronisert manuelt via `syncState()`
+- Triplisert renderingslogikk (renderSeating / openChartDisplay / presentation.html)
+- Dobbelt student-felt: `desk.student` (legacy) + `desk.students[]` (ny) — begge i bruk
+- ROM-editor er DOM-first (leser `style.left/top`), seating-editor er data-first — motstridende paradigmer
+- Kjent bug: `mainWindow` udefinert i `autoUpdater.on('update-downloaded')` — skal være `win`
 
 ### 🛠️ Stack
 - **Framework:** Vanilla JavaScript (ES6+)
 - **UI Library:** Bootstrap 5.3.0
 - **Icons:** Font Awesome 6.4.0
 - **Font:** Google Fonts (Inter)
+
+---
+
+## Ny arkitektur (v2 — under planlegging)
 
 ---
 
@@ -808,3 +824,90 @@ document.addEventListener('DOMContentLoaded', () => {
 ---
 
 **Sist oppdatert:** 2026-02-13 (Toolbar redesign, inline add desk, contextual UI)
+
+---
+
+## Ny arkitektur (v2) — Filstruktur og regler
+
+> Denne seksjonen beskriver målarkitekturen for rebuild. Se plan-filen for full detalj.
+
+### Filstørrelsesregler (HÅNDHEVES)
+- JS-filer: **maks 300 linjer**
+- HTML view-filer: **maks 150 linjer**
+- CSS-filer: **maks 200 linjer**
+
+### Målfilstruktur
+```
+src/
+  main.js               (< 100 linjer — kun Electron bootstrap)
+  db.js                 (SQLite init, schema, queries)
+  ipc-handlers.js       (alle ipcMain.handle/on)
+  updater.js            (electron-updater)
+  window-manager.js     (window lifecycle)
+  preload.js            (contextBridge / IPC-bridge)
+  store.js              (reaktiv state — én sannhetskilde, ingen duplikater)
+  renderer.js           (tynn: router + event delegation, < 100 linjer)
+  views/
+    charts-dashboard.html + charts-dashboard.js
+    seating-setup.html   + seating-setup.js
+    seating-editor.html  + seating-editor.js
+    room-editor.html     + room-editor.js
+    classes.html         + classes.js
+    settings.html        + settings.js
+  shared/
+    renderDesks.js       (én felles render-funksjon for editor + display + presentation)
+    constraints.js       (par-regler, historikk-sjekk)
+    randomize.js         (randomiser med constraint-støtte)
+    animate.js           (trekk-animasjoner for presentasjon)
+  styles/
+    base.css             (reset, CSS custom properties for dark/light mode)
+    components.css       (knapper, modaler, toast, context-menu)
+    desk-types.css       (alle pultstiler)
+    seating-editor.css
+    room-editor.css
+    presentation.css
+db/
+  schema.js              (schema-definisjon + migrations)
+```
+
+### Ny datamodell — desk-objekt
+```javascript
+// Erstatter dagens desk.student (legacy) + desk.students[] (dobbeltføring)
+{
+  id: 'desk-uuid',
+  type: 'single',          // single | bench2 | bench4 | round3 | round4 | round6
+  x: 120, y: 200,
+  rotation: 0,
+  color: 'default',
+  groupId: null,
+  slots: [{ studentId: 'uuid', locked: false }]  // null = tom plass
+}
+```
+
+### Nye DB-tabeller
+```sql
+-- Historikk: hvilke elever satt ved siden av hverandre
+CREATE TABLE seating_history (
+  id INTEGER PRIMARY KEY,
+  class_id INTEGER,
+  chart_id INTEGER,
+  created_at DATETIME,
+  pairs TEXT  -- JSON: [["Ola","Kari"], ...]
+);
+
+-- Constraints: faste par og "aldri-sammen"-regler
+CREATE TABLE student_constraints (
+  id INTEGER PRIMARY KEY,
+  class_id INTEGER,
+  student_a TEXT,
+  student_b TEXT,
+  type TEXT  -- 'always_together' | 'never_together'
+);
+```
+
+### State-prinsipp
+- Én reaktiv `store.js` — ingen lokale `let`-variabler i views
+- Views leser fra `store.getState()` og muterer via `store.dispatch(action)`
+- Ingen `syncState()`-funksjon — dobbelt state er forbudt
+
+**Sist oppdatert:** 2026-03-04 (Rebuild-beslutning, ny arkitektur dokumentert)
