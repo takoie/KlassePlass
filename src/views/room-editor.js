@@ -1,21 +1,177 @@
 /**
- * room-editor.js — Romdesigner med snapping, multi-select og dekorasjoner.
- * Snapping: edge-to-edge mot andre bord, fallback 10px grid.
+ * room-editor.js — Romdesigner: mount/unmount, render, lagre, keyboard, events.
+ * Drag og snapping: room-editor-drag.js
+ * Bygge-hjelpere og auto-generering: room-editor-generate.js
  */
 
+import { showToast, uid, createDesk } from '../shared/utils.js';
 import { DESK_TYPES } from '../shared/constants.js';
-import { showToast, getPortal, createDesk, uid } from '../shared/utils.js';
+import { makeDeskDraggable, makeDecoDraggable, initSelectionBox } from './room-editor-drag.js';
+import { buildRoomDeskEl, buildDecoEl, showDeskContextMenu, showDecoContextMenu, autoGenerate } from './room-editor-generate.js';
 
 let _room = null;  // { id, name, desks, decorations, designMode, roomHeight }
-let _selectedIds = new Set();
-let _dragState = null;
 let _rotated = false;
 
-// Multi-select drag (selection box on canvas background)
-let _selBoxState = null;
+// Shared mutable state — passed by reference into drag/generate helpers
+const _state = {
+  selectedIds: new Set(),
+  dragState:   { current: null },
+  selBoxState: null,
+  get room() { return _room; },
+};
 
-const SNAP_T  = 15;  // Pixel threshold for edge-to-edge snap
-const GRID_SZ = 10;  // Grid snap fallback
+export const roomEditorView = {
+  async mount(container, params = {}) {
+    container.innerHTML = TEMPLATE;
+
+    if (params.roomId) {
+      await loadRoom(params.roomId);
+    } else {
+      initNewRoom();
+    }
+
+    bindEvents();
+    render();
+  },
+  unmount() {
+    _room = null;
+    _state.selectedIds.clear();
+    _state.dragState.current = null;
+    _state.selBoxState = null;
+    _rotated = false;
+  },
+};
+
+/* ---- Initialisering ---- */
+
+function initNewRoom() {
+  _room = { id: null, name: '', desks: [], decorations: [], designMode: 'board-top', roomHeight: 600 };
+}
+
+async function loadRoom(roomId) {
+  const raw = await window.api.getRoom(roomId);
+  if (!raw) { initNewRoom(); return; }
+
+  const layout = parseLayout(raw.layout_data);
+  _room = {
+    id: raw.id,
+    name: raw.name,
+    desks: (layout?.desks ?? []).map(d => ({ ...d, id: d.id ?? uid() })),
+    decorations: (layout?.decorations ?? []).map(d => ({ ...d, id: d.id ?? uid() })),
+    designMode: layout?.designMode ?? 'board-top',
+    roomHeight: layout?.roomHeight ?? 600,
+  };
+  document.getElementById('room-name-input').value = _room.name;
+}
+
+/* ---- Rendering ---- */
+
+function render() {
+  const canvas = document.getElementById('room-canvas');
+  if (!canvas || !_room) return;
+
+  canvas.style.minHeight = _room.roomHeight + 'px';
+  canvas.classList.toggle('canvas-rotated', _rotated);
+
+  [...canvas.querySelectorAll('.room-desk, .decoration')].forEach(el => el.remove());
+
+  const board = document.getElementById('room-front-board');
+  const boardVisuallyAtBottom = (_room.designMode === 'board-bottom') !== _rotated;
+  board?.classList.toggle('board-bottom', boardVisuallyAtBottom);
+  board?.classList.toggle('board-top', !boardVisuallyAtBottom);
+
+  _room.desks.forEach(desk => canvas.appendChild(buildRoomDeskEl(desk, _state, render,
+    (id, e) => showDeskContextMenu(id, e, _room, render))));
+  _room.decorations.forEach(deco => canvas.appendChild(buildDecoEl(deco, _state, render,
+    (id, e) => showDecoContextMenu(id, e, _room, render))));
+}
+
+/* ---- Lagre ---- */
+
+async function saveRoom() {
+  const name = document.getElementById('room-name-input')?.value.trim();
+  if (!name) { showToast('Skriv inn romnavn', 'error'); return; }
+
+  _room.name = name;
+  const layoutData = { desks: _room.desks, decorations: _room.decorations, designMode: _room.designMode, roomHeight: _room.roomHeight };
+  const result = await window.api.saveRoom({ id: _room.id, name, layoutData });
+  if (!_room.id) _room.id = result?.lastID;
+  showToast('Rom lagret!', 'success');
+}
+
+/* ---- Events ---- */
+
+function bindEvents() {
+  document.getElementById('btn-room-back')?.addEventListener('click', () => {
+    if (confirm('Gå tilbake? Ulagrede endringer forsvinner.')) window.navTo('rooms-list');
+  });
+  document.getElementById('btn-room-save')?.addEventListener('click', saveRoom);
+  document.getElementById('btn-auto-generate')?.addEventListener('click', () => autoGenerate(_room, render));
+
+  document.getElementById('btn-rotate-room')?.addEventListener('click', (e) => {
+    _rotated = !_rotated;
+    e.currentTarget.classList.toggle('btn-active', _rotated);
+    render();
+  });
+
+  document.querySelectorAll('.desk-add-btn[data-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type;
+      const info = DESK_TYPES[type];
+      _room.desks.push(createDesk(type, 80, 80 + _room.desks.length * (info.height + 15)));
+      render();
+    });
+  });
+
+  document.querySelectorAll('.desk-add-btn[data-deco]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.deco;
+      const defs = { wall: { w: 200, h: 12 }, cabinet: { w: 80, h: 60 }, window: { w: 120, h: 20 }, door: { w: 60, h: 80 } };
+      const d = defs[type] ?? { w: 80, h: 80 };
+      _room.decorations.push({ id: uid(), type, x: 80, y: 80, width: d.w, height: d.h, rotation: 0, label: '' });
+      render();
+    });
+  });
+
+  const canvas = document.getElementById('room-canvas');
+  if (canvas) {
+    canvas.addEventListener('click', (e) => {
+      if (e.target === canvas || e.target.id === 'room-front-board') {
+        _state.selectedIds.clear();
+        render();
+      }
+    });
+    initSelectionBox(canvas, _state, render);
+  }
+
+  document.addEventListener('keydown', handleKeyboard);
+}
+
+function handleKeyboard(e) {
+  if (!_room) return;
+
+  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+    e.preventDefault();
+    _room.desks.forEach(d => _state.selectedIds.add(d.id));
+    render();
+    return;
+  }
+
+  if ((e.key === 'Delete' || e.key === 'Backspace') && _state.selectedIds.size > 0) {
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    _room.desks = _room.desks.filter(d => !_state.selectedIds.has(d.id));
+    _state.selectedIds.clear();
+    render();
+  }
+}
+
+function parseLayout(raw) {
+  if (!raw) return null;
+  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
+}
+
+/* ---- Template ---- */
 
 const TEMPLATE = `
 <div class="editor-layout">
@@ -60,594 +216,3 @@ const TEMPLATE = `
     </div>
   </div>
 </div>`;
-
-export const roomEditorView = {
-  async mount(container, params = {}) {
-    container.innerHTML = TEMPLATE;
-
-    if (params.roomId) {
-      await loadRoom(params.roomId);
-    } else {
-      initNewRoom();
-    }
-
-    bindEvents();
-    render();
-  },
-  unmount() {
-    _room = null; _selectedIds.clear(); _dragState = null; _selBoxState = null;
-    _rotated = false;
-  },
-};
-
-/* ---- Initialisering ---- */
-
-function initNewRoom() {
-  _room = { id: null, name: '', desks: [], decorations: [], designMode: 'board-top', roomHeight: 600 };
-}
-
-async function loadRoom(roomId) {
-  const raw = await window.api.getRoom(roomId);
-  if (!raw) { initNewRoom(); return; }
-
-  const layout = parseLayout(raw.layout_data);
-  _room = {
-    id: raw.id,
-    name: raw.name,
-    desks: (layout?.desks ?? []).map(d => ({ ...d, id: d.id ?? uid() })),
-    decorations: (layout?.decorations ?? []).map(d => ({ ...d, id: d.id ?? uid() })),
-    designMode: layout?.designMode ?? 'board-top',
-    roomHeight: layout?.roomHeight ?? 600,
-  };
-  document.getElementById('room-name-input').value = _room.name;
-}
-
-/* ---- Rendering ---- */
-
-function render() {
-  const canvas = document.getElementById('room-canvas');
-  if (!canvas || !_room) return;
-
-  canvas.style.minHeight = _room.roomHeight + 'px';
-  canvas.classList.toggle('canvas-rotated', _rotated);
-
-  [...canvas.querySelectorAll('.room-desk, .decoration')].forEach(el => el.remove());
-
-  const board = document.getElementById('room-front-board');
-  const boardVisuallyAtBottom = (_room.designMode === 'board-bottom') !== _rotated;
-  board?.classList.toggle('board-bottom', boardVisuallyAtBottom);
-  board?.classList.toggle('board-top', !boardVisuallyAtBottom);
-
-  _room.desks.forEach(desk => canvas.appendChild(buildRoomDeskEl(desk)));
-  _room.decorations.forEach(deco => canvas.appendChild(buildDecoEl(deco)));
-}
-
-function buildRoomDeskEl(desk) {
-  const info = DESK_TYPES[desk.type] ?? DESK_TYPES.single;
-  const isRound = desk.type.startsWith('round');
-
-  const el = document.createElement('div');
-  el.className = 'desk room-desk' + (_selectedIds.has(desk.id) ? ' selected' : '');
-  if (isRound) el.className += ' desk-' + desk.type;
-  el.dataset.deskId = desk.id;
-  el.style.cssText = `left:${desk.x}px;top:${desk.y}px;width:${info.width}px;height:${info.height}px;`;
-  if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
-  if (isRound) el.style.borderRadius = '50%';
-
-  const label = document.createElement('span');
-  label.style.cssText = 'font-size:9px;opacity:0.5;pointer-events:none;user-select:none';
-  label.textContent = info.label;
-  el.appendChild(label);
-
-  makeDeskDraggable(el, desk);
-  el.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); showDeskContextMenu(desk.id, e); });
-  el.addEventListener('click', e => {
-    e.stopPropagation();
-    if (!e.shiftKey) _selectedIds.clear();
-    _selectedIds.add(desk.id);
-    // Use lightweight visual update instead of full render to avoid detaching elements mid-drag
-    document.querySelectorAll('.room-desk').forEach(d => {
-      d.classList.toggle('selected', _selectedIds.has(d.dataset.deskId));
-    });
-  });
-
-  return el;
-}
-
-function buildDecoEl(deco) {
-  const icons = { wall: '', cabinet: '<i class="fa-solid fa-box"></i>', window: '<i class="fa-regular fa-window-maximize"></i>', door: '<i class="fa-solid fa-door-open"></i>' };
-  const el = document.createElement('div');
-  el.className = `decoration decoration-${deco.type}` + (_selectedIds.has(deco.id) ? ' selected-deco' : '');
-  el.dataset.decoId = deco.id;
-  el.style.cssText = `left:${deco.x}px;top:${deco.y}px;width:${deco.width}px;height:${deco.height}px;`;
-  if (deco.rotation) el.style.transform = `rotate(${deco.rotation}deg)`;
-  if (icons[deco.type]) el.innerHTML = icons[deco.type];
-  if (deco.type === 'label' && deco.label) el.textContent = deco.label;
-
-  makeDecoDraggable(el, deco);
-  el.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); showDecoContextMenu(deco.id, e); });
-  return el;
-}
-
-/* ---- Snapping ---- */
-
-/**
- * Snaps x,y for a given desk against all other desks.
- * Priority: edge-to-edge alignment → fallback to 10px grid.
- */
-function snapDesk(desk, rawX, rawY) {
-  const info    = DESK_TYPES[desk.type] ?? DESK_TYPES.single;
-  const others  = _room.desks.filter(d => d.id !== desk.id && !_selectedIds.has(d.id));
-
-  let snapX = null, snapY = null;
-
-  for (const other of others) {
-    const oi = DESK_TYPES[other.type] ?? DESK_TYPES.single;
-
-    // X snapping
-    if (snapX === null) {
-      if (Math.abs(rawX - (other.x + oi.width)) < SNAP_T)   snapX = other.x + oi.width;  // stick right
-      else if (Math.abs(rawX + info.width - other.x) < SNAP_T) snapX = other.x - info.width; // stick left
-      else if (Math.abs(rawX - other.x) < SNAP_T)            snapX = other.x;              // align left
-      else if (Math.abs(rawX + info.width - other.x - oi.width) < SNAP_T) snapX = other.x + oi.width - info.width; // align right
-    }
-
-    // Y snapping
-    if (snapY === null) {
-      if (Math.abs(rawY - (other.y + oi.height)) < SNAP_T)   snapY = other.y + oi.height; // stick below
-      else if (Math.abs(rawY + info.height - other.y) < SNAP_T) snapY = other.y - info.height; // stick above
-      else if (Math.abs(rawY - other.y) < SNAP_T)            snapY = other.y;              // align top
-    }
-
-    if (snapX !== null && snapY !== null) break;
-  }
-
-  const x = Math.max(0, snapX ?? Math.round(rawX / GRID_SZ) * GRID_SZ);
-  const y = Math.max(0, snapY ?? Math.round(rawY / GRID_SZ) * GRID_SZ);
-  return { x, y };
-}
-
-function snapDeco(rawX, rawY) {
-  return {
-    x: Math.max(0, Math.round(rawX / GRID_SZ) * GRID_SZ),
-    y: Math.max(0, Math.round(rawY / GRID_SZ) * GRID_SZ),
-  };
-}
-
-/* ---- Drag-and-drop (pointer events) ---- */
-
-function makeDeskDraggable(el, desk) {
-  el.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const rect = el.parentElement.getBoundingClientRect();
-
-    // If the dragged desk isn't in the selection, make it the only selected.
-    // Do NOT call render() here — it rebuilds the DOM and detaches el, making
-    // setPointerCapture throw InvalidStateError on the detached element.
-    if (!_selectedIds.has(desk.id)) {
-      _selectedIds.clear();
-      _selectedIds.add(desk.id);
-      // Visually mark selection without full re-render
-      document.querySelectorAll('.room-desk').forEach(d => {
-        d.classList.toggle('selected', _selectedIds.has(d.dataset.deskId));
-      });
-    }
-
-    const canvasEl = el.parentElement;
-    const isRotated = canvasEl?.classList.contains('canvas-rotated');
-
-    // Capture start offsets for ALL selected desks
-    const offsets = {};
-    _selectedIds.forEach(id => {
-      const d = _room.desks.find(x => x.id === id);
-      if (d) {
-        let localX = e.clientX - rect.left;
-        let localY = e.clientY - rect.top;
-        if (isRotated) {
-          localX = rect.width - localX;
-          localY = rect.height - localY;
-        }
-        offsets[id] = { dx: localX - d.x, dy: localY - d.y };
-      }
-    });
-
-    _dragState = { deskId: desk.id, offsets, isDeco: false };
-    try { el.setPointerCapture(e.pointerId); } catch (_) { /* pointer already released */ }
-  });
-
-  el.addEventListener('pointermove', e => {
-    if (!_dragState || _dragState.isDeco || _dragState.deskId !== desk.id) return;
-    const rect = el.parentElement.getBoundingClientRect();
-
-    // Compute raw position for primary desk
-    const off = _dragState.offsets[desk.id];
-    let localX = e.clientX - rect.left;
-    let localY = e.clientY - rect.top;
-    const canvasEl = el.parentElement;
-    if (canvasEl?.classList.contains('canvas-rotated')) {
-      localX = rect.width - localX;
-      localY = rect.height - localY;
-    }
-    const rawX = localX - off.dx;
-    const rawY = localY - off.dy;
-
-    // Snap primary desk
-    const { x: snappedX, y: snappedY } = snapDesk(desk, rawX, rawY);
-    const deltaX = snappedX - desk.x;
-    const deltaY = snappedY - desk.y;
-
-    // Move all selected desks by same delta
-    _selectedIds.forEach(id => {
-      const d = _room.desks.find(x => x.id === id);
-      if (!d) return;
-      d.x = Math.max(0, d.x + deltaX);
-      d.y = Math.max(0, d.y + deltaY);
-      const domEl = document.querySelector(`[data-desk-id="${id}"]`);
-      if (domEl) { domEl.style.left = d.x + 'px'; domEl.style.top = d.y + 'px'; }
-    });
-  });
-
-  el.addEventListener('pointerup', () => { _dragState = null; });
-}
-
-function makeDecoDraggable(el, deco) {
-  el.addEventListener('pointerdown', e => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const rect = el.parentElement.getBoundingClientRect();
-    const isRotated = el.parentElement?.classList.contains('canvas-rotated');
-    let localX = e.clientX - rect.left;
-    let localY = e.clientY - rect.top;
-    if (isRotated) {
-      localX = rect.width - localX;
-      localY = rect.height - localY;
-    }
-    _dragState = {
-      isDeco: true, decoId: deco.id,
-      offsetX: localX - deco.x,
-      offsetY: localY - deco.y,
-    };
-    el.setPointerCapture(e.pointerId);
-  });
-
-  el.addEventListener('pointermove', e => {
-    if (!_dragState || !_dragState.isDeco || _dragState.decoId !== deco.id) return;
-    const rect = el.parentElement.getBoundingClientRect();
-    let localX = e.clientX - rect.left;
-    let localY = e.clientY - rect.top;
-    if (el.parentElement?.classList.contains('canvas-rotated')) {
-      localX = rect.width - localX;
-      localY = rect.height - localY;
-    }
-    const rawX = localX - _dragState.offsetX;
-    const rawY = localY - _dragState.offsetY;
-    const { x, y } = snapDeco(rawX, rawY);
-    deco.x = x; deco.y = y;
-    el.style.left = x + 'px'; el.style.top = y + 'px';
-  });
-
-  el.addEventListener('pointerup', () => { _dragState = null; });
-}
-
-/* ---- Context menus ---- */
-
-function showDeskContextMenu(deskId, event) {
-  const desk = _room.desks.find(d => d.id === deskId);
-  if (!desk) return;
-
-  showMenu(event.clientX, event.clientY, [
-    { label: 'Roter 90° med klokken', icon: 'fa-rotate-right', action: () => {
-      desk.rotation = ((desk.rotation ?? 0) + 90) % 360; render();
-    }},
-    { label: 'Roter 90° mot klokken', icon: 'fa-rotate-left', action: () => {
-      desk.rotation = ((desk.rotation ?? 0) - 90 + 360) % 360; render();
-    }},
-    { label: 'Dupliser', icon: 'fa-copy', action: () => {
-      _room.desks.push({ ...desk, id: uid(), x: desk.x + 20, y: desk.y + 20 }); render();
-    }},
-    { divider: true },
-    { label: 'Slett', icon: 'fa-trash', danger: true, action: () => {
-      _room.desks = _room.desks.filter(d => d.id !== deskId);
-      _selectedIds.delete(deskId);
-      render();
-    }},
-  ]);
-}
-
-function showDecoContextMenu(decoId, event) {
-  const deco = _room.decorations.find(d => d.id === decoId);
-  if (!deco) return;
-
-  showMenu(event.clientX, event.clientY, [
-    { label: 'Roter 90°', icon: 'fa-rotate-right', action: () => {
-      deco.rotation = ((deco.rotation ?? 0) + 90) % 360; render();
-    }},
-    { divider: true },
-    { label: 'Slett', icon: 'fa-trash', danger: true, action: () => {
-      _room.decorations = _room.decorations.filter(d => d.id !== decoId);
-      render();
-    }},
-  ]);
-}
-
-function showMenu(x, y, items) {
-  document.querySelector('.room-ctx-menu')?.remove();
-
-  const menu = document.createElement('div');
-  menu.className = 'context-menu room-ctx-menu';
-  menu.style.cssText = `left:${x}px;top:${y}px`;
-
-  items.forEach(item => {
-    if (item.divider) {
-      menu.appendChild(Object.assign(document.createElement('div'), { className: 'context-menu-divider' }));
-      return;
-    }
-    const el = document.createElement('div');
-    el.className = 'context-menu-item' + (item.danger ? ' danger' : '');
-    el.innerHTML = `<i class="fa-solid ${item.icon}"></i> ${item.label}`;
-    el.addEventListener('click', () => { item.action(); menu.remove(); });
-    menu.appendChild(el);
-  });
-
-  getPortal().appendChild(menu);
-  setTimeout(() => document.addEventListener('click', () => menu.remove(), { once: true }), 0);
-}
-
-/* ---- Multi-select: selection box on canvas background ---- */
-
-function initSelectionBox(canvas) {
-  canvas.addEventListener('pointerdown', e => {
-    if (e.target !== canvas && e.target.id !== 'room-front-board') return;
-    if (e.button !== 0) return;
-
-    // Deselect on bare canvas click
-    if (!e.shiftKey) _selectedIds.clear();
-
-    const rect = canvas.getBoundingClientRect();
-    _selBoxState = {
-      startX: e.clientX - rect.left,
-      startY: e.clientY - rect.top,
-      el: null,
-    };
-    canvas.setPointerCapture(e.pointerId);
-  });
-
-  canvas.addEventListener('pointermove', e => {
-    if (!_selBoxState) return;
-    const rect   = canvas.getBoundingClientRect();
-    const curX   = e.clientX - rect.left;
-    const curY   = e.clientY - rect.top;
-    const left   = Math.min(_selBoxState.startX, curX);
-    const top    = Math.min(_selBoxState.startY, curY);
-    const width  = Math.abs(curX - _selBoxState.startX);
-    const height = Math.abs(curY - _selBoxState.startY);
-
-    if (!_selBoxState.el) {
-      const box = document.createElement('div');
-      box.className = 'selection-box';
-      canvas.appendChild(box);
-      _selBoxState.el = box;
-    }
-    _selBoxState.el.style.cssText = `left:${left}px;top:${top}px;width:${width}px;height:${height}px;`;
-  });
-
-  canvas.addEventListener('pointerup', e => {
-    if (!_selBoxState) return;
-    if (_selBoxState.el) {
-      const boxRect = _selBoxState.el.getBoundingClientRect();
-      _room.desks.forEach(desk => {
-        const info = DESK_TYPES[desk.type] ?? DESK_TYPES.single;
-        const deskRight  = desk.x + info.width;
-        const deskBottom = desk.y + info.height;
-        const canvasRect = document.getElementById('room-canvas').getBoundingClientRect();
-        const deskLeft   = canvasRect.left + desk.x;
-        const deskTop    = canvasRect.top  + desk.y;
-        const deskR      = deskLeft + info.width;
-        const deskB      = deskTop  + info.height;
-
-        // Check overlap
-        if (deskR > boxRect.left && deskLeft < boxRect.right &&
-            deskB > boxRect.top  && deskTop  < boxRect.bottom) {
-          _selectedIds.add(desk.id);
-        }
-      });
-      _selBoxState.el.remove();
-    } else {
-      // Plain click: just re-render to clear selection
-      render();
-    }
-    _selBoxState = null;
-    render();
-  });
-}
-
-/* ---- Lagre ---- */
-
-async function saveRoom() {
-  const name = document.getElementById('room-name-input')?.value.trim();
-  if (!name) { showToast('Skriv inn romnavn', 'error'); return; }
-
-  _room.name = name;
-  const layoutData = {
-    desks: _room.desks,
-    decorations: _room.decorations,
-    designMode: _room.designMode,
-    roomHeight: _room.roomHeight,
-  };
-
-  const result = await window.api.saveRoom({ id: _room.id, name, layoutData });
-  if (!_room.id) _room.id = result?.lastID;
-  showToast('Rom lagret!', 'success');
-}
-
-/* ---- Auto-generer rutenett ---- */
-
-const AUTO_PRESETS = [
-  { label: '2-2 (4 bord per rad)',      groups: [2, 2] },
-  { label: '2-2-2 (6 bord per rad)',    groups: [2, 2, 2] },
-  { label: '2-2-2-2 (8 bord per rad)',  groups: [2, 2, 2, 2] },
-  { label: '2-3-2 (7 bord per rad)',    groups: [2, 3, 2] },
-  { label: '3-3-3 (9 bord per rad)',    groups: [3, 3, 3] },
-  { label: '4-4 (8 bord per rad)',      groups: [4, 4] },
-  { label: '4-2-4 (10 bord per rad)',   groups: [4, 2, 4] },
-  { label: 'Eksamen (1-1-1-1-1)',       groups: [1, 1, 1, 1, 1] },
-];
-
-function autoGenerate() {
-  const backdrop = document.createElement('div');
-  backdrop.className = 'kp-backdrop';
-  backdrop.innerHTML = `
-    <div class="kp-modal" style="min-width:320px">
-      <div class="modal-header"><span class="modal-title">Auto-generer rom</span></div>
-      <div class="form-group" style="margin-bottom:12px">
-        <label class="form-label">Oppsett</label>
-        <select id="ag-preset" class="select select-bordered w-full">
-          ${AUTO_PRESETS.map((p, i) => `<option value="${i}">${escHtml(p.label)}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:12px">
-        <label class="form-label">Antall rader</label>
-        <input type="number" id="ag-rows" class="input input-bordered w-full" value="5" min="1" max="20">
-      </div>
-      <div class="form-group" style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
-        <input type="checkbox" id="ag-keep-deco" class="checkbox checkbox-sm">
-        <label for="ag-keep-deco" class="form-label" style="margin:0">Behold dekorasjoner</label>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-ghost" id="ag-cancel">Avbryt</button>
-        <button class="btn btn-primary" id="ag-ok">Generer</button>
-      </div>
-    </div>
-  `;
-  getPortal().appendChild(backdrop);
-  backdrop.querySelector('#ag-cancel').addEventListener('click', () => backdrop.remove());
-  backdrop.querySelector('#ag-ok').addEventListener('click', () => {
-    const presetIdx  = parseInt(backdrop.querySelector('#ag-preset').value, 10);
-    const rows       = parseInt(backdrop.querySelector('#ag-rows').value, 10) || 5;
-    const keepDeco   = backdrop.querySelector('#ag-keep-deco').checked;
-    backdrop.remove();
-    applyAutoGenerate(AUTO_PRESETS[presetIdx].groups, rows, keepDeco);
-  });
-}
-
-function applyAutoGenerate(groups, rows, keepDeco) {
-  const info    = DESK_TYPES.single;
-  const deskW   = info.width;
-  const deskH   = info.height;
-  const aisle   = 40;  // gap between groups
-  const gapX    = 2;   // gap between desks in same group
-  const rowGapY = 30;
-
-  // Compute total row width
-  const rowWidth = groups.reduce((sum, g) => sum + g * deskW + (g - 1) * gapX, 0)
-    + (groups.length - 1) * aisle;
-
-  const canvasW = 920;
-  const startX  = Math.round((canvasW - rowWidth) / 2);
-  const startY  = 80;
-
-  if (!keepDeco) {
-    _room.desks = [];
-    _room.decorations = [];
-  } else {
-    _room.desks = [];
-  }
-
-  for (let r = 0; r < rows; r++) {
-    let x = startX;
-    const y = startY + r * (deskH + rowGapY);
-    for (let g = 0; g < groups.length; g++) {
-      for (let i = 0; i < groups[g]; i++) {
-        _room.desks.push(createDesk('single', x, y));
-        x += deskW + (i < groups[g] - 1 ? gapX : 0);
-      }
-      if (g < groups.length - 1) x += aisle;
-    }
-  }
-  render();
-}
-
-function escHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-/* ---- Events ---- */
-
-function bindEvents() {
-  document.getElementById('btn-room-back')?.addEventListener('click', () => {
-    if (confirm('Gå tilbake? Ulagrede endringer forsvinner.')) window.navTo('rooms-list');
-  });
-  document.getElementById('btn-room-save')?.addEventListener('click', saveRoom);
-  document.getElementById('btn-auto-generate')?.addEventListener('click', autoGenerate);
-
-  document.getElementById('btn-rotate-room')?.addEventListener('click', (e) => {
-    _rotated = !_rotated;
-    e.currentTarget.classList.toggle('btn-active', _rotated);
-    render();
-  });
-
-  // Legg til bord
-  document.querySelectorAll('.desk-add-btn[data-type]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const type = btn.dataset.type;
-      const info = DESK_TYPES[type];
-      _room.desks.push(createDesk(type, 80, 80 + _room.desks.length * (info.height + 15)));
-      render();
-    });
-  });
-
-  // Legg til dekorasjoner
-  document.querySelectorAll('.desk-add-btn[data-deco]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const type = btn.dataset.deco;
-      const defs = { wall: { w: 200, h: 12 }, cabinet: { w: 80, h: 60 }, window: { w: 120, h: 20 }, door: { w: 60, h: 80 } };
-      const d = defs[type] ?? { w: 80, h: 80 };
-      _room.decorations.push({ id: uid(), type, x: 80, y: 80, width: d.w, height: d.h, rotation: 0, label: '' });
-      render();
-    });
-  });
-
-  // Canvas: deselect + selection box
-  const canvas = document.getElementById('room-canvas');
-  if (canvas) {
-    canvas.addEventListener('click', (e) => {
-      if (e.target === canvas || e.target.id === 'room-front-board') {
-        _selectedIds.clear();
-        render();
-      }
-    });
-    initSelectionBox(canvas);
-  }
-
-  // Keyboard shortcuts
-  document.addEventListener('keydown', handleKeyboard);
-}
-
-function handleKeyboard(e) {
-  if (!_room) return;
-
-  // Ctrl+A: select all desks
-  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-    e.preventDefault();
-    _room.desks.forEach(d => _selectedIds.add(d.id));
-    render();
-    return;
-  }
-
-  // Delete / Backspace: remove selected desks
-  if ((e.key === 'Delete' || e.key === 'Backspace') && _selectedIds.size > 0) {
-    const tag = document.activeElement?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    _room.desks = _room.desks.filter(d => !_selectedIds.has(d.id));
-    _selectedIds.clear();
-    render();
-  }
-}
-
-function parseLayout(raw) {
-  if (!raw) return null;
-  try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
-}
