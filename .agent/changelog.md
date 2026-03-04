@@ -5,6 +5,75 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet.
 
 ---
 
+## 2026-03-04 - v2 UI-polish: modaler, flip, titlebar, constraints, elevliste, vindu
+
+**Kategori:** Bugfix / UI / Feature
+
+**Worktree:** `F:\stian.taknes.no\Git\KlassePlass\.worktrees\rebuild`
+**Branch:** `feature/rebuild-v2`
+
+### Sesjon 2 — Modal-fix, flip og tittelbar
+
+**Problem 1: Popups (Auto, Ny regel, notat) blurret skjermen men viste ingen innhold**
+- Root cause: `.modal-backdrop` i `canvas.css` hadde `backdrop-filter: blur(4px)`. I Electron med `background: 'transparent'` på `BrowserWindow` composites `backdrop-filter` mot OS-skrivebordet bak vinduet — ikke app-innholdet. Resultatet er at blurringen er synlig, men modal-dialogen forblir usynlig.
+- Fix: Fjernet `backdrop-filter: blur(4px)` fra `.modal-backdrop`. Hevet z-index fra 1000 → 9999 for å sikre at modaler alltid rendres over all annen innhold inkludert `#app`-stacking context.
+- Toast-containeren hevet fra z-index 3000 → 10000 slik at toasts fortsatt vises over åpne modaler.
+
+**Problem 2: Klassekart speiles ikke ved "Tavle nederst" fra innstillinger**
+- Root cause: `buildChartFromDb()` i `chartHelpers.js` hardkodet `flipForDisplay: false`. Innstillingen `defaultFlipDisplay` ble lest ved opprettelse (seating-setup.js) men ikke ved lasting av eksisterende kart.
+- Fix: `loadExistingChart()` i `seating-editor.js` henter nå `window.api.getSettings()` og setter `_chart.flipForDisplay = settings.defaultFlipDisplay ?? false` etter at kartet er bygget. "Snu visning"-knappen i toolbar reflekterer nå også korrekt initial-tilstand med `btn-active`-klasse.
+
+**Problem 3: KlassePlass-logoen dukket opp to steder (tittelbar + sidebar)**
+- Fix: Logoen fjernet fra tittelbaren. Tittelbaren er nå kun 28px høy og inneholder kun vinduets kontrollknapper (minimer/maksimer/lukk). Logoen beholdes i sidebar-toppen som den eneste forekomsten.
+
+**Filer endret (commit `e8e4999`):**
+- `src/styles/canvas.css` — fjernet backdrop-filter, hevet modal z-index til 9999, toast til 10000
+- `src/views/seating-editor.js` — leser defaultFlipDisplay fra settings ved lasting av eksisterende kart
+- `index.html` — logofri tittelbar, kun vinduskontroller
+
+---
+
+### Sesjon 1 — Constraints, elevliste, sidebar, vinduavrunding
+
+**Ny fil: `src/shared/constraints.js`**
+- Opprettet manglende fil som randomize.js importerte men som ikke eksisterte.
+- Eksporterer `checkHardConstraints(desks, studentsById, constraints)` — validerer always_together og never_together regler.
+- Eksporterer `scoreHistoryConflicts(desks, studentsById, historyPairs)` — teller par som sitter sammen igjen fra historikk.
+
+**Redesignet elevliste i klasse-visningen (`src/views/classes.js`)**
+- Forrige design: rotete med mange knapper per rad.
+- Nytt design: én linje per elev — navn til venstre, inline `<select>` for plasseringsprioritet (kun synlig styled hvis verdi er satt), og en kompakt `btn-note-edit`-knapp som bytter ikon og farge hvis et notat finnes.
+- Plasseringsverdier: `front`, `back`, `middle`, `never-front`, `never-back`.
+
+**Forbedret constraint-UI (`src/views/classes.js`)**
+- Hver constraint viser nå en beskrivende tekst: "Ola og Kari skal aldri sitte på samme bord".
+- Lagt til ⇄-knapp for å bytte constraint-type (always_together ↔ never_together) direkte uten å slette og gjenopprette.
+
+**Sidebar-redesign (`index.html`)**
+- "Klassekart"-ikonet endret fra `fa-grid-2` til `fa-table-cells-large`.
+- "Klasser" endret fra `fa-users` til `fa-user-group`.
+- "Rom" endret fra `fa-door-open` til `fa-chalkboard`.
+- `.nav-item.active` gir tydeligere markering med avrundet pill-form og primary-farge.
+
+**Avrundet programvindu (`index.html`, `src/window-manager.js`)**
+- `roundedCorners: true` lagt til i `BrowserWindow`-options for native Windows 11-avrunding.
+- `#app` wrappes i `#app-shell` med 6px padding og transparent bakgrunn for floating-effekt.
+- Egendefinerte `.win-btn`-knapper med hover-stater, rød tint på lukk-knapp.
+
+**CSS-oppdateringer (`src/styles/canvas.css`)**
+- Ny CSS for `.student-row`, `.student-row-controls`, `.student-placement-select`, `.btn-note-edit`.
+- Ny CSS for `.constraint-item`, `.constraint-item-main`, `.constraint-desc`, `.constraint-item-actions`.
+- Global font-stack satt til Inter.
+- `.desk` border-radius økt fra 6px til 8px.
+
+**Filer endret (commit `fix: constraints engine, cleaner student list, sidebar redesign, rounded window`):**
+- `src/shared/constraints.js` — ny fil
+- `src/views/classes.js` — redesignet elevliste og constraint-UI
+- `src/styles/canvas.css` — nye komponent-stiler
+- `index.html` — sidebar-ikoner, nav-item-styling, avrundet vindu, logofri tittelbar
+
+---
+
 ## 2026-03-04 - KlassePlass v2 Rebuild fullført (branch: feature/rebuild-v2)
 
 **Kategori:** Major rebuild
