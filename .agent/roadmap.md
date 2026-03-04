@@ -160,11 +160,15 @@ Dette dokumentet holder oversikt over fremtidige planer, funksjoner og forbedrin
 **Teknisk:** Aggregering av data fra SQLite.  
 **Estimat:** Stor
 
-#### 🔴 Temaer (light/dark mode toggle)
-**Status:** Ikke startet  
-**Beskrivelse:** Mulighet å bytte mellom dark og light mode.  
-**Teknisk:** CSS variabel-switching.  
-**Estimat:** Medium
+#### ✅ Temaer — mørk/lys modus + fargeprøver
+**Status:** Fullført (2026-03-04)
+**Beskrivelse:** Bytte mellom mørk og lys modus, pluss valg av fargetema (DaisyUI-temaer) per modus.
+**Implementert:**
+- 6 mørke temaer: Natt, Dracula, Kaffe, Halloween, Svart, Dim
+- 3 lyse temaer: Nord, Vinter, Bedrift
+- Fargeprøver (swatches) i innstillinger — Utseende-fanen
+- Valget persisteres i `settings.json` som `colorTheme`-felt
+**Teknisk:** DaisyUI `data-theme` på `<html>`, `applyTheme(settings)` i `renderer.js`
 
 #### 🔴 Multi-språk support
 **Status:** Ikke startet  
@@ -278,4 +282,4 @@ Dette dokumentet holder oversikt over fremtidige planer, funksjoner og forbedrin
 
 ---
 
-**Sist oppdatert:** 2026-02-12 (UX-forbedringer planlagt)
+**Sist oppdatert:** 2026-03-04 (Fargetemaer fullført, innstillinger redesignet med faner)

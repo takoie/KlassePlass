@@ -3,16 +3,122 @@
 ## Formål
 Denne agenten overvåker og dokumenterer frontend-arkitekturen for KlassePlass.
 
+> ⚠️ **Merk:** Dokumentet under «Global State», «Navigasjonssystem» og «Hovedfunksjoner» beskriver v1-arkitekturen (monolittisk `renderer.js` + Bootstrap). KlassePlass ble fullstendig skrevet om til v2 den 2026-03-04. Se v2-seksjonen nedenfor for gjeldende arkitektur.
+
 ---
 
-## Arkitektur
+## Arkitektur (v2 — gjeldende fra 2026-03-04)
 
-### 📂 Filstruktur
+### 📂 Filstruktur (v2)
+
+```
+src/
+  views/
+    charts-dashboard.js      Oversikt over klassekart
+    classes.js               Klasseadministrasjon (liste, CRUD)
+    classes-student-panel.js Elevpanel for klasser
+    rooms-list.js            Rooversikt
+    room-editor.js           Romdesigner (canvas, toolbar, kontekstmeny)
+    room-editor-drag.js      Drag-and-drop logikk for romdesigneren
+    room-editor-generate.js  Auto-generering av bordlayout
+    seating-editor.js        Klassekart-redigering
+    seating-editor-modals.js Modaler for klassekart (historikk, setup)
+    seating-history.js       Historikkoversikt
+    seating-setup.js         Klassekart-oppsett (velg rom, klasse)
+    settings.js              Innstillinger (tabs: Utseende/Data/Om/Lisenser/Personvern)
+  shared/
+    constants.js             DESK_TYPES, DECORATION_TYPES, CANVAS_W/H m.m.
+    constraints.js           Plasserings-constraint-logikk
+    chartHelpers.js          Hjelpefunksjoner for klassekart
+    utils.js                 getPortal(), showToast(), normalizeStudents() m.m.
+  styles/
+    layout.css               Sidebar, navigasjon, innstillinger, felles layout
+    components.css           Modaler, toast, kontekstmeny, badges
+    classes.css              Klasse-view-spesifikke stiler
+    room-editor.css          Romdesigner-spesifikke stiler
+    canvas.css               Klassekart-canvas-stiler
+  store.js                   Reaktiv state store (pub/sub, ingen Redux)
+  renderer.js                Oppstart, applyTheme(), navTo(), update-banner
+  db.js                      (main-process) SQLite + settings.json
+  ipc-handlers.js            (main-process) Alle IPC-handlers
+  preload.js                 (main-process) Electron preload/contextBridge
+index.html                   App-shell med sidebar, nav og #app-content
+```
+
+### 🛠️ Stack (v2)
+- **Framework:** Vanilla JavaScript (ES6+ ES modules)
+- **UI Library:** DaisyUI v4 (via CDN) + Tailwind CSS (via CDN)
+- **Icons:** Font Awesome 6.4.0 (via CDN)
+- **Font:** Google Fonts (Inter, via CDN)
+- **Runtime:** Electron 28
+- **Database:** SQLite3 5.1 (main-process)
+- **Auto-update:** electron-updater 6.1
+
+### 🗂️ State-håndtering (v2)
+
+Alle views deler en reaktiv store (`src/store.js`):
+
+```javascript
+// INITIAL_STATE
+{
+  currentView: 'charts-dashboard',
+  currentChart: null,    // Chart-objekt under redigering
+  currentRoom: null,     // Rom-objekt under redigering
+  currentClass: null,    // Klasse-objekt under redigering
+  settings: {
+    theme: 'dark',             // 'dark' | 'light'
+    colorTheme: 'night',       // DaisyUI-temanavn
+    defaultFlipDisplay: false,
+    onboardingCompleted: false,
+  },
+  updateReady: null,
+}
+```
+
+### 🎨 Temaer (v2)
+
+Temaer styres via `data-theme` på `<html>`. Gyldige temaer:
+
+| Modus | Temaer |
+|---|---|
+| Mørk | `night` (standard), `dracula`, `coffee`, `halloween`, `black`, `dim` |
+| Lys | `nord` (standard), `winter`, `corporate` |
+
+`applyTheme(settings)` i `renderer.js` setter `data-theme` direkte fra `settings.colorTheme`.
+
+### 🧭 Navigasjon (v2)
+
+```javascript
+navTo(viewName)  // f.eks. navTo('charts-dashboard')
+```
+
+Views: `charts-dashboard`, `classes`, `rooms-list`, `room-editor`, `seating-setup`, `seating-editor`, `seating-history`, `settings`
+
+Hver view eksporterer `{ mount(container), unmount() }` — `renderer.js` kaller unmount på forrige og mount på ny view.
+
+### ⚙️ Innstillinger (v2)
+
+Innstillinger lagres som JSON på disk (`app.getPath('userData')/settings.json`). IPC: `get-settings`, `save-settings` (merger patch, ikke overskriving).
+
+Innstillingssiden har 5 faner:
+- **Utseende** — modus-bryter, fargeprøver, roter visning
+- **Data** — database (backup/restore/flytt) + eksport/import
+- **Om** — logo, beskrivelse, versjon, utvikler
+- **Lisenser** — tredjepartsbiblioteker
+- **Personvern** — ansvarsfraskrivelse, GDPR-info
+
+---
+
+## Arkitektur (v1 — historisk referanse)
+
+> Følgende seksjoner dokumenterer v1 (monolittisk `renderer.js` + Bootstrap). Beholdes som referanse.
+
+### 📂 Filstruktur (v1)
 - **index.html** (1384 linjer) - Hovedgrensesnitt
 - **renderer.js** (1167 linjer) - Frontend-logikk
 - **presentation.html** - Presentasjonsvindu
 
-### 🛠️ Stack
+### 🛠️ Stack (v1)
 - **Framework:** Vanilla JavaScript (ES6+)
 - **UI Library:** Bootstrap 5.3.0
 - **Icons:** Font Awesome 6.4.0

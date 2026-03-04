@@ -5,6 +5,160 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet.
 
 ---
 
+## 2026-03-04 - Innstillinger: Tab-navigasjon, fargetemaer og nye informasjonssider
+
+**Kategori:** Feature / UX
+
+**Branch:** `main`
+
+**Commits:** `d8f1137`, `f6f8a78`, `9412bc5`, `9233b12`, `0a7b2aa`, `36e47b5`, `9704d2b`, `da9a004`
+
+### Fargetemaer — velgbar fargeprofil per modus
+
+- Nytt felt `colorTheme` (string, DaisyUI-temanavn) i `settings.json` og `store.js`
+- `applyTheme()` i `renderer.js` setter nå `data-theme` direkte fra `colorTheme` (ikke lenger hardkodet `dracula`/`light`)
+- Fallback til `night` (mørk) og `nord` (lys) for eksisterende brukere uten `colorTheme` i JSON
+- **6 mørke temaer:** Natt (`night`), Dracula, Kaffe (`coffee`), Halloween, Svart (`black`), Dim
+- **3 lyse temaer:** Nord, Vinter (`winter`), Bedrift (`corporate`)
+- `night` erstatter `dracula` som standard mørkt tema; `nord` erstatter `light` som standard lyst tema
+
+### Logo-fargetilpasning
+
+- "Klasse"-spannet i sidebar-logoen bruker nå CSS-klasse `.logo-klasse` i stedet for hardkodet `color:#e0f2fe`
+- Lyse temaer (`light`, `nord`, `winter`, `corporate`) viser mørk navy-tekst (`#1e3a5f`) for kontrast
+
+### Fargeprøver (swatches) i innstillinger
+
+- Ny rad «Fargetema» under modus-bryteren i Utseende-seksjonen
+- Sirkelformede prøveknapper viser faktisk bakgrunnsfarge og primærfarge for hvert tema
+- Aktivt tema markert med `outline` + `border-color` (løst CSS-spesifisitetsbug med `!important`)
+- Bytte av modus (Mørk/Lys) resetter til standardtema for ny modus
+
+### Innstillinger: Tab-navigasjon
+
+- Innstillingssiden redesignet fra stablede seksjoner til 5 faner med understreket aktiv-indikator
+- **Utseende** — tema (modus + fargeprøver) og visningsinnstillinger
+- **Data** — Database (backup/restore/flytt) + Eksport/import samlet
+- **Om** — KlassePlass-logo, appbeskrivelse, dynamisk versjonsnummer, utviklerinfo
+- **Lisenser** — tabell over alle tredjepartsbiblioteker (Electron, electron-updater, sqlite3, DaisyUI, Tailwind CSS, Font Awesome, Inter)
+- **Personvern** — ansvarsfraskrivelse, GDPR-info for skolebruk med UDIR-referanse, forklaring av lokal datahåndtering
+
+**Filer endret:**
+- `src/views/settings.js` — THEMES-konstant, TEMPLATE med tabs, tab-switching i `bindEvents()`, `renderSwatches()`, `setColorTheme()`, `setTheme()`, `loadSettings()`
+- `src/renderer.js` — `DARK_THEMES`/`LIGHT_THEMES`-konstanter, `applyTheme(settings)` mottar nå settings-objekt
+- `src/styles/layout.css` — `.settings-tabs-nav`, `.settings-tab`, `.settings-tab-content`, `.settings-about-hero`, `.settings-license-table`, `.settings-privacy-block`, `.color-theme-swatches`, `.color-swatch`
+- `src/db.js` — `colorTheme: 'night'` i default settings
+- `src/store.js` — `colorTheme: 'night'` i INITIAL_STATE
+- `index.html` — `.logo-klasse` CSS-klasse og tilhørende regler for lyse temaer
+- `docs/plans/2026-03-04-color-themes.md` — implementasjonsplan
+
+---
+
+## 2026-03-04 - Romdesigner: Bordplassering, ikonstørrelser, nye dekorasjoner og posisjonsbasert nummerering
+
+**Kategori:** Feature / Bugfix / UX
+
+**Branch:** `main`
+
+### Endringer
+
+**1. Bordplassering innenfor rommet (`room-editor.js`)**
+- Ny bord-plasserings-algoritme: bord legges til i et 4-kolonners rutenett fra øverst-venstre
+- Koordinatene clampes til `CANVAS_W - info.width` og `roomHeight - info.height`
+- Fikset manglende import av `CANVAS_W` fra `constants.js` — var rotårsaken til at bordknappene ikke virket
+
+**2. Ikonstørrelser i toolbar (`room-editor.css`)**
+- `desk-mini` thumbnails økt: `single` 20×13 → 26×17 px, `bench2` 32×13 → 40×17 px, `bench4` 46×13 → 54×17 px, `round` 18×18 → 22×22 px
+- Kanttykkelse økt fra 1px til 1.5px, kontrast forbedret
+- `.desk-add-btn--typed` fikk mer padding og gap for bedre luft rundt thumbnails
+
+**3. Nye romdekorasjoner (`constants.js`, `room-editor.js`, `room-editor-generate.js`)**
+- Lagt til 5 nye dekorasjonstyper med plansnitt-SVG-er:
+  - `screen` (TV/Projektor) — lilla, 160×20 px
+  - `bookshelf` (Bokhylle) — brun, 120×40 px
+  - `sink` (Vask) — blå, 60×60 px
+  - `trashcan` (Søppelkasse) — grå, 40×40 px
+- Fjernet `teacher-desk` (lærerbord) etter bruker-tilbakemelding
+- Alle nye typer støtter kontekstmeny, flip og rotasjon
+
+**4. "Bord"-label i toolbar**
+- Picker-label i desk-picker endret fra "Pulter" til "Bord"
+
+**5. Posisjonsbasert bordnummerering (`room-editor.js`, `room-editor-generate.js`)**
+- Bordnummer tildeles nå basert på posisjon (øverst→nederst, venstre→høyre) — ikke opprettelsesrekkefølgen
+- `render()` bygger en `deskOrder`-map (`Map<deskId, nummer>`) sortert på `y` primært, `x` sekundært
+- `buildRoomDeskEl` tar imot `deskOrder` som parameter og bruker `deskOrder.get(desk.id)`
+- Nummeret oppdateres automatisk ved hver `render()` — inkludert etter dra-og-slipp
+
+**Filer endret:**
+- `src/views/room-editor.js` — ny plasserings-algoritme, `CANVAS_W`-import, `deskOrder`-map, "Bord"-label, nye deco-knapper, utvidet `defs`
+- `src/views/room-editor-generate.js` — `buildRoomDeskEl` tar `deskOrder`-parameter, bruker `deskOrder.get()`, nye SVG-caser
+- `src/styles/room-editor.css` — større `desk-mini`-størrelser, forbedret knapp-padding
+- `src/shared/constants.js` — 4 nye typer i `DECORATION_TYPES`, fjernet `teacher-desk`
+
+---
+
+## 2026-03-04 - Romdesigner: UX-forbedringer, multi-select, dekorasjoner og toolbar-redesign
+
+**Kategori:** Feature / Bugfix / UX
+
+**Branch:** `main`
+
+### Klasseeditor — auto-lagring og UX-rydding (`classes.js`, `classes-student-panel.js`, `classes.css`)
+- Erstattet manuell "Lagre"-knapp med auto-lagring (debounce 800ms) og visuell status-indikator (`saving` / `saved`)
+- Notat-modal: erstattet upassende placeholder ("ADHD må sitte bakerst") med nøytral tekst
+- Notat-knapp: konsistent `fa-note-sticky`-ikon, farget bakgrunn når notat finnes
+- Plasseringsvelger: "— Prioritet —" → "Ingen prioritet"
+- Elevliste endret fra én kolonne til 2-kolonne CSS-grid for bedre plassutnyttelse
+- Inline styles erstattet med CSS-klasser (`.panel-header-actions`, `.section-header-controls`)
+
+### Romdesigner — multi-select og marquee-seleksjon (`room-editor-drag.js`)
+- **Multi-select bug**: `pointerdown` på bord tømte alltid seleksjonen uten å sjekke `e.shiftKey` — fikset
+- **Marquee-seleksjon**: fullstendig omskriving av `initSelectionBox`:
+  - Byttet fra `mousedown` til `pointerdown` for konsistens med desk/deco-handlere
+  - Fjernet feil `scrollLeft`/`scrollTop`-offset fra koordinatberegning
+  - Lagt til 4px deadzone for å unngå utilsiktede mikroseleksjoner
+  - Lagt til `click`-stopPropagation etter marquee for å hindre at seleksjonen ble tømt
+  - Flyttet `pointermove`/`pointerup`-lyttere til `document`-nivå for robusthet
+
+### Romdesigner — gruppe-drag mot vegger (`room-editor-drag.js`)
+- Tidligere: hvert bord ble clamped individuelt → "trekkspill"-effekt mot vegger
+- Fikset: beregner én felles `deltaX`/`deltaY` begrenset av den strengeste grensen i gruppen — alle bord stopper som én enhet
+
+### Romdesigner — roterte dekorasjoner bounds (`room-editor-drag.js`)
+- `snapDeco` brukte rå `deco.width/height` selv når elementet var rotert 90°/270° — blokkerte bevegelse mot høyre
+- Fikset: `effectiveW`/`effectiveH` bytter bredde og høyde når `rotation % 180 !== 0`
+
+### Romdesigner — tavle-ikon, SVG og kontekstmeny (`room-editor-generate.js`, `room-editor.css`)
+- Dør-SVG: fjernet grå vegglinje, beholder kun dørbladet og svingbuen
+- Dekorasjoner støtter nå flip: `flipH`/`flipV` i dataobjektet gir `scaleX(-1)`/`scaleY(-1)` via CSS
+- Kontekstmeny for dekorasjoner: lagt til "Speil horisontalt" og "Speil vertikalt"
+- `canvas.css` counter-roterte tavle-teksten i rotert rom — overstyrt i `room-editor.css` slik at tavlen følger canvas-rotasjonen
+- `_rotated`-tilstand persisteres i `layoutData` og gjenopprettes ved lasting
+
+### Romdesigner — toolbar-redesign (`room-editor.js`, `room-editor.css`)
+- Dekorasjonspickeren flyttet fra hoved-toolbar til ny `deco-toolbar`-stripe under
+- "Auto"-knapp omdøpt til "Hurtiglayout" med ny `.room-action-btn`-stil (ikon over tekst)
+- "Roter visning"-knapp fik samme stil med `.btn-active` når rommet er rotert
+- Desk-picker-knapper redesignet: thumbnail + kapasitetsbadge (`.desk-thumb-cap`) + tekstlabel (`.desk-thumb-label`)
+
+### Romdesigner — bordnummer og labels i canvas (`room-editor-generate.js`, `room-editor.css`)
+- Hvert bord i romdesigneren viser nå bordnummer øverst til høyre (`.room-desk-number`) og bordtype-label nederst (`.room-desk-label`)
+- `renderDesks` (brukt i seating-editor og presentasjon) er uendret
+
+**Filer endret:**
+- `src/views/classes.js`
+- `src/views/classes-student-panel.js`
+- `src/styles/classes.css`
+- `src/views/room-editor.js`
+- `src/views/room-editor-drag.js`
+- `src/views/room-editor-generate.js`
+- `src/styles/room-editor.css`
+- `src/shared/renderDesks.js` — `dragleave`-fix for barn-elementer
+- `src/shared/constants.js` — `CANVAS_W` eksport
+
+---
+
 ## 2026-03-04 - Refaktorering: Store moduler splittet til single-responsibility filer
 
 **Kategori:** Refactoring / Maintainability
