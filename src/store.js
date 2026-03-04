@@ -10,6 +10,7 @@ const INITIAL_STATE = {
   currentClass: null,       // Klasse-objekt under redigering
   settings: {
     theme: 'dark',          // 'dark' | 'light'
+    colorTheme: 'night',
     defaultFlipDisplay: false,
     onboardingCompleted: false,
   },

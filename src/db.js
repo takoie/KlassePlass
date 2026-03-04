@@ -32,7 +32,7 @@ function loadSettings() {
   if (fs.existsSync(p)) {
     try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { /* fall through */ }
   }
-  return { theme: 'dark', defaultFlipDisplay: false, onboardingCompleted: false };
+  return { theme: 'dark', colorTheme: 'night', defaultFlipDisplay: false, onboardingCompleted: false };
 }
 
 function saveSettings(settings) {
