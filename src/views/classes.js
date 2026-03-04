@@ -208,7 +208,7 @@ function renderStudentList() {
 function openNoteModal(idx) {
   const student = _students[idx];
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  backdrop.className = 'kp-backdrop';
   backdrop.innerHTML = `
     <div class="kp-modal">
       <div class="modal-header">
@@ -337,7 +337,7 @@ async function addConstraint() {
   const names = _students.map(s => s.name);
 
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  backdrop.className = 'kp-backdrop';
   backdrop.innerHTML = `
     <div class="kp-modal">
       <div class="modal-header"><span class="modal-title">Ny plasserings-regel</span></div>

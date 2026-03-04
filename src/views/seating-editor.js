@@ -348,7 +348,7 @@ function openNoteModal(deskId, slotIdx) {
   if (!student) return;
 
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  backdrop.className = 'kp-backdrop';
   backdrop.innerHTML = `
     <div class="kp-modal">
       <div class="modal-header">
@@ -387,7 +387,7 @@ function openNewPeriodModal() {
   const toWeek   = currentWeek + 3;
 
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  backdrop.className = 'kp-backdrop';
   backdrop.innerHTML = `
     <div class="kp-modal" style="min-width:300px">
       <div class="modal-header"><span class="modal-title">Start ny periode</span></div>

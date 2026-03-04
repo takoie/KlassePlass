@@ -160,7 +160,7 @@ async function exportClass() {
 
   // Velg klasse
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  backdrop.className = 'kp-backdrop';
   backdrop.innerHTML = `
     <div class="kp-modal">
       <div class="modal-header"><span class="modal-title">Eksporter klasse</span></div>

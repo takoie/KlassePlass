@@ -462,7 +462,7 @@ const AUTO_PRESETS = [
 
 function autoGenerate() {
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  backdrop.className = 'kp-backdrop';
   backdrop.innerHTML = `
     <div class="kp-modal" style="min-width:320px">
       <div class="modal-header"><span class="modal-title">Auto-generer rom</span></div>
