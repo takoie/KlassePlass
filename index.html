@@ -46,7 +46,7 @@
         <!-- Logo -->
         <div class="sidebar-logo">
           <div style="font-size:1.2rem;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-0.02em">
-            <span style="color:#e0f2fe;text-shadow:0 0 10px rgba(59,130,246,0.7)">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 12px #f59e0b">Plass</span>
+            <span class="logo-klasse">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 12px #f59e0b">Plass</span>
           </div>
         </div>
 
@@ -116,6 +116,18 @@
       padding: 18px 16px 16px;
       border-bottom: 1px solid oklch(var(--b3));
       flex-shrink: 0;
+    }
+    .logo-klasse {
+      color: #e0f2fe;
+      text-shadow: 0 0 10px rgba(59,130,246,0.7);
+    }
+    /* Light themes: dark text for contrast */
+    [data-theme="light"] .logo-klasse,
+    [data-theme="nord"] .logo-klasse,
+    [data-theme="winter"] .logo-klasse,
+    [data-theme="corporate"] .logo-klasse {
+      color: #1e3a5f;
+      text-shadow: 0 0 8px rgba(59,130,246,0.3);
     }
     .sidebar-section { padding: 10px 8px; }
     .sidebar-bottom { border-top: 1px solid oklch(var(--b3)); padding-top: 8px; padding-bottom: 8px; }
