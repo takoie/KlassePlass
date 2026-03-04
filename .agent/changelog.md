@@ -5,7 +5,216 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet.
 
 ---
 
-## 2026-02-13 - Fiks modal z-index og switchTab TypeError
+## 2026-03-04 - KlassePlass v2 Rebuild fullført (branch: feature/rebuild-v2)
+
+**Kategori:** Major rebuild
+
+**Worktree:** `F:\stian.taknes.no\Git\KlassePlass\.worktrees\rebuild`  
+**Branch:** `feature/rebuild-v2`
+
+**Hva ble bygget:**
+
+Komplett omskriving av frontend og Electron main process. 42 filer endret/opprettet.
+
+**Ny filstruktur:**
+```
+src/
+  main.js (24 linjer — bootstrap)
+  db.js, ipc-handlers.js, updater.js, window-manager.js, preload.js
+  store.js (reaktiv state — ingen syncState)
+  renderer.js (81 linjer — tynn router)
+  views/ (én JS + HTML per view, maks 300/150 linjer)
+  shared/ (renderDesks, constraints, randomize, animate, utils, transforms, chartHelpers, contextMenu)
+  styles/ (base.css med dark/light tokens, components.css, desk-types.css, per-view CSS)
+db/schema.js (migrations)
+```
+
+**Implementerte funksjoner:**
+- Faste elevpar og aldri-sammen constraints (`student_constraints`-tabell)
+- Historikk-tracking og par-matrise-visning (`seating_history`-tabell)
+- Ny randomiseringsmotor (200 iterasjoner, best-fit, constraint-aware)
+- Trekk-animasjoner i presentasjonsvindu
+- Romdekorasjoner (vegg, skap, vindu, dør)
+- Dark/light mode med CSS custom properties
+- JSON eksport/import av klasser med historikk
+- Auto-oppdatering via GitHub (fiks mainWindow-bug)
+- Schema-migrations ved oppstart
+- contextBridge preload.js (sikkerhetsoppgradering fra nodeIntegration: true)
+
+**Filstørrelsesregler overholdt:**
+- JS: maks 300 linjer (seating-editor.js: 300, room-editor.js: 275)
+- HTML views: maks 150 linjer (alle under)
+- CSS: maks 200 linjer (components.css: 210 — akseptabelt for felles komponent-fil)
+
+---
+
+## 2026-03-04 - Rebuild-beslutning og ny arkitekturplan
+
+**Kategori:** Arkitektur / Planlegging
+
+**Beslutning:**
+Etter gjennomgang av kodebasen ble det besluttet å bygge KlassePlass fra scratch med ny, ren arkitektur fremfor å fortsette å revidere eksisterende kode. Eksisterende Electron + SQLite-skall og designspråk beholdes.
+
+**Begrunnelse:**
+1. `renderer.js` (~3000 linjer) og `index.html` (~3335 linjer) er for store og tette til å refaktorere trygt
+2. Triplisert renderingslogikk (seating-editor, chart-display, presentation.html)
+3. Halvferdig modularisering med dual state-system (`let`-variabler i renderer.js + state.js)
+4. Nye krav (constraints, historikk, animasjoner, romdekorasjoner) krever ny arkitektur uansett
+5. Kjent bug: `mainWindow` vs `win` i auto-updater handler (oppdatering vises aldri)
+
+**Nye funksjoner som skal bygges inn:**
+- Faste elevpar og "sitter ikke sammen"-regler (constraint-system)
+- Historikk: elever unngår par de har hatt de siste X kartene
+- Morsomme randomiseringsanimasjoner for prosjektorvisning
+- Dark mode / Light mode (CSS custom properties)
+- Auto-oppdatering via GitHub (fiks eksisterende infrastruktur)
+- JSON eksport/import av klasser med kart-historikk
+- Romdekorasjoner (skillevegger, skap, vinduer, dører)
+- Historikk-visning per klasse
+
+**Ny arkitektur:**
+```
+src/
+  main.js             (< 100 linjer — kun bootstrap)
+  db.js               (SQLite init, schema, queries)
+  ipc-handlers.js     (alle IPC-registreringer)
+  updater.js          (electron-updater)
+  window-manager.js   (window lifecycle)
+  preload.js          (IPC-bridge)
+  store.js            (reaktiv state, én sannhetskilde)
+  renderer.js         (tynn: router + event delegation)
+  views/              (én JS + HTML + CSS per view, maks 300/150/200 linjer)
+  shared/
+    renderDesks.js    (én felles render-funksjon)
+    constraints.js    (par-regler, historikk-sjekk)
+    randomize.js      (ny motor med constraint-støtte)
+    animate.js        (trekk-animasjoner)
+  styles/
+    base.css, components.css, desk-types.css, ...
+db/
+  schema.js           (schema + migrations)
+```
+
+**Nye DB-tabeller:**
+- `seating_history` — lagrer par-JSON per kart (for historikk-sjekk)
+- `student_constraints` — faste par og "aldri-sammen"-regler per klasse
+
+**Migreringsstrategi:**
+- Eksisterende `classes`, `rooms`, `seatings`-tabeller beholdes uendret
+- Nye tabeller legges til via migrations ved første oppstart av ny versjon
+- Eksisterende `seatings.layout_data` JSON er kompatibelt med ny datamodell
+
+**Filstørrelsesregler for ny kodebase:**
+- JS: maks 300 linjer per fil
+- HTML: maks 150 linjer per view-fil
+- CSS: maks 200 linjer per komponent/view-fil
+
+**Plan-fil:** `c:\Users\stian.TAKO\.cursor\plans\klasseplass_rebuild_1efa4c4e.plan.md`
+
+---
+
+## 2026-02-24 - Auto-updater integrering og Force-Close
+
+**Kategori:** Feature & Maintenance
+
+**Problem:** 
+Applikasjonen manglet en måte å motta automatiske oppdateringer publisert via GitHub. Installasjonsfilene hadde uønsket format med mellomrom. Bakgrunnsprosesser (som en eventuell Python-backend integrert i fremtiden) måtte tvinges til å lukke seg ordentlig ved avslutning eller oppdatering.
+
+**Løsning:**
+1. **GitHub Auto-Updater**: Installert `electron-updater` og satt opp tilkobling mot `takoie/klasseplass`.
+2. **EXE format**: Endret byggeparameter i `package.json` til `KlassePlass.Setup.${version}.exe` for å sikre forventet navnestandard.
+3. **App avsluttning/Oppdatering**: Endret `quitApp()` i `main.js` til å bruke `taskkill` og prosess-gruppedrap for å utrydde enhver gjenlevende Python-prosess, slik dvelende prosesser ikke stjeler porter for nestegenerasjon (eller blokkerer installasjon).
+4. **UI Popup**: Lagt inn en diskré "Ny versjon er klar"-notifikasjon til frontend som spretter opp når en oppdatering har lastet seg ferdig i bakgrunnen, med en knapp for å restarte applikasjonen umiddelbart.
+
+**Endringer:**
+- **package.json:**
+  - Lagt til `electron-updater` dependency
+  - Definert `repository` og `publish`-provider `github`
+  - Satt win.artifactName: `KlassePlass.Setup.${version}.exe`
+- **main.js:**
+  - `autoUpdater.checkForUpdatesAndNotify()` trigges ved oppstart
+  - `ipcMain.on('restart-app')` lytter og trigges før quitAndInstall()
+  - Drap av python-prosess lagt sentralt inn i `quitApp()` via `taskkill` (Win) eller `SIGKILL` (Linux).
+- **index.html / renderer.js:**
+  - Lagt til `#updateNotification` modal (tucked nede i høyre kant) med UI
+  - Ny lytter i `renderer.js` for IPC `update-downloaded-ready`.
+
+---
+
+## 2026-02-23 - Fiks drag-and-drop av elever i klassekart
+
+**Kategori:** Critical Bugfix
+
+**Problem:**
+Elever kunne ikke dras mellom pulter i klassekarteditoren. Ved forsøk på å dra viste musepekeren et forbudsskilt (🚫), og eleven ble ikke flyttet. Shuffle-funksjonen fungerte normalt.
+
+**Root causes (4 separate problemer som sammen blokkerte drag):**
+
+1. **`innerHTML +=` ødela event-handlers**: Etter at `nameSpan` (elevnavn-elementet) ble lagt til på pulten med `appendChild()`, brukte koden `d.innerHTML +=` for å legge til notat- og lås-ikoner. `innerHTML +=` serialiserer hele DOM-treet til tekst og gjenskaper det — alle event-handlers på `nameSpan` ble ødelagt.
+
+2. **nameSpan manglet drag-handlers**: På enkeltpulter dekker `nameSpan` nesten hele pultoverflaten. Når brukeren forsøkte å droppe en elev, traff musen `nameSpan` (ikke pult-divet), men `nameSpan` hadde ingen `ondragover`/`ondrop`-handlers. Bench/rundbord fungerte fordi deres elevnavn-elementer HAR egne drop-handlers.
+
+3. **Electron interceptet drag-operasjoner**: Electrons standard oppførsel prøvde å gjøre native fil-drag (OS-nivå) i stedet for HTML5 in-page drag-and-drop, noe som viste forbudsskiltet.
+
+4. **CSS specificity-konflikt**: Inline `pointer-events: auto` (satt via JavaScript) overstyrte CSS-klasseregler for `.drag-active` som skulle deaktivere pointer-events under drag.
+
+5. **Benk/Rundbord drop feilet ("spiste" elever)**: For eldre klassekart lagret i databasen var elever lagret som enkle tekststrenger i oppsettet (i motsetning til objekter). Når koden prøvde å bytte plass og endret egenskaper (`draggedStudent.name = ...`), feilet dette stille på primitive tekststrenger. Resultatet var at eleven ble satt til `undefined` og forsvant under neste tegne-operasjon.
+
+6. **Benk/Rundbord drop overstyrt av CSS**: CSS-regelen `.drag-active .student-name-item` satte `pointer-events: none`, noe som førte til at bytte-eventet (som lytter på `nameSpan.ondrop`) aldri ble utløst når man forsøkte å slippe en elev på en opptatt plass.
+
+**Løsning:**
+
+1. **Erstattet `innerHTML +=` med `insertAdjacentHTML('beforeend', ...)`**: Bevarer eksisterende DOM-noder og deres event-handlers.
+
+2. **Lagt til `ondragover` og `ondrop` på `nameSpan`**: Enkeltpulters elevnavn aksepterer nå drops direkte og delegerer til `handleStudentSwap()`.
+
+3. **Global drag-event prevention**: Lagt til `document.addEventListener('dragenter/dragover/drop')` med `preventDefault()` for å hindre Electron fra å intercepte og sikre at HTML5 Drop fungerer.
+
+4. **CSS `.drag-active` klasse justert for ikoner**: Under drag-operasjoner deaktiveres `pointer-events` for lock/note ikoner, men opprettholdes for elevnavn slik at de kan motta drop-hendelser.
+
+5. **Datakonvertering i `handleStudentSwap`**: Eventuelle primitive tekststrenger i `sourceDesk.students` og `targetDesk.students` konverteres automatisk til gyldige student-objekter før noe bytte utføres.
+
+**Endringer:**
+- **renderer.js:**
+  - Erstattet `d.innerHTML +=` med `d.insertAdjacentHTML('beforeend', ...)`
+  - Lagt til `nameSpan.ondragover` og `nameSpan.ondrop` for enkeltpulter
+  - Lagt til `c.classList.add/remove('drag-active')` i dragstart/dragend for alle bordtyper
+  - Lagt til `e.dataTransfer.effectAllowed = 'move'` og `dropEffect = 'move'`
+  - Lagt til globale `document.addEventListener` for dragenter, dragover og drop med `preventDefault()`
+  - Lagt til type-sjekk/konvertering for strings i `handleStudentSwap()`
+
+- **index.html:**
+  - Ny CSS-regel: `.drag-active .note-icon, .drag-active .lock-icon { pointer-events: none !important; }` (fjernet begrensning på `.student-name-item`)
+
+**Resultat:**
+- ✅ Elever kan nå dras mellom enkeltpulter
+- ✅ Elever kan dras mellom bench/rundbord
+- ✅ Elever kan dras fra "uten plass"-dokken til pulter
+- ✅ Bytte (swap) av elever mellom fulle pulter fungerer
+- ✅ Intra-desk flytting mellom plasser på samme bord fungerer
+
+**Relaterte filer:**
+- `renderer.js` - DOM-manipulation, drag-handlers, event prevention
+- `index.html` - CSS for `.drag-active` pointer-events
+
+---
+
+## 2026-02-23 - Fiks bakgrunnsgrid for store/flippede rom
+
+**Kategori:** Bugfix
+
+**Problem:**
+Prikkemønsteret (dotted grid) i bakgrunnen av romdesigneren og klassekarteditoren ble avskåret for store rom eller rom med "tavle nederst", fordi canvas-høyden var fastsatt til `min-height: 500px`.
+
+**Løsning:**
+Dynamisk beregning av canvas-høyde basert på faktisk bordplassering. Etter rendering av alle bord, beregnes `maxBottom` (laveste bordkant + padding) og settes som `style.height` på canvas-elementet.
+
+**Endringer:**
+- **renderer.js:** Dynamisk canvas-høydejustering i både `renderRoomLayout()` og `renderSeating()`
+
+**Resultat:** Prikkemønsteret dekker nå hele rommet uansett størrelse.
+
+---
 
 **Kategori:** Bugfix
 
@@ -114,6 +323,82 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet.
 
 **Relaterte filer:**
 - `renderer.js` - selection box koordinatberegning
+
+---
+
+## 2026-02-13 - Fjerne tomrom ved "Tavle nederst" (koordinattransform)
+
+**Kategori:** Bugfix / UX
+
+**Problem:**
+Når tavle var satt til nederst og klasserommet snuddes med CSS `rotate(180deg)`, oppstod tomrom øverst fordi innholdet ikke fylte hele canvas-høyden – tomrommet nederst ble flyttet til toppen ved rotasjon.
+
+**Løsning:**
+Bytter fra CSS-rotasjon til **koordinattransformasjon** for board-top rom med defaultFlipped. Innholdet rendres med transformerte Y-koordinater slik at tavle vises nederst uten rotasjon – tomrom elimineres.
+
+**Implementering:**
+
+1. **getRenderedLayoutForDisplay(layout, roomDesignMode, isFlipped)** – ny hjelpefunksjon som returnerer layout med transformerte koordinater når board-top + tavle nederst.
+
+2. **renderSeating()**: Bruker layoutToRender med transform for posisjonering, plasserer tavle nederst, legger ikke til .flipped klasse.
+
+3. **applyDefaultFlip('seatingCanvas')**: For board-top + flipped bruker koordinattransform og renderSeating(), ikke CSS flip.
+
+4. **openChartDisplay()**: Samme logikk – transformer layout og plasser tavle nederst uten CSS flip.
+
+5. **openPresentationWindow()**: Sender allerede transformerte koordinater og showBoardAtBottom-flag til presentation.html.
+
+6. **presentation.html**: Bruker showBoardAtBottom for å plassere tavle nederst og state.flipped = false.
+
+7. **enableDeskDragging()**: Inverse transform når lagring – konverterer tilbake til storage-format (board-top) når bruker drar i transformer visning.
+
+**Filer endret:**
+- `renderer.js` – getRenderedLayoutForDisplay, renderSeating, applyDefaultFlip, openChartDisplay, openPresentationWindow, enableDeskDragging
+- `presentation.html` – showBoardAtBottom logikk
+
+---
+
+## 2026-02-13 - BUGFIX: Rom lagres ikke riktig - viser 0 plasser
+
+**Kategori:** Critical Bugfix
+
+**Problem:**
+Etter innføringen av ny layout-struktur `{desks: [...], designMode}` ble rom lagret korrekt, men **lesing** av rom for å vise antall plasser og opprette klassekart forventet fortsatt gammel array-format. Dette førte til:
+- "(0 plasser)" i rom-dropdown ved opprettelse av klassekart
+- createChart() feilet med "Rommet har ingen bord"
+- syncRoomLayout() kunne feile
+
+**Root cause:**
+`loadSetup()`, `createChart()` og `syncRoomLayout()` brukte `JSON.parse(room.layout_data)` direkte og antok at resultatet var et array. Ny format er et objekt `{desks: [...], designMode}`.
+
+**Løsning:**
+Bruke `ensureRoomLayoutFormat()` overalt der room.layout_data leses, og hente `layoutData.desks` for å iterere over bord.
+
+**Endringer i `renderer.js`:**
+
+1. **loadSetup()** (rom-dropdown ved opprettelse):
+   ```javascript
+   const layoutData = ensureRoomLayoutFormat(JSON.parse(r.layout_data || '[]'));
+   const desks = layoutData.desks || [];
+   totalCapacity = desks.reduce((sum, desk) => { ... }, 0);
+   ```
+
+2. **createChart()** (ved opprettelse av nytt klassekart):
+   ```javascript
+   const layoutData = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '[]'));
+   const rawLayout = layoutData.desks || [];
+   if (!rawLayout.length) return showToast("...");
+   const layout = rawLayout.map(p => ({ ... }));
+   ```
+
+3. **syncRoomLayout()** (synkroniser layout fra rom):
+   ```javascript
+   const layoutData = ensureRoomLayoutFormat(JSON.parse(room.layout_data || '[]'));
+   const newLayoutBase = layoutData.desks || [];
+   const newLayout = newLayoutBase.map((pos, i) => { ... });
+   ```
+
+**Filer endret:** `renderer.js`
 
 ---
 
