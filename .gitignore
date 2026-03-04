@@ -4,6 +4,9 @@ __pycache__/
 *.db
 venv/
 
+# Worktrees
+.worktrees/
+
 # Node / Electron
 node_modules/
 dist/
