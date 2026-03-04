@@ -5,6 +5,51 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet.
 
 ---
 
+## 2026-03-04 - Refaktorering: Store moduler splittet til single-responsibility filer
+
+**Kategori:** Refactoring / Maintainability
+**Branch:** `main`
+**Commits:** `86208eb`, `78599c5`, `315a952`, `3990127`, `240ebae`
+
+### Mål
+Filer over 300 linjer splittet for å gjøre det tryggere å arbeide parallelt med flere agenter.
+
+### Endringer
+
+**1. `canvas.css` (743 linjer) → 5 CSS-filer:**
+- `src/styles/canvas.css` (~110 linjer) — seating-canvas, desk, slots, rotasjon
+- `src/styles/room-editor.css` (~120 linjer) — romdesigner, dekorasjoner, desk-picker
+- `src/styles/classes.css` (~130 linjer) — klasse-layout, student-row, constraints
+- `src/styles/components.css` (~85 linjer) — modaler, toast, context-meny, animasjoner
+- `src/styles/layout.css` (~130 linjer) — editor-layout, toolbar, views, settings, forms
+- `index.html` oppdatert med 5 `<link>`-tagger
+
+**2. `shared/utils.js` + `shared/contextMenu.js` — duplikat-konsolidering:**
+- `getPortal()` fjernet fra `contextMenu.js`, importeres nå fra `utils.js`
+- `normalizeStudents()` i `utils.js` oppgradert til robust versjon (håndterer id, name, note)
+- `chartHelpers.js` re-eksporterer `normalizeStudents` fra `utils.js` istedet for å duplisere den
+- `classes.js` bruker nå `normalizeStudents` fra `utils.js` istedet for lokal kopi
+
+**3. `room-editor.js` (653 linjer) → 3 filer:**
+- `src/views/room-editor.js` (~195 linjer) — mount/unmount, render, lagre, events
+- `src/views/room-editor-drag.js` (~195 linjer) — makeDeskDraggable, makeDecoDraggable, initSelectionBox, snapDesk, snapDeco
+- `src/views/room-editor-generate.js` (~185 linjer) — buildRoomDeskEl, buildDecoEl, context-menyer, AUTO_PRESETS, autoGenerate, applyAutoGenerate
+
+**4. `seating-editor.js` (549 linjer) → 2 filer:**
+- `src/views/seating-editor.js` (~215 linjer) — mount/unmount, render, shuffle, lagre, events
+- `src/views/seating-editor-modals.js` (~170 linjer) — openNoteModal, openNewPeriodModal, showDeskContextMenu, showStudentContextMenu, wireDesksForSidebarDrop, renderUnplacedDock
+
+**5. `classes.js` (450 linjer) → 2 filer:**
+- `src/views/classes.js` (~175 linjer) — mount/unmount, renderClassList, openClass, saveClass, deleteClass, events
+- `src/views/classes-student-panel.js` (~185 linjer) — renderStudentList, openNoteModal, renderConstraints, renderHistorySummary, addConstraint, parseStudents
+
+### Hva som IKKE endret seg
+- Ingen logikk eller oppførsel endret
+- Alle CSS-klassenavn forblir uendret
+- Alle JS-funksjonsnavn og signaturer forblir uendret
+
+---
+
 ## 2026-03-04 - v2 KRITISK BUGFIX: Alle popups/modaler usynlige (DaisyUI klassenavnkollisjon)
 
 **Kategori:** Critical Bugfix
