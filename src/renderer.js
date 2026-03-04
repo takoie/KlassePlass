@@ -66,8 +66,18 @@ async function init() {
   navTo('charts-dashboard');
 }
 
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dracula';
+const DARK_THEMES  = ['night', 'dracula', 'coffee'];
+const LIGHT_THEMES = ['nord', 'winter', 'corporate'];
+
+function applyTheme(settings) {
+  const mode = settings?.theme ?? 'dark';
+  const colorTheme = settings?.colorTheme;
+  const validThemes = [...DARK_THEMES, ...LIGHT_THEMES];
+  if (colorTheme && validThemes.includes(colorTheme)) {
+    document.documentElement.dataset.theme = colorTheme;
+  } else {
+    document.documentElement.dataset.theme = mode === 'light' ? 'nord' : 'night';
+  }
 }
 
 function showUpdateBanner(info) {
@@ -78,6 +88,6 @@ function showUpdateBanner(info) {
 }
 
 // Lytt på tema-endringer
-store.on('settings', s => applyTheme(s?.theme ?? 'dark'));
+store.on('settings', s => applyTheme(s));
 
 document.addEventListener('DOMContentLoaded', init);
