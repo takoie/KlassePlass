@@ -4,6 +4,7 @@
 
 import { renderDesks } from '../shared/renderDesks.js';
 import { createDrawAnimation } from '../shared/animate.js';
+import { CANVAS_W } from '../shared/constants.js';
 
 let _data = null;
 let _zoom = 1;
@@ -35,7 +36,6 @@ function render() {
 
   canvas.style.width    = '920px';
   canvas.style.minHeight = (_data.roomHeight ?? 500) + 40 + 'px';
-  canvas.style.transform = `scale(${_zoom})`;
 
   const board = document.getElementById('pres-board');
   const atBottom = _data.flipForDisplay || _data.roomDesignMode === 'board-bottom';
@@ -63,7 +63,18 @@ function renderDecorations(canvas) {
   (_data?.decorations ?? []).forEach(deco => {
     const el = document.createElement('div');
     el.className = `decoration decoration-${deco.type}`;
-    el.style.cssText = `left:${deco.x}px;top:${deco.y}px;width:${deco.width}px;height:${deco.height}px;pointer-events:none`;
+
+    let x = deco.x, y = deco.y;
+    let rot = deco.rotation ?? 0;
+
+    if (_data?.flipForDisplay) {
+      x = CANVAS_W - deco.x - deco.width;
+      y = (_data.roomHeight ?? 500) - deco.y - deco.height;
+      rot = (rot + 180) % 360;
+    }
+
+    el.style.cssText = `left:${x}px;top:${y}px;width:${deco.width}px;height:${deco.height}px;pointer-events:none`;
+    el.style.transform = `rotate(${rot}deg)`;
     if (deco.label) el.textContent = deco.label;
     canvas.appendChild(el);
   });
@@ -74,7 +85,8 @@ function updateZoom() {
   const outer  = document.getElementById('canvas-outer');
   if (!canvas || !outer) return;
   canvas.style.transformOrigin = 'top center';
-  canvas.style.transform = `scale(${_zoom})`;
+  const rotPart = (_data?.flipForDisplay) ? ' rotate(180deg)' : '';
+  canvas.style.transform = `scale(${_zoom})${rotPart}`;
   // Sett høyde slik at outer scroller riktig
   outer.style.alignItems = _zoom > 1 ? 'flex-start' : 'center';
 }
