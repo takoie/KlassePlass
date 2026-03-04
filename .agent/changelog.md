@@ -5,6 +5,59 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet.
 
 ---
 
+## 2026-03-04 - v2 KRITISK BUGFIX: Alle popups/modaler usynlige (DaisyUI klassenavnkollisjon)
+
+**Kategori:** Critical Bugfix
+
+**Worktree:** `F:\stian.taknes.no\Git\KlassePlass\.worktrees\rebuild`
+**Branch:** `feature/rebuild-v2`
+**Commits:** `c37828d`, `cc1287e`, `b49fcf0`, `7f0482c`
+
+### Symptom
+Alle popups i v2-appen blurret skjermen men ingen popup var synlig. Gjaldt: "Auto" i romdesigner, "+ Ny regel" i klasser, notat-editor, periode-modal, eksport-modal og alle kontekst-menyer.
+
+### Undersøkelse (3 feilhypoteser avvist)
+
+**Hypotese 1 (feil):** `overflow:hidden` på `#app` klipper `position:fixed` modaler.
+- Forsøkt fix: fjernet `overflow:hidden` fra `#app`, lagt til `#modal-portal` utenfor `#app-shell`.
+- Resulterte i commit `c37828d` — hjalp ikke.
+
+**Hypotese 2 (feil):** `backdrop-filter: blur(4px)` på `.modal-backdrop` blurrer OS-skrivebordet bak det transparente Electron-vinduet (fjernet i tidligere sesjon).
+- Allerede fikset. Ikke årsaken denne gang.
+
+**Hypotese 3 (korrekt):** DaisyUI 4 definerer egne CSS-regler for klassene `.modal` og `.modal-backdrop` som kolliderer med vår kode.
+
+### Rotårsak
+DaisyUI 4 (`daisyui@4/dist/full.min.css`) definerer:
+```css
+.modal         { opacity: 0; pointer-events: none; ... }   /* usynlig som standard */
+.modal-backdrop { z-index: -1; color: transparent; ... }   /* bak alt, transparent tekst */
+```
+
+Fordi all vår modal-kode brukte nøyaktig disse klassene:
+- `.modal-backdrop` fikk `z-index: -1` → bakgrunnsblur ble pushed bak alt annet (synlig som blur)
+- `.modal` fikk `opacity: 0` → selve dialog-boksen var usynlig
+- `.modal-backdrop` fikk `color: transparent` → all tekst usynlig
+
+### Fix
+Omdøpt alle egne klasser til `kp-`-prefiks som ikke kolliderer med DaisyUI:
+- `.modal-backdrop` → `.kp-backdrop`
+- `.modal` → `.kp-modal`
+
+Oppdatert CSS i `canvas.css` tilsvarende.
+
+**Berørte filer (commit `7f0482c`):**
+- `src/styles/canvas.css` — `.modal-backdrop` → `.kp-backdrop`, `.modal` → `.kp-modal`
+- `src/views/classes.js` — 2 modaler omdøpt
+- `src/views/settings.js` — 1 modal omdøpt
+- `src/views/seating-editor.js` — 2 modaler omdøpt
+- `src/views/room-editor.js` — 1 modal omdøpt
+
+### Lærdom
+Alle CSS-klasser i KlassePlass v2 som kan kollidere med DaisyUI må prefixes med `kp-`. DaisyUI reserverer blant annet: `.modal`, `.modal-backdrop`, `.modal-box`, `.modal-toggle`, `.btn`, `.card`, `.badge`, `.toast` og mange fler. Egendefinerte komponenter må alltid bruke et unikt prefiks.
+
+---
+
 ## 2026-03-04 - v2 UI-polish: modaler, flip, titlebar, constraints, elevliste, vindu
 
 **Kategori:** Bugfix / UI / Feature
