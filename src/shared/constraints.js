@@ -1,27 +1,57 @@
 /**
- * Constraint-sjekk og historikk-analyse for randomisering.
- * Håndterer hard constraints (alltid/aldri) og soft constraints (historikk).
+ * constraints.js — Hard-constraint sjekk og historikk-scoring.
+ * Rene funksjoner, ingen side effects.
  */
 
 /**
- * Sjekk om en gitt student-til-pult-assignment bryter hard constraints.
+ * Bygg et kart: deskId per studentId fra en ferdig layout.
+ */
+function buildDeskByStudent(desks) {
+  const map = {};
+  for (const desk of desks) {
+    for (const slot of desk.slots ?? []) {
+      if (slot?.studentId) map[slot.studentId] = desk.id;
+    }
+  }
+  return map;
+}
+
+/**
+ * Sjekk hard-constraints mot en kandidat-layout.
  *
- * @param {Array} desks - desk-objekter med slots fylt med studentId
- * @param {Object} studentsById - Map<id, { name }>
- * @param {Array} constraints - [{ type, student_a, student_b }]
- * @returns {{ valid: boolean, violations: Array<string> }}
+ * Constraints bruker student-navn (slik de er lagret i DB).
+ * studentsById = { [id]: { id, name, ... } }
+ *
+ * @param {Array}  desks         - Desk-array med slots
+ * @param {Object} studentsById  - Map id → student
+ * @param {Array}  constraints   - [{ student_a, student_b, type }]
+ * @returns {{ valid: boolean, violations: string[] }}
  */
 export function checkHardConstraints(desks, studentsById, constraints) {
+  if (!constraints || constraints.length === 0) return { valid: true, violations: [] };
+
+  // Bygg navn → id map for oppslag
+  const idByName = {};
+  for (const s of Object.values(studentsById)) {
+    idByName[s.name] = s.id;
+  }
+
+  const deskByStudent = buildDeskByStudent(desks);
   const violations = [];
 
   for (const c of constraints) {
-    const together = areStudentsTogether(desks, studentsById, c.student_a, c.student_b);
+    const idA = idByName[c.student_a];
+    const idB = idByName[c.student_b];
+    if (!idA || !idB) continue; // Elev finnes ikke i klassen
 
-    if (c.type === 'always_together' && !together) {
-      violations.push(`${c.student_a} og ${c.student_b} skal alltid sitte sammen`);
-    }
-    if (c.type === 'never_together' && together) {
-      violations.push(`${c.student_a} og ${c.student_b} skal aldri sitte sammen`);
+    const deskA = deskByStudent[idA];
+    const deskB = deskByStudent[idB];
+    const sameDeskOrUnplaced = deskA && deskB && deskA === deskB;
+
+    if (c.type === 'always_together' && !sameDeskOrUnplaced) {
+      violations.push(`${c.student_a} og ${c.student_b} må sitte på samme bord`);
+    } else if (c.type === 'never_together' && sameDeskOrUnplaced) {
+      violations.push(`${c.student_a} og ${c.student_b} skal ikke sitte på samme bord`);
     }
   }
 
@@ -29,53 +59,36 @@ export function checkHardConstraints(desks, studentsById, constraints) {
 }
 
 /**
- * Beregn "historikk-score" for en layout — lavere er bedre.
- * Teller antall par som er gjentatt fra historikk.
+ * Tell opp historikk-konflikter (myke constraints).
+ * historyPairs = [["Navn A", "Navn B"], ...] — par fra siste N kart.
  *
- * @param {Array} desks - desk-objekter med slots
- * @param {Object} studentsById - Map<id, { name }>
- * @param {Array} historyPairs - [["Ola","Kari"], ...] fra siste N kart
- * @returns {number} antall gjentatte par
+ * @param {Array}  desks        - Desk-array med slots
+ * @param {Object} studentsById - Map id → student
+ * @param {Array}  historyPairs - [["navn1","navn2"], ...]
+ * @returns {number} Antall gjentatte par (lavere er bedre)
  */
 export function scoreHistoryConflicts(desks, studentsById, historyPairs) {
-  const historyset = new Set(historyPairs.map(p => pairKey(p[0], p[1])));
-  let score = 0;
+  if (!historyPairs || historyPairs.length === 0) return 0;
+
+  // Normaliser historikk-par til Set med sorterte nøkler
+  const historySet = new Set(
+    historyPairs.map(([a, b]) => [a, b].sort().join('|'))
+  );
+
+  let conflicts = 0;
   for (const desk of desks) {
-    const names = slotsToNames(desk, studentsById);
+    const names = (desk.slots ?? [])
+      .filter(s => s?.studentId && studentsById[s.studentId])
+      .map(s => studentsById[s.studentId].name);
+
+    // Sjekk alle par på dette bordet mot historikk
     for (let i = 0; i < names.length; i++) {
       for (let j = i + 1; j < names.length; j++) {
-        if (historyset.has(pairKey(names[i], names[j]))) score++;
+        const key = [names[i], names[j]].sort().join('|');
+        if (historySet.has(key)) conflicts++;
       }
     }
   }
-  return score;
-}
 
-/** Sjekk om to spesifikke elever sitter på samme pult */
-function areStudentsTogether(desks, studentsById, nameA, nameB) {
-  for (const desk of desks) {
-    const names = slotsToNames(desk, studentsById);
-    if (names.includes(nameA) && names.includes(nameB)) return true;
-  }
-  return false;
-}
-
-function slotsToNames(desk, studentsById) {
-  return (desk.slots ?? [])
-    .filter(s => s && studentsById[s.studentId])
-    .map(s => studentsById[s.studentId].name);
-}
-
-function pairKey(a, b) {
-  return [a, b].sort().join('|||');
-}
-
-/**
- * Bygg soft constraints fra historikk — returnerer et Set av parnøkler.
- */
-export function buildHistorySet(historyEntries) {
-  const pairs = historyEntries.flatMap(e => {
-    try { return JSON.parse(e.pairs); } catch { return []; }
-  });
-  return new Set(pairs.map(p => pairKey(p[0], p[1])));
+  return conflicts;
 }

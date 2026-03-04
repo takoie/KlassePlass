@@ -10,13 +10,13 @@ let _activeClass = null;
 let _constraints = [];
 let _students   = [];  // Normalized student objects for active class
 
-const PLACEMENT_OPTIONS = [
-  { value: 'front',      icon: '⬆', label: 'Fremst' },
-  { value: 'back',       icon: '⬇', label: 'Bakerst' },
-  { value: 'middle',     icon: '⬛', label: 'Midten' },
-  { value: 'never-front', icon: '🚫⬆', label: 'Aldri fremst' },
-  { value: 'never-back',  icon: '🚫⬇', label: 'Aldri bakerst' },
-];
+const PLACEMENT_LABELS = {
+  'front':      'Fremst',
+  'back':       'Bakerst',
+  'middle':     'Midten',
+  'never-front':'Aldri fremst',
+  'never-back': 'Aldri bakerst',
+};
 
 const TEMPLATE = `
 <div class="view-header">
@@ -174,45 +174,30 @@ function renderStudentList() {
     row.className = 'student-row';
     row.dataset.idx = idx;
 
-    const activePlacement = student.placement ?? null;
+    const p = student.placement ?? '';
+    const hasNote = !!(student.note?.trim());
 
     row.innerHTML = `
-      <div class="student-row-main">
-        <span class="student-name">${escHtml(student.name)}</span>
-        ${student.note ? `<span class="student-note-chip" title="${escHtml(student.note)}"><i class="fa-solid fa-note-sticky"></i></span>` : ''}
-        <button class="btn btn-ghost btn-xs btn-note-edit" data-idx="${idx}" title="Rediger notat">
-          <i class="fa-solid fa-pencil"></i>
+      <span class="student-name">${escHtml(student.name)}</span>
+      <div class="student-row-controls">
+        <select class="student-placement-select${p ? ' has-value' : ''}" data-idx="${idx}" title="Plasseringsprioritet">
+          <option value="">— Prioritet —</option>
+          <option value="front"      ${p==='front'      ?'selected':''}>Fremst</option>
+          <option value="back"       ${p==='back'       ?'selected':''}>Bakerst</option>
+          <option value="middle"     ${p==='middle'     ?'selected':''}>Midten</option>
+          <option value="never-front"${p==='never-front'?'selected':''}>Aldri fremst</option>
+          <option value="never-back" ${p==='never-back' ?'selected':''}>Aldri bakerst</option>
+        </select>
+        <button class="btn btn-ghost btn-xs btn-note-edit${hasNote ? ' has-note' : ''}" data-idx="${idx}" title="${hasNote ? escHtml(student.note) : 'Legg til notat'}">
+          <i class="fa-solid fa-${hasNote ? 'note-sticky' : 'pencil'}"></i>
         </button>
-      </div>
-      <div class="student-placement-row">
-        ${PLACEMENT_OPTIONS.map(opt => `
-          <button class="placement-btn${activePlacement === opt.value ? ' active' : ''}"
-            data-idx="${idx}" data-placement="${opt.value}" title="${escHtml(opt.label)}">
-            ${opt.icon}
-          </button>
-        `).join('')}
-        ${activePlacement ? `<button class="placement-btn placement-clear" data-idx="${idx}" title="Fjern prioritet">✕</button>` : ''}
       </div>
     `;
 
-    row.querySelectorAll('.placement-btn[data-placement]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const i = parseInt(btn.dataset.idx, 10);
-        const val = btn.dataset.placement;
-        _students[i].placement = _students[i].placement === val ? null : val;
-        document.getElementById('class-student-count').textContent = _students.length;
-        renderStudentList();
-      });
+    row.querySelector('.student-placement-select').addEventListener('change', (e) => {
+      _students[parseInt(e.target.dataset.idx, 10)].placement = e.target.value || null;
+      renderStudentList();
     });
-
-    const clearBtn = row.querySelector('.placement-clear');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', () => {
-        const i = parseInt(clearBtn.dataset.idx, 10);
-        _students[i].placement = null;
-        renderStudentList();
-      });
-    }
 
     row.querySelector('.btn-note-edit').addEventListener('click', () => openNoteModal(idx));
 
@@ -265,18 +250,43 @@ function renderConstraints() {
   _constraints.forEach(c => {
     const el = document.createElement('div');
     el.className = 'constraint-item';
-    const typeLabel = c.type === 'always_together' ? 'Alltid sammen' : 'Aldri sammen';
-    const badgeCls  = c.type === 'always_together' ? 'badge-always' : 'badge-never';
+    const isAlways  = c.type === 'always_together';
+    const badgeCls  = isAlways ? 'badge-always' : 'badge-never';
+    const typeLabel = isAlways ? 'Alltid sammen' : 'Aldri sammen';
+    const desc      = isAlways
+      ? `${escHtml(c.student_a)} og ${escHtml(c.student_b)} skal alltid sitte på samme bord`
+      : `${escHtml(c.student_a)} og ${escHtml(c.student_b)} skal aldri sitte på samme bord`;
+
     el.innerHTML = `
-      <span class="constraint-type-badge ${badgeCls}">${typeLabel}</span>
-      <span style="flex:1;font-size:12px">${escHtml(c.student_a)} og ${escHtml(c.student_b)}</span>
-      <button class="btn btn-ghost btn-sm btn-icon btn-del-constraint" data-id="${c.id}" title="Slett regel">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+      <div class="constraint-item-main">
+        <span class="constraint-type-badge ${badgeCls}">${typeLabel}</span>
+        <span class="constraint-desc">${desc}</span>
+      </div>
+      <div class="constraint-item-actions">
+        <button class="btn btn-ghost btn-xs btn-toggle-constraint" data-id="${c.id}" title="Bytt til ${isAlways ? 'Aldri sammen' : 'Alltid sammen'}">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i>
+        </button>
+        <button class="btn btn-ghost btn-xs btn-del-constraint" data-id="${c.id}" title="Slett regel">
+          <i class="fa-solid fa-xmark text-error"></i>
+        </button>
+      </div>
     `;
     el.querySelector('.btn-del-constraint').addEventListener('click', async () => {
       await window.api.deleteConstraint(c.id);
       _constraints = _constraints.filter(x => x.id !== c.id);
+      renderConstraints();
+    });
+    el.querySelector('.btn-toggle-constraint').addEventListener('click', async () => {
+      const newType = c.type === 'always_together' ? 'never_together' : 'always_together';
+      await window.api.deleteConstraint(c.id);
+      const result = await window.api.saveConstraint({
+        classId: _activeClass.id,
+        studentA: c.student_a,
+        studentB: c.student_b,
+        type: newType,
+      });
+      const idx = _constraints.findIndex(x => x.id === c.id);
+      if (idx !== -1) _constraints[idx] = { ...c, id: result.lastID, type: newType };
       renderConstraints();
     });
     list.appendChild(el);

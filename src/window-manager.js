@@ -16,6 +16,7 @@ function createMainWindow() {
     icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     frame: false,
     transparent: true,
+    roundedCorners: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
