@@ -25,79 +25,165 @@ const TEMPLATE = `
 <div class="view-header">
   <h1 class="view-title">Innstillinger</h1>
 </div>
-<div class="settings-layout">
-  <section class="settings-section">
-    <h2 class="settings-section-title">Utseende</h2>
-    <div class="settings-row">
-      <div>
-        <div class="settings-label">Tema</div>
-        <div class="settings-hint">Bytt mellom mørk og lys modus</div>
+<div style="display:flex;flex-direction:column;height:calc(100% - 57px);overflow:hidden;">
+
+  <!-- Tab navigation -->
+  <nav class="settings-tabs-nav">
+    <button class="settings-tab active" data-tab="utseende"><i class="fa-solid fa-palette"></i> Utseende</button>
+    <button class="settings-tab" data-tab="data"><i class="fa-solid fa-database"></i> Data</button>
+    <button class="settings-tab" data-tab="om"><i class="fa-solid fa-circle-info"></i> Om</button>
+    <button class="settings-tab" data-tab="lisenser"><i class="fa-solid fa-scale-balanced"></i> Lisenser</button>
+    <button class="settings-tab" data-tab="personvern"><i class="fa-solid fa-shield-halved"></i> Personvern</button>
+  </nav>
+
+  <!-- Tab: Utseende -->
+  <div class="settings-tab-content" id="tab-utseende">
+    <section class="settings-section">
+      <h2 class="settings-section-title">Tema</h2>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Modus</div>
+          <div class="settings-hint">Bytt mellom mørk og lys modus</div>
+        </div>
+        <div class="theme-toggle" id="theme-toggle">
+          <button class="theme-btn" data-theme="dracula" id="btn-theme-dark"><i class="fa-solid fa-moon"></i> Mørk</button>
+          <button class="theme-btn" data-theme="light" id="btn-theme-light"><i class="fa-solid fa-sun"></i> Lys</button>
+        </div>
       </div>
-      <div class="theme-toggle" id="theme-toggle">
-        <button class="theme-btn" data-theme="dracula" id="btn-theme-dark"><i class="fa-solid fa-moon"></i> Mørk</button>
-        <button class="theme-btn" data-theme="light" id="btn-theme-light"><i class="fa-solid fa-sun"></i> Lys</button>
+      <div class="settings-row" id="color-theme-row">
+        <div>
+          <div class="settings-label">Fargetema</div>
+          <div class="settings-hint">Velg fargepalett for gjeldende modus</div>
+        </div>
+        <div class="color-theme-swatches" id="color-theme-swatches"></div>
       </div>
-    </div>
-    <div class="settings-row" id="color-theme-row">
-      <div>
-        <div class="settings-label">Fargetema</div>
-        <div class="settings-hint">Velg fargepalett for gjeldende modus</div>
+    </section>
+    <section class="settings-section">
+      <h2 class="settings-section-title">Visning</h2>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Roter visning som standard</div>
+          <div class="settings-hint">Åpne klassekart med visningen rotert 180° som standard</div>
+        </div>
+        <input type="checkbox" id="setting-flip-display" class="toggle toggle-primary">
       </div>
-      <div class="color-theme-swatches" id="color-theme-swatches">
+    </section>
+  </div>
+
+  <!-- Tab: Data -->
+  <div class="settings-tab-content hidden" id="tab-data">
+    <section class="settings-section">
+      <h2 class="settings-section-title">Database</h2>
+      <div class="settings-row">
+        <div><div class="settings-label">Sikkerhetskopi</div><div class="settings-hint">Lagre en kopi av databasen</div></div>
+        <button class="btn btn-outline btn-sm" id="btn-backup-db"><i class="fa-solid fa-download"></i> Ta backup</button>
       </div>
-    </div>
-    <div class="settings-row">
-      <div>
-        <div class="settings-label">Roter visning som standard</div>
-        <div class="settings-hint">Åpne klassekart med visningen rotert 180° som standard</div>
+      <div class="settings-row">
+        <div><div class="settings-label">Gjenopprett</div><div class="settings-hint">Last inn en tidligere sikkerhetskopi</div></div>
+        <button class="btn btn-outline btn-sm" id="btn-restore-db"><i class="fa-solid fa-upload"></i> Gjenopprett</button>
       </div>
-      <input type="checkbox" id="setting-flip-display" class="toggle toggle-primary">
-    </div>
-  </section>
-  <section class="settings-section">
-    <h2 class="settings-section-title">Database</h2>
-    <div class="settings-row">
-      <div><div class="settings-label">Sikkerhetskopi</div><div class="settings-hint">Lagre en kopi av databasen</div></div>
-      <button class="btn btn-outline btn-sm" id="btn-backup-db"><i class="fa-solid fa-download"></i> Ta backup</button>
-    </div>
-    <div class="settings-row">
-      <div><div class="settings-label">Gjenopprett</div><div class="settings-hint">Last inn en tidligere sikkerhetskopi</div></div>
-      <button class="btn btn-outline btn-sm" id="btn-restore-db"><i class="fa-solid fa-upload"></i> Gjenopprett</button>
-    </div>
-    <div class="settings-row">
-      <div><div class="settings-label">Flytt database</div><div class="settings-hint">Lagre databasen på en annen plassering</div></div>
-      <button class="btn btn-outline btn-sm" id="btn-move-db"><i class="fa-solid fa-folder-open"></i> Flytt</button>
-    </div>
-    <div class="settings-row">
-      <div><div class="settings-label">Databaseplassering</div><div id="db-path-display" class="settings-hint code-hint"></div></div>
-    </div>
-  </section>
-  <section class="settings-section">
-    <h2 class="settings-section-title">Eksport og import</h2>
-    <div class="settings-row">
-      <div>
-        <div class="settings-label">Eksporter klasse</div>
-        <div class="settings-hint">Eksporter en klasse med alle kart og historikk som JSON-fil</div>
+      <div class="settings-row">
+        <div><div class="settings-label">Flytt database</div><div class="settings-hint">Lagre databasen på en annen plassering</div></div>
+        <button class="btn btn-outline btn-sm" id="btn-move-db"><i class="fa-solid fa-folder-open"></i> Flytt</button>
       </div>
-      <button class="btn btn-outline btn-sm" id="btn-export-class"><i class="fa-solid fa-file-export"></i> Eksporter</button>
-    </div>
-    <div class="settings-row">
-      <div>
-        <div class="settings-label">Importer klasse</div>
-        <div class="settings-hint">Importer en tidligere eksportert klasse-bundle</div>
+      <div class="settings-row">
+        <div><div class="settings-label">Databaseplassering</div><div id="db-path-display" class="settings-hint code-hint"></div></div>
       </div>
-      <button class="btn btn-outline btn-sm" id="btn-import-class"><i class="fa-solid fa-file-import"></i> Importer</button>
+    </section>
+    <section class="settings-section">
+      <h2 class="settings-section-title">Eksport og import</h2>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Eksporter klasse</div>
+          <div class="settings-hint">Eksporter en klasse med alle kart og historikk som JSON-fil</div>
+        </div>
+        <button class="btn btn-outline btn-sm" id="btn-export-class"><i class="fa-solid fa-file-export"></i> Eksporter</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Importer klasse</div>
+          <div class="settings-hint">Importer en tidligere eksportert klasse-bundle</div>
+        </div>
+        <button class="btn btn-outline btn-sm" id="btn-import-class"><i class="fa-solid fa-file-import"></i> Importer</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Tab: Om -->
+  <div class="settings-tab-content hidden" id="tab-om">
+    <div class="settings-about-hero">
+      <div class="settings-about-logo">
+        <span class="logo-klasse">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 12px #f59e0b">Plass</span>
+      </div>
+      <p class="settings-about-desc">Et verktøy for lærere til å lage og administrere klassekart — enkelt, raskt og lokalt.</p>
+      <div style="font-size:11px;color:oklch(var(--bc)/0.35);margin-top:4px" id="app-version"></div>
     </div>
-  </section>
-  <section class="settings-section">
-    <h2 class="settings-section-title">Om KlassePlass</h2>
-    <div class="settings-row">
-      <div><div class="settings-label">Versjon</div><div id="app-version" class="settings-hint"></div></div>
+    <section class="settings-section">
+      <h2 class="settings-section-title">Utvikler</h2>
+      <div class="settings-row">
+        <div><div class="settings-label">Navn</div></div>
+        <div class="settings-hint">Stian Taknes</div>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-label">Nettside</div></div>
+        <div class="settings-hint"><a href="https://stian.taknes.no" target="_blank" style="color:oklch(var(--p))">stian.taknes.no</a></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Tab: Lisenser -->
+  <div class="settings-tab-content hidden" id="tab-lisenser">
+    <section class="settings-section">
+      <h2 class="settings-section-title">Tredjepartsbiblioteker</h2>
+      <div style="padding:4px 0">
+        <table class="settings-license-table">
+          <thead>
+            <tr>
+              <th>Bibliotek</th>
+              <th>Versjon</th>
+              <th>Lisens</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Electron</td><td>~28</td><td>MIT</td></tr>
+            <tr><td>electron-updater</td><td>~6.1</td><td>MIT</td></tr>
+            <tr><td>sqlite3</td><td>~5.1</td><td>BSD-2-Clause</td></tr>
+            <tr><td>DaisyUI</td><td>4 (CDN)</td><td>MIT</td></tr>
+            <tr><td>Tailwind CSS</td><td>CDN</td><td>MIT</td></tr>
+            <tr><td>Font Awesome</td><td>6.4.0 (CDN)</td><td>Icons: CC BY 4.0 · Fonts: SIL OFL 1.1 · Kode: MIT</td></tr>
+            <tr><td>Inter (Google Fonts)</td><td>CDN</td><td>SIL OFL 1.1</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section class="settings-section">
+      <h2 class="settings-section-title">Applikasjonen</h2>
+      <div class="settings-row">
+        <div><div class="settings-label">KlassePlass</div><div class="settings-hint">Kildekode og distribusjon</div></div>
+        <div class="settings-hint">ISC</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Tab: Personvern -->
+  <div class="settings-tab-content hidden" id="tab-personvern">
+    <div class="settings-privacy-block settings-privacy-warning">
+      <h3><i class="fa-solid fa-triangle-exclamation" style="color:oklch(var(--wa))"></i> Ansvarsfraskrivelse</h3>
+      <p>KlassePlass tilbys uten garantier. Bruk av appen skjer på eget ansvar. Utvikler er ikke ansvarlig for tap av data eller konsekvenser av bruk.</p>
     </div>
-    <div class="settings-row">
-      <div><div class="settings-label">Utvikler</div><div class="settings-hint">Stian Taknes — stian.taknes.no</div></div>
+    <div class="settings-privacy-block">
+      <h3><i class="fa-solid fa-user-shield" style="color:oklch(var(--p))"></i> Personvern og GDPR</h3>
+      <p>Appen er beregnet på bruk i skolen. Elevnavn og annen informasjon som lagres kan utgjøre personopplysninger etter personopplysningsloven og GDPR.</p>
+      <p>Unngå å lagre særlige kategorier av personopplysninger — som helseopplysninger, atferdsnotater eller andre sensitive opplysninger om elever.</p>
+      <p>Behandling av personopplysninger skal skje i henhold til skolens personvernrutiner og UDIRs retningslinjer for digitale verktøy i skolen.</p>
     </div>
-  </section>
+    <div class="settings-privacy-block">
+      <h3><i class="fa-solid fa-server" style="color:oklch(var(--p))"></i> Datahåndtering</h3>
+      <p>All data lagres utelukkende lokalt på din enhet. Ingen data sendes til eksterne servere, skytjenester eller tredjeparter.</p>
+      <p>Databasen kan til enhver tid flyttes, sikkerhetskopieres eller slettes fra <strong>Data</strong>-fanen.</p>
+    </div>
+  </div>
+
 </div>`;
 
 export const settingsView = {
@@ -172,6 +258,16 @@ async function setColorTheme(themeId) {
 }
 
 function bindEvents() {
+  // Tab-navigasjon
+  document.querySelectorAll('.settings-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.add('hidden'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+    });
+  });
+
   // Tema
   document.getElementById('btn-theme-dark')?.addEventListener('click', () => setTheme('dracula'));
   document.getElementById('btn-theme-light')?.addEventListener('click', () => setTheme('light'));
