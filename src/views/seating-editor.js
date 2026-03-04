@@ -6,7 +6,6 @@
 
 import { renderDesks }        from '../shared/renderDesks.js';
 import { randomizeSeating }   from '../shared/randomize.js';
-import { getDisplayDesks }    from '../shared/transforms.js';
 import { DESK_COLORS }        from '../shared/constants.js';
 import { extractPairsFromLayout, showToast, getWeekNumber, getPortal } from '../shared/utils.js';
 import { showContextMenu }    from '../shared/contextMenu.js';
@@ -37,8 +36,8 @@ const TEMPLATE = `
       </button>
     </div>
     <div class="toolbar-right">
-      <button class="btn btn-ghost btn-sm" id="btn-flip-view" title="Snu visning (speil bord)">
-        <i class="fa-solid fa-rotate-180"></i> Snu visning
+      <button class="btn btn-ghost btn-sm" id="btn-flip-view" title="Roter visning 180°">
+        <i class="fa-solid fa-rotate-180"></i> Roter visning
       </button>
       <div class="toolbar-divider"></div>
       <button class="btn btn-ghost btn-sm" id="btn-new-period" title="Start ny periode">
@@ -121,9 +120,10 @@ function render() {
   const canvas = document.getElementById('seating-canvas');
   if (!canvas) return;
 
-  const displayDesks = getDisplayDesks(_chart.desks, _chart.roomHeight, _chart.flipForDisplay);
+  const displayDesks = _chart.desks;
 
   canvas.style.minHeight = (_chart.roomHeight + 40) + 'px';
+  canvas.classList.toggle('canvas-rotated', !!_chart.flipForDisplay);
 
   const board = document.getElementById('front-board');
   const showAtBottom = _chart.roomDesignMode === 'board-bottom' || _chart.flipForDisplay;
@@ -453,9 +453,8 @@ async function saveChart() {
 
 function openPresentation() {
   if (!_chart) return;
-  const displayDesks = getDisplayDesks(_chart.desks, _chart.roomHeight, _chart.flipForDisplay);
   window.api.openPresentation(JSON.stringify({
-    desks: displayDesks,
+    desks: _chart.desks,
     studentsById: _chart.studentsById,
     roomHeight: _chart.roomHeight,
     roomDesignMode: _chart.roomDesignMode,
