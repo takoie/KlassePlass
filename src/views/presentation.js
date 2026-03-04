@@ -38,9 +38,10 @@ function render() {
   canvas.style.minHeight = (_data.roomHeight ?? 500) + 40 + 'px';
 
   const board = document.getElementById('pres-board');
-  const atBottom = _data.flipForDisplay || _data.roomDesignMode === 'board-bottom';
-  board?.classList.toggle('board-bottom', atBottom);
-  board?.classList.toggle('board-top', !atBottom);
+  const boardDataAtBottom = _data.roomDesignMode === 'board-bottom';
+  const boardVisuallyAtBottom = boardDataAtBottom !== !!_data.flipForDisplay;
+  board?.classList.toggle('board-bottom', boardVisuallyAtBottom);
+  board?.classList.toggle('board-top', !boardVisuallyAtBottom);
 
   renderDesks(canvas, _data.desks, _data.studentsById, {
     interactive: false,

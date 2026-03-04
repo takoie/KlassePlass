@@ -126,9 +126,10 @@ function render() {
   canvas.classList.toggle('canvas-rotated', !!_chart.flipForDisplay);
 
   const board = document.getElementById('front-board');
-  const showAtBottom = _chart.roomDesignMode === 'board-bottom' || _chart.flipForDisplay;
-  board?.classList.toggle('board-bottom', showAtBottom);
-  board?.classList.toggle('board-top', !showAtBottom);
+  const boardDataAtBottom = _chart.roomDesignMode === 'board-bottom';
+  const boardVisuallyAtBottom = boardDataAtBottom !== !!_chart.flipForDisplay;
+  board?.classList.toggle('board-bottom', boardVisuallyAtBottom);
+  board?.classList.toggle('board-top', !boardVisuallyAtBottom);
 
   renderDesks(canvas, displayDesks, _chart.studentsById, {
     interactive: true,
