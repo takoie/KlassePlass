@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('api', {
   // Historikk
   getHistory:       (cid, n) => ipcRenderer.invoke('get-history', cid, n),
   saveHistory:      (data)   => ipcRenderer.invoke('save-history', data),
+  duplicateSeating: (data)   => ipcRenderer.invoke('duplicate-seating', data),
 
   // Eksport / Import
   exportBundle:     (cid)    => ipcRenderer.invoke('export-bundle', cid),

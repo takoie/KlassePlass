@@ -1,14 +1,14 @@
 /**
  * seating-editor.js — Interaktiv klassekarteditor.
  * Inneholder: shuffle, drag-swap, lock/unlock, notater, gruppefarger,
- * pultnumre, pultfarger, unplaced-dock og kontekstmenyer.
+ * bordnumre, bordfarger, unplaced-dock og kontekstmenyer.
  */
 
 import { renderDesks }        from '../shared/renderDesks.js';
 import { randomizeSeating }   from '../shared/randomize.js';
 import { getDisplayDesks }    from '../shared/transforms.js';
 import { DESK_COLORS }        from '../shared/constants.js';
-import { extractPairsFromLayout, showToast } from '../shared/utils.js';
+import { extractPairsFromLayout, showToast, getWeekNumber } from '../shared/utils.js';
 import { showContextMenu }    from '../shared/contextMenu.js';
 import { buildChartFromParams, buildChartFromDb } from '../shared/chartHelpers.js';
 
@@ -32,11 +32,19 @@ const TEMPLATE = `
       <button class="btn btn-ghost btn-sm" id="btn-toggle-groups" title="Grupperingsmodus">
         <i class="fa-solid fa-object-group"></i>
       </button>
-      <button class="btn btn-ghost btn-sm" id="btn-toggle-numbers" title="Vis pultnumre">
+      <button class="btn btn-ghost btn-sm" id="btn-toggle-numbers" title="Vis bordnumre">
         <i class="fa-solid fa-hashtag"></i>
       </button>
     </div>
     <div class="toolbar-right">
+      <button class="btn btn-ghost btn-sm" id="btn-flip-view" title="Snu visning (speil bord)">
+        <i class="fa-solid fa-rotate-180"></i> Snu visning
+      </button>
+      <div class="toolbar-divider"></div>
+      <button class="btn btn-ghost btn-sm" id="btn-new-period" title="Start ny periode">
+        <i class="fa-solid fa-calendar-plus"></i> Ny periode
+      </button>
+      <div class="toolbar-divider"></div>
       <button class="btn btn-ghost btn-sm" id="btn-present" title="Åpne presentasjonsvindu">
         <i class="fa-solid fa-tv"></i> Presenter
       </button>
@@ -294,7 +302,7 @@ function showDeskContextMenu(deskId, event) {
   menu.innerHTML = `
     <div class="context-menu-item" id="_cm-clear"><i class="fa-solid fa-eraser"></i> Fjern elever</div>
     <div class="context-menu-divider"></div>
-    <div style="padding:6px 12px;font-size:11px;color:oklch(var(--bc)/0.4)">Pultfarge</div>
+    <div style="padding:6px 12px;font-size:11px;color:oklch(var(--bc)/0.4)">Bordfarge</div>
     <div style="padding:4px 12px 8px;display:flex;flex-wrap:wrap;gap:2px">${colorSwatches}</div>
   `;
 
@@ -325,7 +333,7 @@ function showStudentContextMenu(deskId, slotIdx, event) {
     },
     { label: 'Rediger notat', icon: 'fa-note-sticky', action: () => openNoteModal(deskId, slotIdx) },
     { divider: true },
-    { label: 'Fjern fra pult', icon: 'fa-user-minus', action: () => { desk.slots[slotIdx] = null; render(); }},
+    { label: 'Fjern fra bord', icon: 'fa-user-minus', action: () => { desk.slots[slotIdx] = null; render(); }},
   ], 'seating-ctx-menu');
 }
 
@@ -364,6 +372,56 @@ function openNoteModal(deskId, slotIdx) {
   });
 }
 
+/* ---- Ny periode ---- */
+
+function openNewPeriodModal() {
+  if (!_chart) return;
+  if (!_chart.id) {
+    showToast('Lagre klassekart først før du starter ny periode', 'error');
+    return;
+  }
+  const currentWeek = getWeekNumber(new Date());
+  const fromWeek = currentWeek;
+  const toWeek   = currentWeek + 3;
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal" style="min-width:300px">
+      <div class="modal-header"><span class="modal-title">Start ny periode</span></div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">Fra uke</label>
+        <input type="number" id="period-from" class="input input-bordered w-full" value="${fromWeek}" min="1" max="53">
+      </div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label class="form-label">Til uke</label>
+        <input type="number" id="period-to" class="input input-bordered w-full" value="${toWeek}" min="1" max="53">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="period-cancel">Avbryt</button>
+        <button class="btn btn-primary" id="period-ok">Opprett</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#period-cancel').addEventListener('click', () => backdrop.remove());
+  backdrop.querySelector('#period-ok').addEventListener('click', async () => {
+    const from = parseInt(backdrop.querySelector('#period-from').value, 10);
+    const to   = parseInt(backdrop.querySelector('#period-to').value, 10);
+    if (!from || !to || from > to) { showToast('Ugyldig ukeintervall', 'error'); return; }
+    backdrop.remove();
+    const comment = `Uke ${from}–${to}`;
+    const name    = `${_chart.name} (${comment})`;
+    const result  = await window.api.duplicateSeating({ sourceId: _chart.id, name, comment });
+    if (result?.lastID) {
+      showToast(`Ny periode opprettet: ${comment}`, 'success');
+      window.navTo('seating-editor', { chartId: result.lastID });
+    } else {
+      showToast('Feil ved oppretting av periode', 'error');
+    }
+  });
+}
+
 /* ---- Lagre ---- */
 
 async function saveChart() {
@@ -376,7 +434,7 @@ async function saveChart() {
     classId: _chart.classId,
     roomId: _chart.roomId,
     placements: JSON.stringify(_chart.desks),
-    comment: '',
+    comment: _chart.comment ?? '',
   });
 
   const newId = _chart.id ?? result?.lastID;
@@ -439,6 +497,14 @@ function bindEvents() {
     e.currentTarget.classList.toggle('btn-active', _showGroups);
     render();
   });
+  document.getElementById('btn-flip-view')?.addEventListener('click', (e) => {
+    if (_chart) {
+      _chart.flipForDisplay = !_chart.flipForDisplay;
+      e.currentTarget.classList.toggle('btn-active', _chart.flipForDisplay);
+      render();
+    }
+  });
+  document.getElementById('btn-new-period')?.addEventListener('click', openNewPeriodModal);
 
   wireDesksForSidebarDrop();
 

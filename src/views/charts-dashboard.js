@@ -96,6 +96,7 @@ function buildChartCard(chart) {
   card.className = 'chart-card';
   card.innerHTML = `
     <div class="chart-card-title">${escHtml(chart.name ?? 'Uten navn')}</div>
+    ${chart.comment ? `<div class="chart-card-comment"><i class="fa-solid fa-calendar-week" style="margin-right:4px"></i>${escHtml(chart.comment)}</div>` : ''}
     <div class="chart-card-meta">
       <span><i class="fa-solid fa-users" style="margin-right:4px"></i>${escHtml(chart.class_name ?? '—')}</span>
       <span><i class="fa-solid fa-door-open" style="margin-right:4px"></i>${escHtml(chart.room_name ?? '—')}</span>

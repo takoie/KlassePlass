@@ -13,13 +13,16 @@
       plugins: [],
     }
   </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="src/styles/canvas.css">
 </head>
 <body class="bg-base-100 text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased">
   <div id="app" class="flex flex-col h-screen overflow-hidden">
     <!-- Title bar -->
     <div class="titlebar flex items-center justify-between px-3 h-8 bg-base-200 border-b border-base-300 flex-shrink-0" style="-webkit-app-region:drag">
-      <span class="text-sm font-semibold text-base-content/60">KlassePlass</span>
+      <span style="font-size:1.05rem;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-0.01em">
+        <span style="color:#e0f2fe;text-shadow:0 0 10px rgba(59,130,246,0.8)">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 15px #f59e0b">Plass</span>
+      </span>
       <div class="flex gap-1" style="-webkit-app-region:no-drag">
         <button class="btn btn-ghost btn-xs btn-circle" onclick="window.api.minimizeWindow()" title="Minimer">
           <i class="fa-solid fa-minus text-xs"></i>
@@ -38,7 +41,9 @@
       <!-- Sidebar nav -->
       <nav class="w-52 flex-shrink-0 bg-base-200 border-r border-base-300 flex flex-col py-2 gap-1">
         <div class="px-4 pb-3 mb-1 border-b border-base-300">
-          <div class="text-base font-bold">KlassePlass</div>
+          <div style="font-size:0.95rem;font-weight:800;font-style:italic;text-transform:uppercase">
+            <span style="color:#e0f2fe;text-shadow:0 0 8px rgba(59,130,246,0.6)">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 10px #f59e0b">Plass</span>
+          </div>
           <div class="text-xs text-base-content/50">Klasseromsplanlegger</div>
         </div>
         <div class="nav-item active" data-view="charts-dashboard" onclick="navTo('charts-dashboard')">
@@ -47,7 +52,7 @@
         <div class="nav-item" data-view="classes" onclick="navTo('classes')">
           <i class="fa-solid fa-users w-4 text-center"></i> Klasser
         </div>
-        <div class="nav-item" data-view="room-editor" onclick="navTo('room-editor')">
+        <div class="nav-item" data-view="rooms-list" onclick="navTo('rooms-list')">
           <i class="fa-solid fa-door-open w-4 text-center"></i> Rom
         </div>
         <div class="flex-1"></div>

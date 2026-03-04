@@ -1,12 +1,22 @@
 /**
- * classes.js — Klasse- og elevadministrasjon + constraints.
+ * classes.js — Klasse- og elevadministrasjon.
+ * Studentliste med notater, plasseringsprioritet og constraints.
  */
 
-import { showToast, normalizeStudents } from '../shared/utils.js';
+import { showToast } from '../shared/utils.js';
 
 let _classes    = [];
 let _activeClass = null;
 let _constraints = [];
+let _students   = [];  // Normalized student objects for active class
+
+const PLACEMENT_OPTIONS = [
+  { value: 'front',      icon: '⬆', label: 'Fremst' },
+  { value: 'back',       icon: '⬇', label: 'Bakerst' },
+  { value: 'middle',     icon: '⬛', label: 'Midten' },
+  { value: 'never-front', icon: '🚫⬆', label: 'Aldri fremst' },
+  { value: 'never-back',  icon: '🚫⬇', label: 'Aldri bakerst' },
+];
 
 const TEMPLATE = `
 <div class="view-header">
@@ -37,15 +47,36 @@ const TEMPLATE = `
         </button>
       </div>
     </div>
+
     <div class="student-editor">
       <div class="student-editor-header">
         <span style="font-weight:600;font-size:13px">Elever</span>
-        <span id="class-student-count" class="badge"></span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span id="class-student-count" class="badge"></span>
+          <button class="btn btn-ghost btn-xs" id="btn-toggle-bulk" title="Bulk-rediger elevliste">
+            <i class="fa-solid fa-list"></i>
+          </button>
+        </div>
       </div>
-      <textarea id="class-students-input" class="students-textarea"
-        placeholder="Skriv ett elevnavn per linje&#10;Ola Nordmann&#10;Kari Hansen&#10;..."></textarea>
-      <div class="form-hint">Én elev per linje. Tomme linjer ignoreres.</div>
+
+      <div id="student-list-view">
+        <div id="student-list"></div>
+        <div id="student-list-empty" class="empty-state-inline hidden">Ingen elever ennå.</div>
+        <button class="btn btn-ghost btn-xs" id="btn-add-student" style="margin-top:6px">
+          <i class="fa-solid fa-plus"></i> Legg til elev
+        </button>
+      </div>
+
+      <div id="student-bulk-view" class="hidden">
+        <textarea id="class-students-input" class="students-textarea"
+          placeholder="Skriv ett elevnavn per linje&#10;Ola Nordmann&#10;Kari Hansen&#10;..."></textarea>
+        <div class="form-hint">Én elev per linje. Eksisterende notater og prioriteter beholdes.</div>
+        <button class="btn btn-ghost btn-xs" id="btn-apply-bulk" style="margin-top:6px">
+          <i class="fa-solid fa-check"></i> Bruk liste
+        </button>
+      </div>
     </div>
+
     <div class="constraints-section">
       <div class="section-header">
         <span style="font-weight:600;font-size:13px">Plasserings-regler</span>
@@ -58,6 +89,7 @@ const TEMPLATE = `
         Ingen regler ennå. Legg til for å kontrollere plasseringer.
       </div>
     </div>
+
     <div class="history-section">
       <div class="section-header">
         <span style="font-weight:600;font-size:13px">Historikk</span>
@@ -76,7 +108,7 @@ export const classesView = {
     await loadClasses();
     bindEvents();
   },
-  unmount() { _activeClass = null; },
+  unmount() { _activeClass = null; _students = []; },
 };
 
 async function loadClasses() {
@@ -97,7 +129,6 @@ function renderClassList() {
     const el = document.createElement('div');
     el.className = 'class-list-item' + (_activeClass?.id === cls.id ? ' active' : '');
     el.dataset.id = cls.id;
-
     const students = parseStudents(cls.students);
     el.innerHTML = `
       <span>${escHtml(cls.name)}</span>
@@ -111,18 +142,112 @@ function renderClassList() {
 async function openClass(cls) {
   _activeClass = cls;
   _constraints = await window.api.getConstraints(cls.id);
+  _students = normalizeStudentsLocal(parseStudents(cls.students));
 
   document.getElementById('class-detail-panel')?.classList.remove('hidden');
   document.getElementById('class-name-input').value = cls.name;
+  document.getElementById('class-student-count').textContent = _students.length;
 
-  const students = normalizeStudents(parseStudents(cls.students));
-  document.getElementById('class-students-input').value = students.map(s => s.name).join('\n');
-  document.getElementById('class-student-count').textContent = students.length;
-
+  renderStudentList();
   renderConstraints();
   renderHistorySummary(cls.id);
-  renderClassList(); // Refresh active state
+  renderClassList();
 }
+
+/* ---- Student list rendering ---- */
+
+function renderStudentList() {
+  const list  = document.getElementById('student-list');
+  const empty = document.getElementById('student-list-empty');
+  if (!list) return;
+
+  list.innerHTML = '';
+
+  if (_students.length === 0) {
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+
+  _students.forEach((student, idx) => {
+    const row = document.createElement('div');
+    row.className = 'student-row';
+    row.dataset.idx = idx;
+
+    const activePlacement = student.placement ?? null;
+
+    row.innerHTML = `
+      <div class="student-row-main">
+        <span class="student-name">${escHtml(student.name)}</span>
+        ${student.note ? `<span class="student-note-chip" title="${escHtml(student.note)}"><i class="fa-solid fa-note-sticky"></i></span>` : ''}
+        <button class="btn btn-ghost btn-xs btn-note-edit" data-idx="${idx}" title="Rediger notat">
+          <i class="fa-solid fa-pencil"></i>
+        </button>
+      </div>
+      <div class="student-placement-row">
+        ${PLACEMENT_OPTIONS.map(opt => `
+          <button class="placement-btn${activePlacement === opt.value ? ' active' : ''}"
+            data-idx="${idx}" data-placement="${opt.value}" title="${escHtml(opt.label)}">
+            ${opt.icon}
+          </button>
+        `).join('')}
+        ${activePlacement ? `<button class="placement-btn placement-clear" data-idx="${idx}" title="Fjern prioritet">✕</button>` : ''}
+      </div>
+    `;
+
+    row.querySelectorAll('.placement-btn[data-placement]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.idx, 10);
+        const val = btn.dataset.placement;
+        _students[i].placement = _students[i].placement === val ? null : val;
+        document.getElementById('class-student-count').textContent = _students.length;
+        renderStudentList();
+      });
+    });
+
+    const clearBtn = row.querySelector('.placement-clear');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        const i = parseInt(clearBtn.dataset.idx, 10);
+        _students[i].placement = null;
+        renderStudentList();
+      });
+    }
+
+    row.querySelector('.btn-note-edit').addEventListener('click', () => openNoteModal(idx));
+
+    list.appendChild(row);
+  });
+}
+
+function openNoteModal(idx) {
+  const student = _students[idx];
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Notat for ${escHtml(student.name)}</span>
+      </div>
+      <textarea id="note-input" class="students-textarea" rows="4"
+        placeholder="F.eks: ADHD – sitter best fremst til venstre"
+        style="min-height:80px">${escHtml(student.note ?? '')}</textarea>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="note-cancel">Avbryt</button>
+        <button class="btn btn-primary" id="note-save">Lagre</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#note-cancel').addEventListener('click', () => backdrop.remove());
+  backdrop.querySelector('#note-save').addEventListener('click', () => {
+    _students[idx].note = backdrop.querySelector('#note-input').value.trim();
+    backdrop.remove();
+    renderStudentList();
+  });
+}
+
+/* ---- Constraints ---- */
 
 function renderConstraints() {
   const list  = document.getElementById('constraints-list');
@@ -145,7 +270,7 @@ function renderConstraints() {
     el.innerHTML = `
       <span class="constraint-type-badge ${badgeCls}">${typeLabel}</span>
       <span style="flex:1;font-size:12px">${escHtml(c.student_a)} og ${escHtml(c.student_b)}</span>
-      <button class="btn btn-ghost btn-sm btn-icon btn-del-constraint" data-id="${c.id}">
+      <button class="btn btn-ghost btn-sm btn-icon btn-del-constraint" data-id="${c.id}" title="Slett regel">
         <i class="fa-solid fa-xmark"></i>
       </button>
     `;
@@ -167,25 +292,23 @@ async function renderHistorySummary(classId) {
     : 'Ingen historikk ennå';
 }
 
+/* ---- Save ---- */
+
 async function saveClass() {
   if (!_activeClass) return;
-
-  const name     = document.getElementById('class-name-input')?.value.trim();
-  const rawText  = document.getElementById('class-students-input')?.value ?? '';
-  const students = rawText.split('\n').map(s => s.trim()).filter(Boolean);
-
+  const name = document.getElementById('class-name-input')?.value.trim();
   if (!name) { showToast('Skriv inn klassenavn', 'error'); return; }
 
   await window.api.saveClass({
     id: _activeClass.id,
     name,
-    students: JSON.stringify(students),
+    students: JSON.stringify(_students),
   });
 
   _activeClass.name     = name;
-  _activeClass.students = JSON.stringify(students);
+  _activeClass.students = JSON.stringify(_students);
   await loadClasses();
-  document.getElementById('class-student-count').textContent = students.length;
+  document.getElementById('class-student-count').textContent = _students.length;
   showToast('Klasse lagret!', 'success');
 }
 
@@ -201,11 +324,8 @@ async function deleteClass() {
 
 async function addConstraint() {
   if (!_activeClass) return;
+  const names = _students.map(s => s.name);
 
-  const students = normalizeStudents(parseStudents(_activeClass.students));
-  const names    = students.map(s => s.name);
-
-  // Enkel modal
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.innerHTML = `
@@ -213,19 +333,19 @@ async function addConstraint() {
       <div class="modal-header"><span class="modal-title">Ny plasserings-regel</span></div>
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Elev A</label>
-        <select id="c-student-a" class="form-input">
+        <select id="c-student-a" class="select select-bordered w-full">
           ${names.map(n => `<option>${escHtml(n)}</option>`).join('')}
         </select>
       </div>
       <div class="form-group" style="margin-bottom:12px">
         <label class="form-label">Elev B</label>
-        <select id="c-student-b" class="form-input">
+        <select id="c-student-b" class="select select-bordered w-full">
           ${names.map(n => `<option>${escHtml(n)}</option>`).join('')}
         </select>
       </div>
       <div class="form-group" style="margin-bottom:16px">
         <label class="form-label">Type</label>
-        <select id="c-type" class="form-input">
+        <select id="c-type" class="select select-bordered w-full">
           <option value="always_together">Alltid sammen</option>
           <option value="never_together">Aldri sammen</option>
         </select>
@@ -252,6 +372,8 @@ async function addConstraint() {
   });
 }
 
+/* ---- Events ---- */
+
 function bindEvents() {
   document.getElementById('btn-new-class')?.addEventListener('click', async () => {
     const result = await window.api.saveClass({ id: null, name: 'Ny klasse', students: '[]' });
@@ -266,12 +388,43 @@ function bindEvents() {
     if (_activeClass) window.navTo('seating-history', { classId: _activeClass.id });
   });
 
-  document.getElementById('class-students-input')?.addEventListener('input', () => {
+  document.getElementById('btn-add-student')?.addEventListener('click', () => {
+    const name = prompt('Elevnavn:')?.trim();
+    if (!name) return;
+    _students.push({ id: `new-${Date.now()}`, name, note: '', placement: null });
+    document.getElementById('class-student-count').textContent = _students.length;
+    renderStudentList();
+  });
+
+  document.getElementById('btn-toggle-bulk')?.addEventListener('click', () => {
+    const listView = document.getElementById('student-list-view');
+    const bulkView = document.getElementById('student-bulk-view');
+    const isShowing = !bulkView.classList.contains('hidden');
+    if (isShowing) {
+      bulkView.classList.add('hidden');
+      listView.classList.remove('hidden');
+    } else {
+      document.getElementById('class-students-input').value = _students.map(s => s.name).join('\n');
+      listView.classList.add('hidden');
+      bulkView.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('btn-apply-bulk')?.addEventListener('click', () => {
     const raw = document.getElementById('class-students-input')?.value ?? '';
-    const count = raw.split('\n').map(s => s.trim()).filter(Boolean).length;
-    document.getElementById('class-student-count').textContent = count;
+    const names = raw.split('\n').map(s => s.trim()).filter(Boolean);
+    const existing = Object.fromEntries(_students.map(s => [s.name, s]));
+    _students = names.map((name, i) =>
+      existing[name] ?? { id: `new-${Date.now()}-${i}`, name, note: '', placement: null }
+    );
+    document.getElementById('class-student-count').textContent = _students.length;
+    document.getElementById('student-bulk-view').classList.add('hidden');
+    document.getElementById('student-list-view').classList.remove('hidden');
+    renderStudentList();
   });
 }
+
+/* ---- Helpers ---- */
 
 function parseStudents(raw) {
   if (!raw) return [];
@@ -279,6 +432,13 @@ function parseStudents(raw) {
     const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
     return Array.isArray(p) ? p : String(raw).split('\n').filter(Boolean);
   } catch { return String(raw).split('\n').filter(Boolean); }
+}
+
+function normalizeStudentsLocal(arr) {
+  return arr.map((s, i) => {
+    if (typeof s === 'string') return { id: `s-${i}-${s}`, name: s, note: '', placement: null };
+    return { placement: null, note: '', ...s, id: s.id ?? `s-${i}` };
+  });
 }
 
 function escHtml(str) {

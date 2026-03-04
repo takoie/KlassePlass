@@ -39,13 +39,20 @@ export function randomizeSeating(desks, students, studentsById, opts = {}) {
     }
   }
 
+  // Beregn Y-range for plasserings-prioritering
+  const allY = desks.map(d => d.y).filter(y => y != null);
+  const minY = Math.min(...allY);
+  const maxY = Math.max(...allY);
+  const rangeY = maxY - minY || 1;
+  const midY = minY + rangeY / 2;
+
   let bestLayout = null;
   let bestScore = Infinity;
   let bestViolations = [];
 
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
     const shuffled = fisherYatesShuffle([...freeStudents]);
-    const candidate = buildLayout(desks, shuffled, freeSlotPositions, lockedSlots);
+    const candidate = buildLayout(desks, shuffled, freeSlotPositions, lockedSlots, minY, maxY, midY);
 
     const { valid, violations } = checkHardConstraints(candidate, studentsById, constraints);
     if (valid) {
@@ -70,7 +77,7 @@ export function randomizeSeating(desks, students, studentsById, opts = {}) {
   };
 }
 
-function buildLayout(desks, shuffledStudents, freeSlots, lockedSlots) {
+function buildLayout(desks, shuffledStudents, freeSlots, lockedSlots, minY, maxY, midY) {
   const result = desks.map(desk => ({
     ...desk,
     slots: Array(DESK_TYPES[desk.type]?.capacity ?? 1).fill(null),
@@ -87,13 +94,56 @@ function buildLayout(desks, shuffledStudents, freeSlots, lockedSlots) {
     }
   }
 
-  // Plasser frie studenter
+  // Skill ut studenter med plasseringspreferanser
+  const prioritized = shuffledStudents.filter(s => s.placement);
+  const regular     = shuffledStudents.filter(s => !s.placement);
+
+  // Bygg en sorted kopi av freeSlots per gruppe
+  const rangeY = maxY - minY || 1;
+  const top20  = minY + rangeY * 0.2;
+  const bot80  = minY + rangeY * 0.8;
+
+  const slotsForStudent = (placement) => {
+    const deskLookup = deskById;
+    return freeSlots.filter(({ deskId }) => {
+      const deskY = deskLookup[deskId]?.y ?? midY;
+      if (placement === 'never-front')  return deskY >= top20;
+      if (placement === 'never-back')   return deskY <= bot80;
+      return true;
+    }).sort((a, b) => {
+      const ay = deskById[a.deskId]?.y ?? midY;
+      const by = deskById[b.deskId]?.y ?? midY;
+      if (placement === 'front')  return ay - by;
+      if (placement === 'back')   return by - ay;
+      if (placement === 'middle') return Math.abs(ay - midY) - Math.abs(by - midY);
+      return 0;
+    });
+  };
+
+  const usedSlots = new Set();
+
+  // Place prioritized students first
+  for (const student of prioritized) {
+    const candidates = slotsForStudent(student.placement).filter(sl => {
+      const key = `${sl.deskId}:${sl.slotIdx}`;
+      return !usedSlots.has(key) && !deskById[sl.deskId]?.slots[sl.slotIdx];
+    });
+    if (candidates.length > 0) {
+      const { deskId, slotIdx } = candidates[0];
+      usedSlots.add(`${deskId}:${slotIdx}`);
+      deskById[deskId].slots[slotIdx] = { studentId: student.id, locked: false };
+    }
+  }
+
+  // Place regular students in shuffle order
   let si = 0;
   for (const { deskId, slotIdx } of freeSlots) {
-    if (si >= shuffledStudents.length) break;
+    const key = `${deskId}:${slotIdx}`;
+    if (usedSlots.has(key)) continue;
+    if (si >= regular.length) break;
     if (deskById[deskId] && !deskById[deskId].slots[slotIdx]) {
       deskById[deskId].slots[slotIdx] = {
-        studentId: shuffledStudents[si].id,
+        studentId: regular[si].id,
         locked: false,
       };
       si++;

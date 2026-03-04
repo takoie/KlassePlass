@@ -1,5 +1,5 @@
 /**
- * Felles render-funksjon for pulter.
+ * Felles render-funksjon for bord.
  * Brukes av: seating-editor, seating-display, presentation.
  * Maks 300 linjer — hold den tynn.
  */
@@ -13,7 +13,7 @@ import { DESK_TYPES, DESK_COLOR_CLASS } from './constants.js';
  * @param {Object} options
  * @param {boolean} options.interactive      - Legg til drag/drop handlers
  * @param {boolean} options.showNames        - Vis elevnavn (default true)
- * @param {boolean} options.showNumbers      - Vis pultnumre
+ * @param {boolean} options.showNumbers      - Vis bordnumre
  * @param {boolean} options.showGroups       - Vis gruppefarger
  * @param {boolean} options.hideIcons        - Skjul lås/notat ikoner (presentasjon)
  * @param {Function} options.onStudentDrop   - (sourceDeskId, sourceSlot, targetDeskId, targetSlot)

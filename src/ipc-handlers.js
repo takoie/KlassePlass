@@ -157,6 +157,16 @@ function registerHandlers(winRef) {
     return { success: true, newPath, requiresRestart: true };
   });
 
+  // ---- Dupliser klassekart (ny periode) ----
+  ipcMain.handle('duplicate-seating', async (_, { sourceId, name, comment }) => {
+    const source = await dbGet('SELECT * FROM seatings WHERE id=?', [sourceId]);
+    if (!source) return { error: 'Ikke funnet' };
+    return dbRun(
+      'INSERT INTO seatings (name, class_id, room_id, placements, comment) VALUES (?,?,?,?,?)',
+      [name, source.class_id, source.room_id, source.placements, comment ?? '']
+    );
+  });
+
   // ---- Restart (for auto-update) ----
   ipcMain.on('restart-app', () => {
     const { autoUpdater } = require('electron-updater');

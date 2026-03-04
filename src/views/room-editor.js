@@ -1,6 +1,6 @@
 /**
  * room-editor.js — Romdesigner med snapping, multi-select og dekorasjoner.
- * Snapping: edge-to-edge mot andre pulter, fallback 10px grid.
+ * Snapping: edge-to-edge mot andre bord, fallback 10px grid.
  */
 
 import { DESK_TYPES } from '../shared/constants.js';
@@ -25,7 +25,7 @@ const TEMPLATE = `
     </div>
     <div class="toolbar-center">
       <div class="desk-picker" id="desk-picker">
-        <button class="desk-add-btn" data-type="single" title="Enkeltpult"><span class="desk-mini single"></span></button>
+        <button class="desk-add-btn" data-type="single" title="Enkeltbord"><span class="desk-mini single"></span></button>
         <button class="desk-add-btn" data-type="bench2" title="Benk (2)"><span class="desk-mini bench2"></span></button>
         <button class="desk-add-btn" data-type="bench4" title="Benk (4)"><span class="desk-mini bench4 w-8"></span></button>
         <button class="desk-add-btn" data-type="round3" title="Rundbord (3)"><span class="desk-mini round"></span></button>
@@ -449,30 +449,100 @@ async function saveRoom() {
 
 /* ---- Auto-generer rutenett ---- */
 
-function autoGenerate() {
-  const cols = parseInt(prompt('Antall kolonner:', '5') ?? '5', 10);
-  const rows = parseInt(prompt('Antall rader:', '5') ?? '5', 10);
-  if (!cols || !rows) return;
+const AUTO_PRESETS = [
+  { label: '2-2 (4 bord per rad)',      groups: [2, 2] },
+  { label: '2-2-2 (6 bord per rad)',    groups: [2, 2, 2] },
+  { label: '2-2-2-2 (8 bord per rad)',  groups: [2, 2, 2, 2] },
+  { label: '2-3-2 (7 bord per rad)',    groups: [2, 3, 2] },
+  { label: '3-3-3 (9 bord per rad)',    groups: [3, 3, 3] },
+  { label: '4-4 (8 bord per rad)',      groups: [4, 4] },
+  { label: '4-2-4 (10 bord per rad)',   groups: [4, 2, 4] },
+  { label: 'Eksamen (1-1-1-1-1)',       groups: [1, 1, 1, 1, 1] },
+];
 
-  _room.desks = [];
-  const type  = 'single';
-  const info  = DESK_TYPES[type];
-  const gapX  = 20, gapY = 20;
-  const startX = 40, startY = 80;
+function autoGenerate() {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `
+    <div class="modal" style="min-width:320px">
+      <div class="modal-header"><span class="modal-title">Auto-generer rom</span></div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">Oppsett</label>
+        <select id="ag-preset" class="select select-bordered w-full">
+          ${AUTO_PRESETS.map((p, i) => `<option value="${i}">${escHtml(p.label)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">Antall rader</label>
+        <input type="number" id="ag-rows" class="input input-bordered w-full" value="5" min="1" max="20">
+      </div>
+      <div class="form-group" style="margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="ag-keep-deco" class="checkbox checkbox-sm">
+        <label for="ag-keep-deco" class="form-label" style="margin:0">Behold dekorasjoner</label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="ag-cancel">Avbryt</button>
+        <button class="btn btn-primary" id="ag-ok">Generer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#ag-cancel').addEventListener('click', () => backdrop.remove());
+  backdrop.querySelector('#ag-ok').addEventListener('click', () => {
+    const presetIdx  = parseInt(backdrop.querySelector('#ag-preset').value, 10);
+    const rows       = parseInt(backdrop.querySelector('#ag-rows').value, 10) || 5;
+    const keepDeco   = backdrop.querySelector('#ag-keep-deco').checked;
+    backdrop.remove();
+    applyAutoGenerate(AUTO_PRESETS[presetIdx].groups, rows, keepDeco);
+  });
+}
+
+function applyAutoGenerate(groups, rows, keepDeco) {
+  const info    = DESK_TYPES.single;
+  const deskW   = info.width;
+  const deskH   = info.height;
+  const aisle   = 40;  // gap between groups
+  const gapX    = 2;   // gap between desks in same group
+  const rowGapY = 30;
+
+  // Compute total row width
+  const rowWidth = groups.reduce((sum, g) => sum + g * deskW + (g - 1) * gapX, 0)
+    + (groups.length - 1) * aisle;
+
+  const canvasW = 920;
+  const startX  = Math.round((canvasW - rowWidth) / 2);
+  const startY  = 80;
+
+  if (!keepDeco) {
+    _room.desks = [];
+    _room.decorations = [];
+  } else {
+    _room.desks = [];
+  }
 
   for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      _room.desks.push(createDesk(type, startX + c * (info.width + gapX), startY + r * (info.height + gapY)));
+    let x = startX;
+    const y = startY + r * (deskH + rowGapY);
+    for (let g = 0; g < groups.length; g++) {
+      for (let i = 0; i < groups[g]; i++) {
+        _room.desks.push(createDesk('single', x, y));
+        x += deskW + (i < groups[g] - 1 ? gapX : 0);
+      }
+      if (g < groups.length - 1) x += aisle;
     }
   }
   render();
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 /* ---- Events ---- */
 
 function bindEvents() {
   document.getElementById('btn-room-back')?.addEventListener('click', () => {
-    if (confirm('Gå tilbake? Ulagrede endringer forsvinner.')) window.navTo('charts-dashboard');
+    if (confirm('Gå tilbake? Ulagrede endringer forsvinner.')) window.navTo('rooms-list');
   });
   document.getElementById('btn-room-save')?.addEventListener('click', saveRoom);
   document.getElementById('btn-auto-generate')?.addEventListener('click', autoGenerate);
@@ -484,7 +554,7 @@ function bindEvents() {
     });
   });
 
-  // Legg til pulter
+  // Legg til bord
   document.querySelectorAll('.desk-add-btn[data-type]').forEach(btn => {
     btn.addEventListener('click', () => {
       const type = btn.dataset.type;

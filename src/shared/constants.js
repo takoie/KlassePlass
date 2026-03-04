@@ -6,7 +6,7 @@ export const CANVAS_W = 920;
 export const SNAP = 15;
 
 export const DESK_TYPES = {
-  single: { width: 85,  height: 55,  capacity: 1, label: 'Enkeltpult' },
+  single: { width: 85,  height: 55,  capacity: 1, label: 'Enkeltbord' },
   bench2: { width: 170, height: 55,  capacity: 2, label: 'Benk (2)' },
   bench4: { width: 340, height: 55,  capacity: 4, label: 'Benk (4)' },
   round3: { width: 130, height: 130, capacity: 3, label: 'Rundbord (3)' },

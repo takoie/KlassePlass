@@ -178,7 +178,7 @@ async function createChart() {
   const layout   = parseLayout(room.layout_data);
 
   if (!layout?.desks?.length) {
-    showToast('Rommet har ingen pulter. Rediger rommet først.', 'error');
+    showToast('Rommet har ingen bord. Rediger rommet først.', 'error');
     return;
   }
 

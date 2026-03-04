@@ -8,6 +8,7 @@ import { chartsDashboardView }  from './views/charts-dashboard.js';
 import { seatingSetupView }     from './views/seating-setup.js';
 import { seatingEditorView }    from './views/seating-editor.js';
 import { roomEditorView }       from './views/room-editor.js';
+import { roomsListView }        from './views/rooms-list.js';
 import { classesView }          from './views/classes.js';
 import { settingsView }         from './views/settings.js';
 import { seatingHistoryView }   from './views/seating-history.js';
@@ -17,6 +18,7 @@ const VIEWS = {
   'seating-setup':    seatingSetupView,
   'seating-editor':   seatingEditorView,
   'room-editor':      roomEditorView,
+  'rooms-list':       roomsListView,
   'classes':          classesView,
   'settings':         settingsView,
   'seating-history':  seatingHistoryView,

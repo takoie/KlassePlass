@@ -41,9 +41,17 @@ export function buildStudentsById(students) {
  */
 export function normalizeStudents(raw) {
   return raw.map((s, i) => {
-    if (typeof s === 'string') return { id: `legacy-${i}-${s}`, name: s, note: '' };
-    return s;
+    if (typeof s === 'string') return { id: `legacy-${i}-${s}`, name: s, note: '', placement: null };
+    return { placement: null, ...s };
   });
+}
+
+/** ISO 8601 ukenummer for en dato */
+export function getWeekNumber(date = new Date()) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
 /**
