@@ -15,9 +15,8 @@ function createMainWindow() {
     height: 820,
     icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     frame: false,
-    transparent: false,
-    backgroundColor: '#282a36',
-    roundedCorners: true,
+    transparent: true,
+    roundedCorners: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

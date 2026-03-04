@@ -20,9 +20,9 @@
   <link rel="stylesheet" href="src/styles/classes.css">
   <link rel="stylesheet" href="src/styles/canvas.css">
 </head>
-<body class="bg-base-200 text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;">
-  <div id="app-shell" style="height:100vh;box-sizing:border-box;">
-  <div id="app" class="flex flex-col" style="height:100%;overflow:hidden;">
+<body style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;background:transparent;margin:0;padding:0;">
+  <div id="app-shell" style="height:100vh;box-sizing:border-box;background:transparent;padding:0;">
+  <div id="app" class="flex flex-col bg-base-200 text-base-content" style="height:100%;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
     <!-- Title bar — only window controls, no duplicate logo -->
     <div class="titlebar flex items-center justify-end px-2 flex-shrink-0 bg-base-200" style="-webkit-app-region:drag;height:28px;border-bottom:1px solid oklch(var(--b3)/0.5)">
       <div class="flex gap-1" style="-webkit-app-region:no-drag">
@@ -99,6 +99,7 @@
   <div id="modal-portal"></div>
 
   <style>
+    html, body { background: transparent !important; margin: 0; padding: 0; }
     .hidden { display: none !important; }
 
     /* Modal portal — plain container, no positioning so fixed children use viewport */
