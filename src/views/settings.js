@@ -24,8 +24,8 @@ const TEMPLATE = `
     </div>
     <div class="settings-row">
       <div>
-        <div class="settings-label">Standard visning</div>
-        <div class="settings-hint">Vis klassekart med tavle nederst som standard</div>
+        <div class="settings-label">Roter visning som standard</div>
+        <div class="settings-hint">Åpne klassekart med visningen rotert 180° som standard</div>
       </div>
       <input type="checkbox" id="setting-flip-display" class="toggle toggle-primary">
     </div>
