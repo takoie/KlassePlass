@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="no" data-theme="dracula">
+<html lang="no" data-theme="dracula" style="background:transparent !important">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,9 +20,9 @@
   <link rel="stylesheet" href="src/styles/classes.css">
   <link rel="stylesheet" href="src/styles/canvas.css">
 </head>
-<body class="bg-transparent text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased">
-  <div id="app-shell" style="height:100vh;padding:6px;box-sizing:border-box;background:transparent">
-  <div id="app" class="flex flex-col" style="height:100%;border-radius:12px;border:1px solid oklch(var(--b3)/0.8);box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+<body class="text-base-content" style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;background:transparent !important">
+  <div id="app-shell" style="height:100vh;padding:8px;box-sizing:border-box;background:transparent">
+  <div id="app" class="flex flex-col" style="height:100%;border-radius:14px;overflow:hidden;border:1px solid oklch(var(--b3)/0.8);box-shadow:0 24px 64px rgba(0,0,0,0.6)">
     <!-- Title bar — only window controls, no duplicate logo -->
     <div class="titlebar flex items-center justify-end px-2 flex-shrink-0 bg-base-200" style="-webkit-app-region:drag;height:28px;border-bottom:1px solid oklch(var(--b3)/0.5)">
       <div class="flex gap-1" style="-webkit-app-region:no-drag">
@@ -42,34 +42,43 @@
     <div class="flex flex-1 overflow-hidden bg-base-200">
       <!-- Sidebar nav -->
       <nav class="sidebar-nav flex-shrink-0 bg-base-200 flex flex-col" style="width:200px;border-right:1px solid oklch(var(--b3))">
+
+        <!-- Logo -->
         <div class="sidebar-logo">
-          <div style="font-size:0.9rem;font-weight:800;font-style:italic;text-transform:uppercase">
-            <span style="color:#e0f2fe;text-shadow:0 0 8px rgba(59,130,246,0.6)">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 10px #f59e0b">Plass</span>
+          <div style="font-size:1.2rem;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-0.02em">
+            <span style="color:#e0f2fe;text-shadow:0 0 10px rgba(59,130,246,0.7)">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 12px #f59e0b">Plass</span>
           </div>
-          <div style="font-size:10px;opacity:0.4;margin-top:1px">Klasseromsplanlegger</div>
         </div>
+
+        <!-- Main nav group -->
         <div class="sidebar-section" style="flex:1">
-          <div class="nav-item active" data-view="charts-dashboard" onclick="navTo('charts-dashboard')">
-            <i class="fa-solid fa-table-cells-large nav-icon"></i> Klassekart
-          </div>
-          <div class="nav-item" data-view="classes" onclick="navTo('classes')">
-            <i class="fa-solid fa-user-group nav-icon"></i> Klasser
-          </div>
-          <div class="nav-item" data-view="rooms-list" onclick="navTo('rooms-list')">
-            <i class="fa-solid fa-chalkboard nav-icon"></i> Rom
+          <div class="nav-group-box">
+            <div class="nav-item active" data-view="charts-dashboard" onclick="navTo('charts-dashboard')">
+              <i class="fa-solid fa-table-cells-large nav-icon"></i> Klassekart
+            </div>
+            <div class="nav-item" data-view="classes" onclick="navTo('classes')">
+              <i class="fa-solid fa-user-group nav-icon"></i> Klasser
+            </div>
+            <div class="nav-item" data-view="rooms-list" onclick="navTo('rooms-list')">
+              <i class="fa-solid fa-chalkboard nav-icon"></i> Rom
+            </div>
           </div>
         </div>
+
+        <!-- Settings group -->
         <div class="sidebar-section sidebar-bottom">
-          <div class="nav-item" data-view="settings" onclick="navTo('settings')">
-            <i class="fa-solid fa-gear nav-icon"></i> Innstillinger
+          <div class="nav-group-box">
+            <div class="nav-item" data-view="settings" onclick="navTo('settings')">
+              <i class="fa-solid fa-gear nav-icon"></i> Innstillinger
+            </div>
           </div>
         </div>
       </nav>
 
       <!-- Main content — boxed with rounded corners -->
       <div class="flex-1 overflow-hidden" style="padding:8px 8px 8px 0;">
-        <main id="app-content" class="bg-base-100 h-full overflow-auto"
-          style="border-radius:12px;border:1px solid oklch(var(--b3)/0.6);box-shadow:inset 0 1px 0 oklch(var(--b2)/0.5),0 2px 8px rgba(0,0,0,0.15);overflow:hidden;">
+        <main id="app-content" class="bg-base-100 h-full"
+          style="border-radius:10px;border:1px solid oklch(var(--b3)/0.6);box-shadow:0 2px 12px rgba(0,0,0,0.2);overflow:hidden;">
         </main>
       </div>
     </div>
@@ -90,6 +99,9 @@
   <div id="modal-portal"></div>
 
   <style>
+    /* Force transparent background on html/body so rounded window corners show through */
+    html, body { background: transparent !important; }
+
     .hidden { display: none !important; }
 
     /* Modal portal — plain container, no positioning so fixed children use viewport */
@@ -97,12 +109,21 @@
 
     /* Sidebar */
     .sidebar-logo {
-      padding: 14px 16px 12px;
+      padding: 18px 16px 16px;
       border-bottom: 1px solid oklch(var(--b3));
       flex-shrink: 0;
     }
-    .sidebar-section { padding: 8px 8px; }
-    .sidebar-bottom { border-top: 1px solid oklch(var(--b3)); padding-top: 8px; }
+    .sidebar-section { padding: 10px 8px; }
+    .sidebar-bottom { border-top: 1px solid oklch(var(--b3)); padding-top: 8px; padding-bottom: 8px; }
+
+    /* Nav group box — subtle container around nav items */
+    .nav-group-box {
+      background: oklch(var(--b1) / 0.5);
+      border: 1px solid oklch(var(--b3) / 0.5);
+      border-radius: 10px;
+      padding: 4px;
+      overflow: hidden;
+    }
 
     /* Nav items */
     .nav-item {
@@ -110,14 +131,15 @@
       align-items: center;
       gap: 10px;
       padding: 9px 12px;
-      border-radius: 10px;
-      margin-bottom: 2px;
+      border-radius: 7px;
+      margin-bottom: 1px;
       cursor: pointer;
       font-size: 13px;
       font-weight: 500;
       transition: background 0.15s, color 0.15s;
       color: oklch(var(--bc) / 0.55);
     }
+    .nav-item:last-child { margin-bottom: 0; }
     .nav-item:hover {
       background: oklch(var(--b3));
       color: oklch(var(--bc));
