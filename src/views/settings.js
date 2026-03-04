@@ -7,9 +7,12 @@ import { showToast, getPortal } from '../shared/utils.js';
 
 const THEMES = {
   dark: [
-    { id: 'night',   label: 'Natt',   bg: '#1a1f2e', primary: '#7c3aed' },
-    { id: 'dracula', label: 'Dracula', bg: '#282a36', primary: '#bd93f9' },
-    { id: 'coffee',  label: 'Kaffe',  bg: '#1e1512', primary: '#db924b' },
+    { id: 'night',     label: 'Natt',      bg: '#1a1f2e', primary: '#7c3aed' },
+    { id: 'dracula',   label: 'Dracula',   bg: '#282a36', primary: '#bd93f9' },
+    { id: 'coffee',    label: 'Kaffe',     bg: '#1e1512', primary: '#db924b' },
+    { id: 'halloween', label: 'Halloween', bg: '#1a0a00', primary: '#f28c18' },
+    { id: 'black',     label: 'Svart',     bg: '#000000', primary: '#343232' },
+    { id: 'dim',       label: 'Dim',       bg: '#1f2937', primary: '#9ca3af' },
   ],
   light: [
     { id: 'nord',      label: 'Nord',    bg: '#eceff4', primary: '#5e81ac' },

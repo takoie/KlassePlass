@@ -66,7 +66,7 @@ async function init() {
   navTo('charts-dashboard');
 }
 
-const DARK_THEMES  = ['night', 'dracula', 'coffee'];
+const DARK_THEMES  = ['night', 'dracula', 'coffee', 'halloween', 'black', 'dim'];
 const LIGHT_THEMES = ['nord', 'winter', 'corporate'];
 
 function applyTheme(settings) {
