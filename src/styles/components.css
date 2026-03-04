@@ -1,0 +1,99 @@
+/* ============================================================
+   components.css — Gjenbrukbare UI-komponenter:
+   modaler, toast, context-meny, badge, animasjoner, scrollbar.
+   ============================================================ */
+
+/* ---- Modal (custom kp-prefix for å unngå DaisyUI-konflikt) ---- */
+.kp-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.15s ease;
+}
+.kp-modal {
+  background: oklch(var(--b2));
+  border: 1px solid oklch(var(--b3));
+  border-radius: 16px;
+  padding: 24px;
+  min-width: 340px;
+  max-width: 560px;
+  width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: slideUp 0.2s ease;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.modal-title { font-size: 16px; font-weight: 600; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* ---- Badge (student count, etc.) ---- */
+.badge-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: 9999px;
+  background: oklch(var(--p) / 0.15);
+  color: oklch(var(--p));
+  font-size: 11px; font-weight: 600;
+}
+
+/* ---- Animasjoner ---- */
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ---- Context menu ---- */
+.context-menu {
+  position: fixed;
+  background: oklch(var(--b2));
+  border: 1px solid oklch(var(--b3));
+  border-radius: 10px;
+  padding: 4px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 2000;
+  animation: fadeIn 0.1s ease;
+}
+.context-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-radius: 6px;
+  cursor: pointer; font-size: 13px;
+  transition: background 0.15s;
+}
+.context-menu-item:hover { background: oklch(var(--b3)); }
+.context-menu-item.danger { color: oklch(var(--er)); }
+.context-menu-item.danger:hover { background: oklch(var(--er) / 0.1); }
+.context-menu-divider { height: 1px; background: oklch(var(--b3)); margin: 4px 0; }
+
+/* ---- Toast ---- */
+#toast-container {
+  position: fixed; bottom: 20px; right: 20px;
+  display: flex; flex-direction: column; gap: 8px; z-index: 10000;
+}
+.toast {
+  padding: 10px 16px; border-radius: 10px; font-size: 13px;
+  background: oklch(var(--b2)); border: 1px solid oklch(var(--b3));
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  opacity: 0; transform: translateX(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  max-width: 320px;
+}
+.toast.toast-show { opacity: 1; transform: translateX(0); }
+.toast.toast-success { border-color: oklch(var(--su)); }
+.toast.toast-error   { border-color: oklch(var(--er)); }
+.toast.toast-warning { border-color: oklch(var(--wa)); }
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: oklch(var(--b3)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(var(--bc) / 0.2); }
+
+/* ---- Animasjoner (trekk-modus) ---- */
+.anim-fly-in {
+  transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22,1,0.36,1) !important;
+}

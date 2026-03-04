@@ -1,0 +1,140 @@
+/* ============================================================
+   room-editor.css — Romdesigner-spesifikke stiler:
+   room-canvas, bevegbare bord, dekorasjoner, selection-box,
+   desk-picker, design-mode toggle.
+   ============================================================ */
+
+/* ---- Room canvas ---- */
+.room-canvas {
+  position: relative;
+  width: 920px;
+  min-height: 600px;
+  background: oklch(var(--b2));
+  border: 1px solid oklch(var(--b3));
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* ---- Romdesigner: bevegbare bord ---- */
+.room-desk {
+  cursor: move;
+  position: absolute;
+}
+.room-desk.selected {
+  box-shadow: 0 0 0 2px oklch(var(--p)), 0 2px 8px rgba(0,0,0,0.25);
+  border-color: oklch(var(--p));
+}
+.room-desk.drag-ghost { opacity: 0.5; }
+
+/* ---- Dekorasjoner ---- */
+.decoration {
+  position: absolute;
+  border-radius: 4px;
+  cursor: move;
+}
+.decoration-wall {
+  background: oklch(var(--b3) / 0.5);
+  border: 2px solid oklch(var(--b3));
+}
+.decoration-cabinet {
+  background: rgba(120,53,15,0.25);
+  border: 2px solid rgba(180,83,9,0.5);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(180,83,9,0.7);
+}
+.decoration-window {
+  background: rgba(125,211,252,0.08);
+  border: 2px dashed rgba(125,211,252,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: rgba(125,211,252,0.6);
+}
+.decoration-door {
+  background: rgba(34,197,94,0.08);
+  border: 2px solid rgba(34,197,94,0.35);
+  border-radius: 0 0 4px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(34,197,94,0.6);
+}
+.decoration-label { background: transparent; font-size: 11px; font-weight: 500; pointer-events: none; }
+.decoration.selected-deco {
+  outline: 2px dashed oklch(var(--p));
+  outline-offset: 2px;
+}
+
+/* ---- Selection box (multi-select) ---- */
+.selection-box {
+  position: absolute;
+  border: 1px dashed oklch(var(--p));
+  background: oklch(var(--p) / 0.08);
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ---- Desk picker toolbar ---- */
+.desk-picker, .deco-picker {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.desk-add-btn {
+  padding: 5px 8px;
+  border: 1px solid oklch(var(--b3));
+  border-radius: 6px;
+  background: oklch(var(--b2));
+  cursor: pointer;
+  color: oklch(var(--bc) / 0.5);
+  font-size: 11px;
+  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.desk-add-btn:hover {
+  background: oklch(var(--p) / 0.15);
+  border-color: oklch(var(--p) / 0.5);
+  color: oklch(var(--p));
+}
+.desk-mini {
+  display: inline-block;
+  background: oklch(var(--b3));
+  border: 1px solid oklch(var(--bc) / 0.3);
+  border-radius: 2px;
+}
+.desk-mini.single { width: 14px; height: 9px; }
+.desk-mini.bench2 { width: 22px; height: 9px; }
+.desk-mini.round  { width: 12px; height: 12px; border-radius: 50%; }
+
+/* ---- Design mode toggle ---- */
+.design-mode-toggle {
+  display: flex;
+  gap: 2px;
+  background: oklch(var(--b1));
+  border: 1px solid oklch(var(--b3));
+  border-radius: 6px;
+  padding: 2px;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: oklch(var(--bc) / 0.5);
+  transition: background 0.15s, color 0.15s;
+}
+.toggle-label input { display: none; }
+.toggle-label:has(input:checked) { background: oklch(var(--p)); color: oklch(var(--pc)); }
