@@ -1,0 +1,152 @@
+/* ============================================================
+   group-editor.css — Stiler for gruppe-editoren
+   ============================================================ */
+
+/* ---- Toolbar ---- */
+.ge-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid oklch(var(--b3));
+  flex-wrap: wrap;
+}
+.ge-toolbar-title {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ge-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---- Groups container ---- */
+.ge-groups-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+  align-content: flex-start;
+}
+
+/* ---- Group card ---- */
+.ge-group-card {
+  background: oklch(var(--b2));
+  border: 2px solid oklch(var(--b3));
+  border-radius: 12px;
+  min-width: 180px;
+  max-width: 240px;
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ge-group-card.drag-over {
+  border-color: oklch(var(--p));
+  box-shadow: 0 0 0 3px oklch(var(--p) / 0.2);
+}
+.ge-group-header {
+  padding: 10px 12px 8px;
+  border-radius: 10px 10px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 13px;
+}
+.ge-group-members {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 60px;
+}
+
+/* ---- Student chip ---- */
+.ge-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: oklch(var(--b3));
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+  transition: background 0.15s, opacity 0.15s;
+  position: relative;
+}
+.ge-chip:hover { background: oklch(var(--b3) / 0.8); }
+.ge-chip.dragging { opacity: 0.4; cursor: grabbing; }
+.ge-chip-name { flex: 1; font-weight: 500; }
+.ge-chip-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.ge-chip:hover .ge-chip-actions { opacity: 1; }
+.ge-chip-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 4px;
+  color: inherit;
+  opacity: 0.6;
+  line-height: 1;
+  font-size: 11px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.ge-chip-btn:hover { opacity: 1; background: oklch(var(--b2)); }
+
+/* Leader badge */
+.ge-chip.is-leader { background: oklch(var(--p) / 0.15); border: 1px solid oklch(var(--p) / 0.4); }
+.ge-chip.is-leader .ge-leader-icon { color: oklch(var(--p)); font-size: 10px; }
+
+/* Locked chip */
+.ge-chip.is-locked { border: 1px solid oklch(var(--s) / 0.5); }
+.ge-chip.is-locked .ge-lock-icon { color: oklch(var(--s)); font-size: 10px; }
+
+/* Group color header backgrounds (matching desk-group colors) */
+.ge-group-card[data-color="0"] .ge-group-header { background: oklch(var(--er) / 0.15); }
+.ge-group-card[data-color="1"] .ge-group-header { background: oklch(70% 0.18 55 / 0.2); }
+.ge-group-card[data-color="2"] .ge-group-header { background: oklch(var(--wa) / 0.15); }
+.ge-group-card[data-color="3"] .ge-group-header { background: oklch(var(--su) / 0.15); }
+.ge-group-card[data-color="4"] .ge-group-header { background: oklch(var(--in) / 0.15); }
+.ge-group-card[data-color="5"] .ge-group-header { background: oklch(65% 0.18 290 / 0.2); }
+.ge-group-card[data-color="6"] .ge-group-header { background: oklch(65% 0.18 340 / 0.2); }
+.ge-group-card[data-color="7"] .ge-group-header { background: oklch(60% 0.15 195 / 0.2); }
+
+/* ---- Empty state ---- */
+.ge-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 300px;
+  opacity: 0.5;
+  font-size: 14px;
+  width: 100%;
+}
+
+/* ---- Summary bar ---- */
+.ge-summary {
+  padding: 8px 16px;
+  border-top: 1px solid oklch(var(--b3));
+  font-size: 12px;
+  opacity: 0.6;
+  display: flex;
+  gap: 16px;
+}
