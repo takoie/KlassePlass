@@ -3,7 +3,7 @@
  * Kjøres ved oppstart. CREATE TABLE IF NOT EXISTS er idempotent.
  */
 
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 
 /** Kjør alle migrations mot en åpen sqlite3 db-instans */
 function runMigrations(db) {
@@ -64,6 +64,39 @@ function runMigrations(db) {
       // ---- v3: ROM-migrering — legg til designMode og roomHeight kolonner om de mangler ----
       db.run(`ALTER TABLE rooms ADD COLUMN design_mode TEXT DEFAULT 'board-top'`, () => {});
       db.run(`ALTER TABLE rooms ADD COLUMN room_height INTEGER DEFAULT 500`, () => {});
+
+      // ---- v4: Gruppearbeid ----
+      db.run(`CREATE TABLE IF NOT EXISTS group_assignments (
+        id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+        name               TEXT NOT NULL,
+        class_id           INTEGER NOT NULL,
+        source_seating_id  INTEGER,
+        use_constraints    INTEGER DEFAULT 1,
+        avoid_last_n       INTEGER DEFAULT 3,
+        require_leaders    INTEGER DEFAULT 0,
+        leader_ids         TEXT DEFAULT '[]',
+        created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(class_id) REFERENCES classes(id),
+        FOREIGN KEY(source_seating_id) REFERENCES seatings(id)
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS group_assignment_groups (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        assignment_id INTEGER NOT NULL,
+        group_number  INTEGER NOT NULL,
+        student_ids   TEXT NOT NULL,
+        FOREIGN KEY(assignment_id) REFERENCES group_assignments(id)
+      )`);
+
+      db.run(`CREATE TABLE IF NOT EXISTS group_history (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id      INTEGER NOT NULL,
+        assignment_id INTEGER,
+        pairs         TEXT NOT NULL,
+        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(class_id) REFERENCES classes(id),
+        FOREIGN KEY(assignment_id) REFERENCES group_assignments(id)
+      )`);
 
       // Sett schema-versjon
       db.run(
