@@ -14,9 +14,14 @@ const TEMPLATE = `
     <h1 class="view-title">Klassekart</h1>
     <p class="view-subtitle">Oversikt over alle dine klassekart</p>
   </div>
-  <button class="btn btn-secondary btn-sm" id="btn-new-chart">
-    <i class="fa-solid fa-plus"></i> Nytt klassekart
-  </button>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" id="btn-new-group">
+      <i class="fa-solid fa-people-group"></i> Gruppearbeid
+    </button>
+    <button class="btn btn-secondary btn-sm" id="btn-new-chart">
+      <i class="fa-solid fa-plus"></i> Nytt klassekart
+    </button>
+  </div>
 </div>
 <div class="filter-bar">
   <div class="filter-group">
@@ -130,6 +135,7 @@ function buildChartCard(chart) {
 function bindEvents() {
   document.getElementById('btn-new-chart')?.addEventListener('click', () => window.navTo('seating-setup'));
   document.getElementById('btn-new-chart-empty')?.addEventListener('click', () => window.navTo('seating-setup'));
+  document.getElementById('btn-new-group')?.addEventListener('click', () => window.navTo('group-setup'));
   document.getElementById('filter-class')?.addEventListener('change', applyFilters);
   document.getElementById('filter-sort')?.addEventListener('change', applyFilters);
 }

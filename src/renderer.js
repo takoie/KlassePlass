@@ -12,6 +12,8 @@ import { roomsListView }        from './views/rooms-list.js';
 import { classesView }          from './views/classes.js';
 import { settingsView }         from './views/settings.js';
 import { seatingHistoryView }   from './views/seating-history.js';
+import { groupSetupView }       from './views/group-setup.js';
+import { groupEditorView }      from './views/group-editor.js';
 
 const VIEWS = {
   'charts-dashboard': chartsDashboardView,
@@ -22,6 +24,8 @@ const VIEWS = {
   'classes':          classesView,
   'settings':         settingsView,
   'seating-history':  seatingHistoryView,
+  'group-setup':      groupSetupView,
+  'group-editor':     groupEditorView,
 };
 
 let currentViewModule = null;
