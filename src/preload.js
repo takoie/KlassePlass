@@ -55,6 +55,15 @@ contextBridge.exposeInMainWorld('api', {
   onUpdateReady:    (cb)     => ipcRenderer.on('update-ready', (_, info) => cb(info)),
   restartApp:       ()       => ipcRenderer.send('restart-app'),
 
+  // Gruppearbeid
+  getGroupAssignments:      (cid)    => ipcRenderer.invoke('get-group-assignments', cid),
+  getGroupAssignment:       (id)     => ipcRenderer.invoke('get-group-assignment', id),
+  saveGroupAssignment:      (d)      => ipcRenderer.invoke('save-group-assignment', d),
+  deleteGroupAssignment:    (id)     => ipcRenderer.invoke('delete-group-assignment', id),
+  getGroupAssignmentGroups: (id)     => ipcRenderer.invoke('get-group-assignment-groups', id),
+  getGroupHistory:          (cid, n) => ipcRenderer.invoke('get-group-history', cid, n),
+  saveGroupHistory:         (d)      => ipcRenderer.invoke('save-group-history', d),
+
   // App info
   getVersion:       ()       => ipcRenderer.invoke('get-version'),
   getDbPath:        ()       => ipcRenderer.invoke('get-db-path'),

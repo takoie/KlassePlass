@@ -87,6 +87,53 @@ function registerHandlers(winRef) {
       [classId, studentA, studentB, type]));
   ipcMain.handle('delete-constraint',  async (_, id) => dbRun('DELETE FROM student_constraints WHERE id=?', [id]));
 
+  // ---- Gruppearbeid ----
+  ipcMain.handle('get-group-assignments', async (_, classId) => {
+    const sql = classId
+      ? 'SELECT * FROM group_assignments WHERE class_id=? ORDER BY created_at DESC'
+      : 'SELECT * FROM group_assignments ORDER BY created_at DESC';
+    return classId ? dbAll(sql, [classId]) : dbAll(sql);
+  });
+
+  ipcMain.handle('get-group-assignment', async (_, id) =>
+    dbGet('SELECT * FROM group_assignments WHERE id=?', [id]));
+
+  ipcMain.handle('save-group-assignment', async (_, { id, name, classId, sourceSeatingId, useConstraints, avoidLastN, requireLeaders, leaderIds, groups }) => {
+    const lids = JSON.stringify(leaderIds ?? []);
+    let assignmentId = id;
+    if (id) {
+      await dbRun('UPDATE group_assignments SET name=?,use_constraints=?,avoid_last_n=?,require_leaders=?,leader_ids=? WHERE id=?',
+        [name, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, id]);
+      await dbRun('DELETE FROM group_assignment_groups WHERE assignment_id=?', [id]);
+    } else {
+      const r = await dbRun(
+        'INSERT INTO group_assignments (name,class_id,source_seating_id,use_constraints,avoid_last_n,require_leaders,leader_ids) VALUES (?,?,?,?,?,?,?)',
+        [name, classId, sourceSeatingId ?? null, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids]);
+      assignmentId = r.lastID;
+    }
+    for (const g of groups ?? []) {
+      await dbRun('INSERT INTO group_assignment_groups (assignment_id,group_number,student_ids) VALUES (?,?,?)',
+        [assignmentId, g.groupNumber, JSON.stringify(g.studentIds)]);
+    }
+    return { lastID: assignmentId };
+  });
+
+  ipcMain.handle('delete-group-assignment', async (_, id) => {
+    await dbRun('DELETE FROM group_assignment_groups WHERE assignment_id=?', [id]);
+    await dbRun('DELETE FROM group_history WHERE assignment_id=?', [id]);
+    return dbRun('DELETE FROM group_assignments WHERE id=?', [id]);
+  });
+
+  ipcMain.handle('get-group-assignment-groups', async (_, assignmentId) =>
+    dbAll('SELECT * FROM group_assignment_groups WHERE assignment_id=? ORDER BY group_number ASC', [assignmentId]));
+
+  ipcMain.handle('get-group-history', async (_, classId, n = 10) =>
+    dbAll('SELECT * FROM group_history WHERE class_id=? ORDER BY created_at DESC LIMIT ?', [classId, n]));
+
+  ipcMain.handle('save-group-history', async (_, { classId, assignmentId, pairs }) =>
+    dbRun('INSERT INTO group_history (class_id,assignment_id,pairs) VALUES (?,?,?)',
+      [classId, assignmentId, JSON.stringify(pairs)]));
+
   // ---- Eksport / Import bundle ----
   ipcMain.handle('export-bundle', async (_, classId) => {
     const cls      = await dbGet('SELECT * FROM classes WHERE id=?', [classId]);
