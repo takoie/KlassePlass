@@ -36,7 +36,20 @@ function registerHandlers(winRef) {
     if (id) return dbRun('UPDATE classes SET name=?, students=? WHERE id=?', [name, studentsJson, id]);
     return dbRun('INSERT INTO classes (name, students) VALUES (?,?)', [name, studentsJson]);
   });
-  ipcMain.handle('delete-class', async (_, id) => dbRun('DELETE FROM classes WHERE id=?', [id]));
+  ipcMain.handle('delete-class', async (_, id) => {
+    const seatings = await dbAll('SELECT id FROM seatings WHERE class_id=?', [id]);
+    for (const s of seatings) {
+      await dbRun('DELETE FROM participation_logs WHERE seating_id=?', [s.id]);
+      await dbRun('DELETE FROM seating_history WHERE chart_id=?', [s.id]);
+    }
+    await dbRun('DELETE FROM seatings WHERE class_id=?', [id]);
+    await dbRun('DELETE FROM student_constraints WHERE class_id=?', [id]);
+    await dbRun('DELETE FROM group_assignments WHERE class_id=?', [id]);
+    await dbRun('DELETE FROM group_history WHERE class_id=?', [id]);
+    await dbRun('DELETE FROM schedule WHERE class_id=?', [id]);
+    await dbRun('DELETE FROM station_sessions WHERE class_id=?', [id]);
+    return dbRun('DELETE FROM classes WHERE id=?', [id]);
+  });
 
   // ---- Rom ----
   ipcMain.handle('get-rooms', async () => dbAll('SELECT * FROM rooms ORDER BY name ASC'));
@@ -46,7 +59,10 @@ function registerHandlers(winRef) {
     if (id) return dbRun('UPDATE rooms SET name=?, layout_data=? WHERE id=?', [name, layout, id]);
     return dbRun('INSERT INTO rooms (name, layout_data) VALUES (?,?)', [name, layout]);
   });
-  ipcMain.handle('delete-room', async (_, id) => dbRun('DELETE FROM rooms WHERE id=?', [id]));
+  ipcMain.handle('delete-room', async (_, id) => {
+    await dbRun('UPDATE seatings SET room_id=NULL WHERE room_id=?', [id]);
+    return dbRun('DELETE FROM rooms WHERE id=?', [id]);
+  });
 
   // ---- Klassekart ----
   ipcMain.handle('get-seatings', async (_, classId) => {
@@ -76,9 +92,9 @@ function registerHandlers(winRef) {
     dbAll('SELECT * FROM seating_history WHERE class_id=? ORDER BY created_at DESC LIMIT ?', [classId, n]));
 
   // Lagre historikk kalles fra save-seating-path (etter lagring)
-  ipcMain.handle('save-history', async (_, { classId, chartId, pairs }) =>
-    dbRun('INSERT INTO seating_history (class_id, chart_id, pairs) VALUES (?,?,?)',
-      [classId, chartId, JSON.stringify(pairs)]));
+  ipcMain.handle('save-history', async (_, { classId, chartId, pairs, neighbors }) =>
+    dbRun('INSERT INTO seating_history (class_id, chart_id, pairs, neighbors) VALUES (?,?,?,?)',
+      [classId, chartId, JSON.stringify(pairs ?? []), JSON.stringify(neighbors ?? [])]));
 
   // ---- Constraints ----
   ipcMain.handle('get-constraints',    async (_, cid) => dbAll('SELECT * FROM student_constraints WHERE class_id=?', [cid]));
@@ -157,8 +173,8 @@ function registerHandlers(winRef) {
         'INSERT INTO seatings (name,class_id,room_id,placements,comment,created_at) VALUES (?,?,?,?,?,?)',
         [s.name, cid, s.room_id, s.placements, s.comment ?? '', s.created_at]);
       for (const h of bundle.history?.filter(x => x.chart_id === s.id) ?? []) {
-        await dbRun('INSERT INTO seating_history (class_id,chart_id,pairs,created_at) VALUES (?,?,?,?)',
-          [cid, sid, h.pairs, h.created_at]);
+        await dbRun('INSERT INTO seating_history (class_id,chart_id,pairs,neighbors,created_at) VALUES (?,?,?,?,?)',
+          [cid, sid, h.pairs, h.neighbors ?? '[]', h.created_at]);
       }
     }
     return { success: true, newClassId: cid };
