@@ -1,38 +1,28 @@
 /* ============================================================
-   group-editor.css — Stiler for gruppe-editoren
+   group-editor.css — Stiler for gruppe-editoren (redesign)
    ============================================================ */
 
-/* ---- Toolbar ---- */
-.ge-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  border-bottom: 1px solid oklch(var(--b3));
-  flex-wrap: wrap;
-}
-.ge-toolbar-title {
-  font-size: 15px;
-  font-weight: 600;
-  flex: 1;
-  min-width: 120px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* ---- Toolbar-handlinger ---- */
 .ge-toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+}
+.ge-toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: oklch(var(--b3));
+  margin: 0 4px;
+  flex-shrink: 0;
 }
 
 /* ---- Groups container ---- */
 .ge-groups-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 20px;
+  gap: 14px;
+  padding: 20px 24px;
   overflow-y: auto;
   flex: 1;
   align-content: flex-start;
@@ -41,92 +31,154 @@
 /* ---- Group card ---- */
 .ge-group-card {
   background: oklch(var(--b2));
-  border: 2px solid oklch(var(--b3));
-  border-radius: 12px;
-  min-width: 180px;
-  max-width: 240px;
-  flex: 1 1 180px;
+  border: 1px solid oklch(var(--b3));
+  border-radius: 14px;
+  min-width: 220px;
+  max-width: 300px;
+  flex: 1 1 220px;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px oklch(var(--b1) / 0.5);
+  transition: box-shadow 0.15s, border-color 0.15s;
+  overflow: hidden;
+  /* Farge-aksen settes som border-left via JS (inline style) */
+}
+.ge-group-card:hover {
+  box-shadow: 0 4px 16px oklch(var(--b1) / 0.7);
 }
 .ge-group-card.drag-over {
   border-color: oklch(var(--p));
-  box-shadow: 0 0 0 3px oklch(var(--p) / 0.2);
+  box-shadow: 0 0 0 3px oklch(var(--p) / 0.25);
 }
+
+/* ---- Group header ---- */
 .ge-group-header {
-  padding: 10px 12px 8px;
-  border-radius: 10px 10px 0 0;
+  padding: 12px 14px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-weight: 600;
-  font-size: 13px;
+  gap: 8px;
 }
+.ge-group-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ge-group-number {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+  /* Farge settes inline fra JS */
+}
+.ge-group-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: oklch(var(--bc) / 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ge-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: oklch(var(--b3));
+  color: oklch(var(--bc) / 0.7);
+  flex-shrink: 0;
+}
+
+/* ---- Members list ---- */
 .ge-group-members {
-  padding: 8px;
+  padding: 4px 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 60px;
+  gap: 3px;
+  min-height: 48px;
 }
 
 /* ---- Student chip ---- */
 .ge-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border-radius: 7px;
-  background: oklch(var(--b3));
-  font-size: 12px;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: oklch(var(--b3) / 0.6);
+  border: 1px solid transparent;
+  font-size: 13px;
   cursor: grab;
   user-select: none;
-  transition: background 0.15s, opacity 0.15s;
-  position: relative;
+  transition: background 0.12s, border-color 0.12s;
 }
-.ge-chip:hover { background: oklch(var(--b3) / 0.8); }
-.ge-chip.dragging { opacity: 0.4; cursor: grabbing; }
-.ge-chip-name { flex: 1; font-weight: 500; }
+.ge-chip:hover {
+  background: oklch(var(--b3));
+}
+.ge-chip.dragging {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+.ge-chip-name {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Leader chip */
+.ge-chip.is-leader {
+  background: oklch(84% 0.15 85 / 0.15);
+  border-color: oklch(84% 0.15 85 / 0.5);
+}
+.ge-leader-icon {
+  color: oklch(78% 0.18 85);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* Locked chip */
+.ge-chip.is-locked {
+  border-color: oklch(var(--s) / 0.4);
+}
+.ge-lock-icon-visible {
+  color: oklch(var(--s));
+  font-size: 10px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+/* Chip action buttons */
 .ge-chip-actions {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   opacity: 0;
   transition: opacity 0.1s;
+  flex-shrink: 0;
 }
 .ge-chip:hover .ge-chip-actions { opacity: 1; }
+.ge-chip.is-locked .ge-chip-actions { opacity: 1; }
+
 .ge-chip-btn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px 3px;
+  padding: 2px 4px;
   border-radius: 4px;
-  color: inherit;
-  opacity: 0.6;
+  color: oklch(var(--bc) / 0.5);
   line-height: 1;
   font-size: 11px;
-  transition: opacity 0.15s, background 0.15s;
+  transition: color 0.12s, background 0.12s;
 }
-.ge-chip-btn:hover { opacity: 1; background: oklch(var(--b2)); }
-
-/* Leader badge */
-.ge-chip.is-leader { background: oklch(var(--p) / 0.15); border: 1px solid oklch(var(--p) / 0.4); }
-.ge-chip.is-leader .ge-leader-icon { color: oklch(var(--p)); font-size: 10px; }
-
-/* Locked chip */
-.ge-chip.is-locked { border: 1px solid oklch(var(--s) / 0.5); }
-.ge-chip.is-locked .ge-lock-icon { color: oklch(var(--s)); font-size: 10px; }
-
-/* Group color header backgrounds (matching desk-group colors) */
-.ge-group-card[data-color="0"] .ge-group-header { background: oklch(var(--er) / 0.15); }
-.ge-group-card[data-color="1"] .ge-group-header { background: oklch(70% 0.18 55 / 0.2); }
-.ge-group-card[data-color="2"] .ge-group-header { background: oklch(var(--wa) / 0.15); }
-.ge-group-card[data-color="3"] .ge-group-header { background: oklch(var(--su) / 0.15); }
-.ge-group-card[data-color="4"] .ge-group-header { background: oklch(var(--in) / 0.15); }
-.ge-group-card[data-color="5"] .ge-group-header { background: oklch(65% 0.18 290 / 0.2); }
-.ge-group-card[data-color="6"] .ge-group-header { background: oklch(65% 0.18 340 / 0.2); }
-.ge-group-card[data-color="7"] .ge-group-header { background: oklch(60% 0.15 195 / 0.2); }
+.ge-chip-btn:hover {
+  color: oklch(var(--bc));
+  background: oklch(var(--b2));
+}
+.ge-chip.is-locked .ge-chip-btn.ge-lock-btn {
+  color: oklch(var(--s));
+}
 
 /* ---- Empty state ---- */
 .ge-empty {
@@ -136,17 +188,40 @@
   justify-content: center;
   gap: 12px;
   height: 300px;
-  opacity: 0.5;
+  opacity: 0.4;
   font-size: 14px;
   width: 100%;
 }
 
 /* ---- Summary bar ---- */
 .ge-summary {
-  padding: 8px 16px;
+  padding: 8px 24px;
   border-top: 1px solid oklch(var(--b3));
   font-size: 12px;
-  opacity: 0.6;
+  color: oklch(var(--bc) / 0.45);
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.ge-summary-saved {
+  color: oklch(var(--su));
+  font-weight: 600;
+}
+
+/* ---- Leaders-knapp badge ---- */
+.ge-leader-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: oklch(var(--p));
+  color: oklch(var(--pc));
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  margin-left: 2px;
 }

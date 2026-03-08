@@ -2,8 +2,8 @@
  * group-editor.js — Rediger og lagre gruppeinndelinger.
  */
 
-import { normalizeStudents, showToast } from '../shared/utils.js';
-import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer.js';
+import { normalizeStudents, showToast, showConfirm } from '../shared/utils.js';
+import { generateGroups, buildGroupPairs, groupByLevelHomogeneous, groupByLevelHeterogeneous } from '../shared/groupRandomizer.js';
 
 // 8 gruppefarger (samme palett som desk-group i seating-editor)
 const GROUP_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6'];
@@ -33,17 +33,23 @@ export const groupEditorView = {
 // ---------------------------------------------------------------------------
 
 async function initState(params) {
+  if (params.mode === 'existing') {
+    await initStateFromDb(params.assignmentId);
+  } else {
+    await initStateNew(params);
+  }
+}
+
+async function initStateNew(params) {
   const { mode, name, classId, sourceSeatingId, students, numGroups,
-    useConstraints, avoidLastN, requireLeaders, leaderIds } = params;
+    useConstraints, avoidLastN, requireLeaders, leaderIds, groupingMode } = params;
 
   const studentsById = {};
   const normalized = normalizeStudents(students);
   normalized.forEach(s => { studentsById[s.id] = s; });
 
-  // Hent constraints
   const rawConstraints = await window.api.getConstraints(classId);
 
-  // Hent historikk-par
   let recentPairs = [];
   if (avoidLastN > 0) {
     const histRows = await window.api.getGroupHistory(classId, avoidLastN);
@@ -53,7 +59,7 @@ async function initState(params) {
   }
 
   _state = {
-    mode,                        // 'new' | 'existing'
+    mode,
     name,
     classId,
     sourceSeatingId: sourceSeatingId ?? null,
@@ -61,19 +67,69 @@ async function initState(params) {
     studentsById,
     constraints: rawConstraints ?? [],
     numGroups,
-    groups: [],                  // string[][]
-    lockedPlacements: [],        // [{ studentId, groupIndex }]
+    groups: [],
+    lockedPlacements: [],
     leaderIds: leaderIds ?? [],
     requireLeaders: requireLeaders ?? false,
     useConstraints: useConstraints ?? true,
     avoidLastN: avoidLastN ?? 3,
     recentPairs,
+    groupingMode: groupingMode ?? 'random',
     assignmentId: null,
     saved: false,
   };
 
-  // Initial randomisering
   randomize();
+}
+
+async function initStateFromDb(assignmentId) {
+  const [assignment, groupRows] = await Promise.all([
+    window.api.getGroupAssignment(assignmentId),
+    window.api.getGroupAssignmentGroups(assignmentId),
+  ]);
+
+  if (!assignment) {
+    showToast('Fant ikke gruppeinndelingen', 'error');
+    window.navTo('group-dashboard');
+    return;
+  }
+
+  const cls = await window.api.getClass(assignment.class_id);
+  const rawStudents = cls?.students ?? '[]';
+  const parsed = (() => {
+    try { return JSON.parse(rawStudents); } catch { return String(rawStudents).split('\n').filter(Boolean); }
+  })();
+  const normalized = normalizeStudents(parsed);
+  const studentsById = {};
+  normalized.forEach(s => { studentsById[s.id] = s; });
+
+  const rawConstraints = await window.api.getConstraints(assignment.class_id);
+
+  // Gjenbygg grupper fra DB
+  const groups = groupRows.map(row => {
+    try { return JSON.parse(row.student_ids); } catch { return []; }
+  });
+
+  _state = {
+    mode: 'existing',
+    name: assignment.name,
+    classId: assignment.class_id,
+    sourceSeatingId: assignment.source_seating_id ?? null,
+    students: normalized,
+    studentsById,
+    constraints: rawConstraints ?? [],
+    numGroups: groups.length,
+    groups,
+    lockedPlacements: [],
+    leaderIds: (() => { try { return JSON.parse(assignment.leader_ids ?? '[]'); } catch { return []; } })(),
+    requireLeaders: !!assignment.require_leaders,
+    useConstraints: !!assignment.use_constraints,
+    avoidLastN: assignment.avoid_last_n ?? 3,
+    recentPairs: [],
+    groupingMode: 'random',
+    assignmentId: assignmentId,
+    saved: true,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -82,18 +138,25 @@ async function initState(params) {
 
 function randomize() {
   if (!_state) return;
-  const result = generateGroups({
-    studentIds: _state.students.map(s => s.id),
-    studentsById: _state.studentsById,
-    numGroups: _state.numGroups,
-    constraints: _state.constraints,
-    useConstraints: _state.useConstraints,
-    lockedPlacements: _state.lockedPlacements,
-    leaderIds: _state.leaderIds,
-    requireLeaders: _state.requireLeaders,
-    recentPairs: _state.recentPairs,
-  });
-  _state.groups = result.groups;
+
+  if (_state.groupingMode === 'homogeneous') {
+    _state.groups = groupByLevelHomogeneous(_state.students, _state.numGroups);
+  } else if (_state.groupingMode === 'heterogeneous') {
+    _state.groups = groupByLevelHeterogeneous(_state.students, _state.numGroups);
+  } else {
+    const result = generateGroups({
+      studentIds: _state.students.map(s => s.id),
+      studentsById: _state.studentsById,
+      numGroups: _state.numGroups,
+      constraints: _state.constraints,
+      useConstraints: _state.useConstraints,
+      lockedPlacements: _state.lockedPlacements,
+      leaderIds: _state.leaderIds,
+      requireLeaders: _state.requireLeaders,
+      recentPairs: _state.recentPairs,
+    });
+    _state.groups = result.groups;
+  }
   _state.saved = false;
 }
 
@@ -104,31 +167,32 @@ function randomize() {
 function buildTemplate() {
   return `
 <div style="display:flex;flex-direction:column;height:100%">
-  <div class="view-header" style="padding-bottom:0;border-bottom:none">
-    <div style="display:flex;align-items:center;gap:10px;flex:1">
+  <div class="view-header" style="padding-bottom:0;border-bottom:none;flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
       <button class="btn btn-ghost btn-sm" id="ge-btn-back">
         <i class="fa-solid fa-arrow-left"></i>
       </button>
-      <div>
-        <h1 class="view-title" id="ge-title"></h1>
+      <div style="min-width:0">
+        <h1 class="view-title" id="ge-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></h1>
         <p class="view-subtitle" id="ge-subtitle"></p>
       </div>
     </div>
     <div class="ge-toolbar-actions">
-      <label class="flex items-center gap-2 cursor-pointer text-sm" title="Respekter plasserings-regler">
-        <input type="checkbox" id="ge-toggle-constraints" class="checkbox checkbox-sm">
-        <span>Regler</span>
-      </label>
-      <label class="flex items-center gap-2 cursor-pointer text-sm" title="Krev én leder per gruppe">
-        <input type="checkbox" id="ge-toggle-leaders" class="checkbox checkbox-sm">
-        <span>Ledere</span>
-      </label>
+      <button class="btn btn-ghost btn-sm" id="ge-btn-toggle-constraints" title="Respekter plasserings-regler">
+        <i class="fa-solid fa-gavel"></i> Regler
+      </button>
+      <button class="btn btn-ghost btn-sm" id="ge-btn-toggle-leaders" title="Krev én leder per gruppe">
+        <i class="fa-solid fa-user-tie"></i> Ledere
+        <span id="ge-leaders-badge" class="ge-leader-badge hidden">0</span>
+      </button>
+      <div class="ge-toolbar-sep"></div>
+      <button class="btn btn-ghost btn-sm" id="ge-btn-leaders-modal" title="Velg gruppeledere">
+        <i class="fa-solid fa-user-pen"></i>
+      </button>
       <button class="btn btn-ghost btn-sm" id="ge-btn-reshuffle" title="Generer på nytt">
         <i class="fa-solid fa-shuffle"></i> Generer på nytt
       </button>
-      <button class="btn btn-ghost btn-sm" id="ge-btn-leaders-modal" title="Velg gruppeledere">
-        <i class="fa-solid fa-user-tie"></i>
-      </button>
+      <div class="ge-toolbar-sep"></div>
       <button class="btn btn-primary btn-sm" id="ge-btn-save">
         <i class="fa-solid fa-floppy-disk"></i> Lagre
       </button>
@@ -205,6 +269,7 @@ function buildGroupCard(group, gi) {
   card.className = 'ge-group-card';
   card.dataset.groupIdx = gi;
   card.dataset.color = colorIdx;
+  card.style.borderLeft = `4px solid ${color}`;
 
   // Drop target events
   card.addEventListener('dragover', e => {
@@ -220,12 +285,14 @@ function buildGroupCard(group, gi) {
 
   const header = document.createElement('div');
   header.className = 'ge-group-header';
+  // Lett tint av gruppefargen på header-bakgrunnen
+  header.style.background = `${color}18`;
   header.innerHTML = `
-    <span style="display:flex;align-items:center;gap:6px">
-      <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>
-      Gruppe ${gi + 1}
-    </span>
-    <span class="badge-count">${group.length}</span>`;
+    <div class="ge-group-header-left">
+      <span class="ge-group-number" style="color:${color}">${gi + 1}</span>
+      <span class="ge-group-label">Gruppe</span>
+    </div>
+    <span class="ge-group-count">${group.length} elever</span>`;
   card.appendChild(header);
 
   const members = document.createElement('div');
@@ -258,15 +325,12 @@ function buildChip(studentId, groupIdx) {
   chip.innerHTML = `
     ${isLeader ? '<i class="fa-solid fa-star ge-leader-icon" title="Gruppeleder"></i>' : ''}
     <span class="ge-chip-name">${s.name}</span>
+    ${isLocked ? '<i class="fa-solid fa-lock ge-lock-icon-visible" title="Låst til denne gruppen"></i>' : ''}
     <span class="ge-chip-actions">
       <button class="ge-chip-btn ge-lock-btn" title="${isLocked ? 'Lås opp' : 'Lås til denne gruppen'}">
         <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}"></i>
       </button>
     </span>`;
-
-  if (isLocked) {
-    chip.querySelector('.ge-lock-icon')?.setAttribute('title', 'Låst');
-  }
 
   // Drag events
   chip.addEventListener('dragstart', e => {
@@ -289,20 +353,48 @@ function buildChip(studentId, groupIdx) {
 function renderSummary() {
   const el = document.getElementById('ge-summary');
   if (!el || !_state) return;
+
   const leaderCount = _state.leaderIds.length;
   const lockedCount = _state.lockedPlacements.length;
-  const parts = [];
+  const totalStudents = _state.students.length;
+  const numGroups = _state.groups.length;
+
+  const parts = [
+    `${numGroups} grupper`,
+    `${totalStudents} elever`,
+  ];
   if (lockedCount > 0) parts.push(`${lockedCount} låst${lockedCount !== 1 ? 'e' : ''}`);
   if (leaderCount > 0) parts.push(`${leaderCount} leder${leaderCount !== 1 ? 'e' : ''}`);
-  if (_state.saved) parts.push('Lagret');
-  el.textContent = parts.join(' · ');
+
+  let savedHtml = '';
+  if (_state.saved) {
+    savedHtml = `<span class="ge-summary-saved"><i class="fa-solid fa-check" style="margin-right:3px"></i>Lagret</span>`;
+  }
+
+  el.innerHTML = parts.join(' · ') + (savedHtml ? `<span style="flex:1"></span>${savedHtml}` : '');
 }
 
 function syncToolbarToggles() {
-  const constraintsChk = document.getElementById('ge-toggle-constraints');
-  const leadersChk = document.getElementById('ge-toggle-leaders');
-  if (constraintsChk) constraintsChk.checked = _state.useConstraints;
-  if (leadersChk) leadersChk.checked = _state.requireLeaders;
+  // Oppdater toggle-knapper for constraints og leaders
+  const constraintsBtn = document.getElementById('ge-btn-toggle-constraints');
+  const leadersBtn = document.getElementById('ge-btn-toggle-leaders');
+  const leadersBadge = document.getElementById('ge-leaders-badge');
+
+  if (constraintsBtn) {
+    constraintsBtn.classList.toggle('btn-active', _state.useConstraints);
+  }
+  if (leadersBtn) {
+    leadersBtn.classList.toggle('btn-active', _state.requireLeaders);
+  }
+  if (leadersBadge) {
+    const count = _state.leaderIds.length;
+    if (count > 0) {
+      leadersBadge.textContent = count;
+      leadersBadge.classList.remove('hidden');
+    } else {
+      leadersBadge.classList.add('hidden');
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -472,10 +564,20 @@ async function save() {
 
 function bindToolbar() {
   document.getElementById('ge-btn-back')?.addEventListener('click', () => {
-    window.navTo('charts-dashboard');
+    window.navTo('group-dashboard');
   });
 
-  document.getElementById('ge-btn-reshuffle')?.addEventListener('click', () => {
+  document.getElementById('ge-btn-reshuffle')?.addEventListener('click', async () => {
+    const hasManualChanges = !_state.saved && _state.lockedPlacements.length > 0;
+    if (hasManualChanges) {
+      const ok = await showConfirm({
+        title: 'Generer på nytt?',
+        message: 'Du har gjort manuelle endringer (låste elever). Disse vil gå tapt.',
+        confirmLabel: 'Generer på nytt',
+        danger: false,
+      });
+      if (!ok) return;
+    }
     randomize();
     renderGroups();
     renderSummary();
@@ -484,12 +586,14 @@ function bindToolbar() {
 
   document.getElementById('ge-btn-save')?.addEventListener('click', save);
 
-  document.getElementById('ge-toggle-constraints')?.addEventListener('change', e => {
-    _state.useConstraints = e.target.checked;
+  document.getElementById('ge-btn-toggle-constraints')?.addEventListener('click', () => {
+    _state.useConstraints = !_state.useConstraints;
+    syncToolbarToggles();
   });
 
-  document.getElementById('ge-toggle-leaders')?.addEventListener('change', e => {
-    _state.requireLeaders = e.target.checked;
+  document.getElementById('ge-btn-toggle-leaders')?.addEventListener('click', () => {
+    _state.requireLeaders = !_state.requireLeaders;
+    syncToolbarToggles();
   });
 
   document.getElementById('ge-btn-leaders-modal')?.addEventListener('click', openLeadersModal);
@@ -500,6 +604,7 @@ function bindToolbar() {
 
   document.getElementById('ge-leaders-modal-ok')?.addEventListener('click', () => {
     document.getElementById('ge-leaders-modal')?.classList.add('hidden');
+    syncToolbarToggles();
     renderGroups();
     renderSummary();
   });

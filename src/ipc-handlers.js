@@ -89,9 +89,14 @@ function registerHandlers(winRef) {
 
   // ---- Gruppearbeid ----
   ipcMain.handle('get-group-assignments', async (_, classId) => {
+    const base = `
+      SELECT ga.*, c.name as class_name,
+        (SELECT COUNT(*) FROM group_assignment_groups g WHERE g.assignment_id = ga.id) as group_count
+      FROM group_assignments ga
+      LEFT JOIN classes c ON ga.class_id = c.id`;
     const sql = classId
-      ? 'SELECT * FROM group_assignments WHERE class_id=? ORDER BY created_at DESC'
-      : 'SELECT * FROM group_assignments ORDER BY created_at DESC';
+      ? base + ' WHERE ga.class_id=? ORDER BY ga.created_at DESC'
+      : base + ' ORDER BY ga.created_at DESC';
     return classId ? dbAll(sql, [classId]) : dbAll(sql);
   });
 
@@ -213,6 +218,72 @@ function registerHandlers(winRef) {
       [name, source.class_id, source.room_id, source.placements, comment ?? '']
     );
   });
+
+  // ---- Deltakelseslogg ----
+  ipcMain.handle('get-participation', async (_, seatingId, date) =>
+    dbAll('SELECT * FROM participation_logs WHERE seating_id=? AND date=?', [seatingId, date]));
+
+  ipcMain.handle('save-participation', async (_, { seatingId, studentId, date, events }) => {
+    const eventsJson = JSON.stringify(events ?? []);
+    return dbRun(
+      `INSERT INTO participation_logs (seating_id, student_id, date, events)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(seating_id, student_id, date) DO UPDATE SET events=excluded.events`,
+      [seatingId, studentId, date, eventsJson]
+    );
+  });
+
+  ipcMain.handle('get-participation-summary', async (_, seatingId) =>
+    dbAll('SELECT * FROM participation_logs WHERE seating_id=? ORDER BY date DESC', [seatingId]));
+
+  ipcMain.handle('clear-participation', async (_, seatingId, date) =>
+    dbRun('DELETE FROM participation_logs WHERE seating_id=? AND date=?', [seatingId, date]));
+
+  // ---- Timeplan ----
+  ipcMain.handle('get-schedule', async () =>
+    dbAll(`SELECT sc.*, c.name as class_name FROM schedule sc
+           LEFT JOIN classes c ON sc.class_id=c.id
+           ORDER BY weekday, period`));
+
+  ipcMain.handle('save-schedule-entry', async (_, { id, classId, weekday, period, note }) => {
+    if (id) return dbRun('UPDATE schedule SET class_id=?,weekday=?,period=?,note=? WHERE id=?',
+      [classId, weekday, period, note ?? '', id]);
+    return dbRun('INSERT INTO schedule (class_id,weekday,period,note) VALUES (?,?,?,?)',
+      [classId, weekday, period, note ?? '']);
+  });
+
+  ipcMain.handle('delete-schedule-entry', async (_, id) =>
+    dbRun('DELETE FROM schedule WHERE id=?', [id]));
+
+  // ---- Stasjonsundervisning ----
+  ipcMain.handle('get-station-sessions', async (_, classId) => {
+    const sql = classId
+      ? `SELECT ss.*, c.name as class_name FROM station_sessions ss
+         LEFT JOIN classes c ON ss.class_id=c.id
+         WHERE ss.class_id=? ORDER BY ss.created_at DESC`
+      : `SELECT ss.*, c.name as class_name FROM station_sessions ss
+         LEFT JOIN classes c ON ss.class_id=c.id
+         ORDER BY ss.created_at DESC`;
+    return classId ? dbAll(sql, [classId]) : dbAll(sql);
+  });
+
+  ipcMain.handle('get-station-session', async (_, id) =>
+    dbGet('SELECT * FROM station_sessions WHERE id=?', [id]));
+
+  ipcMain.handle('save-station-session', async (_, { id, name, classId, stations, groups, rotationPlan, minutesPerStation }) => {
+    const s = JSON.stringify(stations ?? []);
+    const g = JSON.stringify(groups ?? []);
+    const r = JSON.stringify(rotationPlan ?? []);
+    if (id) return dbRun(
+      'UPDATE station_sessions SET name=?,stations=?,groups=?,rotation_plan=?,minutes_per_station=? WHERE id=?',
+      [name, s, g, r, minutesPerStation ?? 10, id]);
+    return dbRun(
+      'INSERT INTO station_sessions (name,class_id,stations,groups,rotation_plan,minutes_per_station) VALUES (?,?,?,?,?,?)',
+      [name, classId, s, g, r, minutesPerStation ?? 10]);
+  });
+
+  ipcMain.handle('delete-station-session', async (_, id) =>
+    dbRun('DELETE FROM station_sessions WHERE id=?', [id]));
 
   // ---- Restart (for auto-update) ----
   ipcMain.on('restart-app', () => {

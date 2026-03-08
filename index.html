@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="src/styles/room-editor.css">
   <link rel="stylesheet" href="src/styles/classes.css">
   <link rel="stylesheet" href="src/styles/canvas.css">
+  <link rel="stylesheet" href="src/styles/print.css">
 </head>
 <body style="height:100vh;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;background:transparent;margin:0;padding:0;">
   <div id="app-shell" style="height:100vh;box-sizing:border-box;background:transparent;padding:0;">
@@ -41,11 +42,11 @@
     <!-- Layout -->
     <div class="flex flex-1 overflow-hidden bg-base-200">
       <!-- Sidebar nav -->
-      <nav class="sidebar-nav flex-shrink-0 bg-base-200 flex flex-col" style="width:200px;border-right:1px solid oklch(var(--b3))">
+      <nav class="sidebar-nav flex-shrink-0 bg-base-200 flex flex-col" style="width:200px;border-right:1px solid oklch(var(--b3) / 0.6);box-shadow:2px 0 12px oklch(var(--b3) / 0.4)">
 
         <!-- Logo -->
         <div class="sidebar-logo">
-          <div style="font-size:1.2rem;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-0.02em">
+          <div style="font-size:1.55rem;font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:-0.02em">
             <span class="logo-klasse">Klasse</span><span style="color:#fbbf24;text-shadow:0 0 12px #f59e0b">Plass</span>
           </div>
         </div>
@@ -55,6 +56,12 @@
           <div class="nav-group-box">
             <div class="nav-item active" data-view="charts-dashboard" onclick="navTo('charts-dashboard')">
               <i class="fa-solid fa-table-cells-large nav-icon"></i> Klassekart
+            </div>
+            <div class="nav-item" data-view="group-dashboard" onclick="navTo('group-dashboard')">
+              <i class="fa-solid fa-people-group nav-icon"></i> Gruppearbeid
+            </div>
+            <div class="nav-item" data-view="station-setup" onclick="navTo('station-setup')">
+              <i class="fa-solid fa-arrows-rotate nav-icon"></i> Stasjoner
             </div>
             <div class="nav-item" data-view="classes" onclick="navTo('classes')">
               <i class="fa-solid fa-user-group nav-icon"></i> Klasser
@@ -98,6 +105,25 @@
   <!-- Modal portal — outside #app so overflow:hidden cannot clip modals -->
   <div id="modal-portal"></div>
 
+  <!-- Print overlay — kun synlig ved utskrift / vikarmodus -->
+  <div id="print-overlay">
+    <div class="print-action-bar">
+      <button class="print-close-btn" onclick="window.closePrintOverlay()">
+        <i class="fa-solid fa-xmark"></i> Lukk
+      </button>
+      <button class="print-print-btn" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> Skriv ut
+      </button>
+    </div>
+    <div class="print-header">
+      <div>
+        <div class="print-chart-name" id="print-chart-name"></div>
+        <div class="print-meta" id="print-meta"></div>
+      </div>
+    </div>
+    <div class="print-canvas-wrapper" id="print-canvas-wrapper"></div>
+  </div>
+
   <style>
     html, body {
       background: transparent !important;
@@ -132,25 +158,24 @@
     .sidebar-section { padding: 10px 8px; }
     .sidebar-bottom { border-top: 1px solid oklch(var(--b3)); padding-top: 8px; padding-bottom: 8px; }
 
-    /* Nav group box — subtle container around nav items */
+    /* Nav group box — flat, no box around items */
     .nav-group-box {
-      background: oklch(var(--b1) / 0.5);
-      border: 1px solid oklch(var(--b3) / 0.5);
+      background: transparent;
+      border: none;
       border-radius: 10px;
-      padding: 4px;
-      overflow: hidden;
+      padding: 2px 0;
     }
 
     /* Nav items */
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 9px 12px;
+      gap: 11px;
+      padding: 10px 12px;
       border-radius: 7px;
       margin-bottom: 1px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 500;
       transition: background 0.15s, color 0.15s;
       color: oklch(var(--bc) / 0.55);
@@ -166,9 +191,9 @@
       font-weight: 600;
     }
     .nav-icon {
-      width: 16px;
+      width: 17px;
       text-align: center;
-      font-size: 13px;
+      font-size: 14px;
       flex-shrink: 0;
     }
 
