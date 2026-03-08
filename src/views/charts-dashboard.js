@@ -281,7 +281,7 @@ function wireChartActions(el, chart) {
 function bindEvents() {
   document.getElementById('btn-new-chart')?.addEventListener('click', () => window.navTo('seating-setup'));
   document.getElementById('btn-new-chart-empty')?.addEventListener('click', () => window.navTo('seating-setup'));
-  document.getElementById('btn-new-group')?.addEventListener('click', () => window.navTo('group-setup'));
+  document.getElementById('btn-new-group')?.addEventListener('click', () => window.navTo('group-dashboard'));
   document.getElementById('filter-sort')?.addEventListener('change', applyFilters);
 }
 
