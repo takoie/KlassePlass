@@ -206,7 +206,7 @@ function registerHandlers(winRef) {
     const backup = getDbPathFn() + '.bak';
     fs.copyFileSync(getDbPathFn(), backup);
     fs.copyFileSync(src, getDbPathFn());
-    if (fs.existsSync(backup)) fs.unlinkSync(backup);
+    // .bak beholdes bevisst — gir fallback dersom gjenopprettingen er korrupt
     return { success: true };
   });
 
