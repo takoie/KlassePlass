@@ -114,6 +114,9 @@ async function loadClasses() {
   try {
     _classes = await window.api.getClasses();
     renderClassList();
+  } catch (err) {
+    showToast('Kunne ikke laste klasser. Sjekk databasen.', 'error');
+    console.error('loadClasses error:', err);
   } finally {
     document.getElementById('loading-skeleton')?.remove();
   }

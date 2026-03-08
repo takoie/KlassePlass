@@ -2,7 +2,7 @@
  * rooms-list.js — Oversikt over alle rom.
  */
 
-import { showToast } from '../shared/utils.js';
+import { showToast, showConfirm } from '../shared/utils.js';
 
 let _rooms = [];
 
@@ -35,9 +35,27 @@ export const roomsListView = {
   unmount() { _rooms = []; },
 };
 
+function showLoadingSkeleton(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const el = document.createElement('div');
+  el.id = 'loading-skeleton';
+  el.className = 'loading-skeleton';
+  el.innerHTML = `<span class="loading loading-spinner loading-md"></span><span>Laster…</span>`;
+  container.appendChild(el);
+}
+
 async function loadRooms() {
-  _rooms = await window.api.getRooms();
-  renderRooms();
+  showLoadingSkeleton('rooms-grid');
+  try {
+    _rooms = await window.api.getRooms();
+    renderRooms();
+  } catch (err) {
+    showToast('Kunne ikke laste rom. Sjekk databasen.', 'error');
+    console.error('loadRooms error:', err);
+  } finally {
+    document.getElementById('loading-skeleton')?.remove();
+  }
 }
 
 function renderRooms() {
@@ -89,7 +107,12 @@ function buildRoomCard(room) {
   });
   card.querySelector('.btn-delete-room').addEventListener('click', async (e) => {
     e.stopPropagation();
-    if (!confirm(`Slett rommet "${room.name}"? Dette kan ikke angres.`)) return;
+    const ok = await showConfirm({
+      title: 'Slett rom?',
+      message: `"${room.name}" slettes permanent og kan ikke gjenopprettes.`,
+      confirmLabel: 'Ja, slett',
+    });
+    if (!ok) return;
     await window.api.deleteRoom(room.id);
     showToast('Rom slettet', 'info');
     await loadRooms();
