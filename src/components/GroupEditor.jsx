@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer';
+import StudentContextMenu from './GroupWork/StudentContextMenu';
 
 const GROUP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16', '#06b6d4', '#d946ef'];
 
@@ -236,19 +237,18 @@ export default function GroupEditor({ onBack, initialId }) {
                     const student = studentsById[sid];
                     if (!student) return null;
                     const isLeader = leaderIds.includes(sid);
+                    const isLocked = lockedIds.includes(sid);
                     return (
-                      <div key={sid} className="flex items-center justify-between gap-2 bg-[#262b3a] rounded-lg px-2.5 py-1.5">
+                      <div
+                        key={sid}
+                        onContextMenu={(e) => handleStudentContextMenu(e, sid, idx)}
+                        className="flex items-center justify-between gap-2 bg-[#262b3a] rounded-lg px-2.5 py-1.5 cursor-grab select-none"
+                      >
                         <span className="text-sm text-slate-200 truncate flex items-center gap-1.5">
                           {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
                           {student.name}
                         </span>
-                        <select
-                          className="select select-bordered select-xs bg-[#1a1e2b] border-slate-700 text-slate-300"
-                          value={idx}
-                          onChange={(e) => moveStudent(sid, idx, Number(e.target.value))}
-                        >
-                          {groups.map((_, gi) => <option key={gi} value={gi}>Gruppe {gi + 1}</option>)}
-                        </select>
+                        {isLocked && <i className="fa-solid fa-lock text-red-400 text-[10px]" title="Låst"></i>}
                       </div>
                     );
                   })}
@@ -258,6 +258,17 @@ export default function GroupEditor({ onBack, initialId }) {
           })}
         </div>
       </div>
+
+      <StudentContextMenu
+        contextMenu={contextMenu}
+        studentsById={studentsById}
+        leaderIds={leaderIds}
+        lockedIds={lockedIds}
+        setGroupLeader={setGroupLeader}
+        removeGroupLeader={removeGroupLeader}
+        toggleLock={toggleLock}
+        setContextMenu={setContextMenu}
+      />
 
       <dialog id="modal_delete_group_assignment" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
