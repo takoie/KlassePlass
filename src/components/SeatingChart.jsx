@@ -1,4 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PrintOverlay from './SeatingChart/PrintOverlay';
+import Modals from './SeatingChart/Modals';
+import DeskContextMenu from './SeatingChart/DeskContextMenu';
+import HeaderBar from './SeatingChart/HeaderBar';
+import Toolbar from './SeatingChart/Toolbar';
+import StudentDrawer from './SeatingChart/StudentDrawer';
+import GroupDrawer from './SeatingChart/GroupDrawer';
+import FunDrawer from './SeatingChart/FunDrawer';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -1058,289 +1066,60 @@ export default function SeatingChart({ onBack, initialId }) {
     <div className="flex flex-col h-full w-full bg-[#131620] overflow-hidden relative">
       {/* Top Header Bar - Unifisert med RoomEditor */}
       {!isProjectorMode && (
-        <div className="px-6 py-2.5 bg-[#1a1e2b] border-b border-slate-800 flex justify-between items-center z-20 flex-shrink-0 shadow-md">
-          <div className="flex items-center gap-4">
-            {onBack && (
-              <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
-                <i className="fa-solid fa-arrow-left"></i> Tilbake
-              </button>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Klasse:</span>
-              <select 
-                className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold min-w-32"
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(Number(e.target.value))}
-              >
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Rom:</span>
-              <select 
-                className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold min-w-32"
-                value={selectedRoom}
-                onChange={(e) => setSelectedRoom(Number(e.target.value))}
-              >
-                {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Periode:</span>
-            <select
-              className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold min-w-36"
-              value={selectedSeatingId}
-              onChange={(e) => handleSelectSeating(e.target.value)}
-            >
-              {seatings
-                .filter(s => s.class_id === Number(selectedClass))
-                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-                .map(s => <option key={s.id} value={s.id}>{s.comment && !s.name.includes(s.comment) ? `${s.name} (${s.comment})` : s.name}</option>)}
-            </select>
-            <button
-              className="btn btn-ghost btn-xs text-slate-400 hover:text-white"
-              title="Rediger periodenavn"
-              onClick={() => {
-                const existing = seatings.find(s => s.id === Number(selectedSeatingId));
-                if (existing) setEditingPeriod({ id: existing.id, name: existing.name, comment: existing.comment || '' });
-                document.getElementById('modal_edit_period')?.showModal();
-              }}
-            >
-              <i className="fa-solid fa-pen"></i>
-            </button>
-            <button
-              className="btn btn-outline btn-xs border-slate-700 text-slate-300 hover:bg-slate-800"
-              title="Start ny periode (beholder dette kartet som historikk)"
-              onClick={handleStartNewPeriod}
-            >
-              <i className="fa-solid fa-plus"></i> Ny periode
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              value={chartName}
-              onChange={(e) => setChartName(e.target.value)}
-              className="input input-ghost text-base font-bold bg-[#262b3a] border border-slate-700 focus:border-[#34d399] px-3 h-8 rounded text-white min-w-44"
-              placeholder="Navn på klassekart..."
-            />
-            <input
-              type="text"
-              value={chartComment}
-              onChange={(e) => setChartComment(e.target.value)}
-              className="input input-ghost text-xs font-bold text-amber-300 bg-[#262b3a] border border-slate-700 px-3 h-8 w-28 text-center rounded"
-              placeholder="f.eks Uke 1-4..."
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            {saveState === 'saving' ? (
-              <span className="text-amber-400 opacity-80 text-xs font-semibold flex items-center gap-1">
-                <i className="fa-solid fa-spinner fa-spin"></i> Lagrer...
-              </span>
-            ) : (
-              <span className="text-[#34d399] text-xs font-semibold flex items-center gap-1">
-                <i className="fa-solid fa-circle-check text-[#34d399]"></i> Lagret
-              </span>
-            )}
-            <button 
-              className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs" 
-              onClick={handleDelete}
-            >
-              <i className="fa-solid fa-trash"></i> Slett kart
-            </button>
-          </div>
-        </div>
+        <HeaderBar
+          onBack={onBack}
+          classes={classes} selectedClass={selectedClass} setSelectedClass={setSelectedClass}
+          rooms={rooms} selectedRoom={selectedRoom} setSelectedRoom={setSelectedRoom}
+          seatings={seatings} selectedSeatingId={selectedSeatingId} handleSelectSeating={handleSelectSeating}
+          setEditingPeriod={setEditingPeriod} handleStartNewPeriod={handleStartNewPeriod}
+          chartName={chartName} setChartName={setChartName}
+          chartComment={chartComment} setChartComment={setChartComment}
+          saveState={saveState} handleDelete={handleDelete}
+        />
       )}
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* 1. ToolBox Sidebar */}
         {!isProjectorMode && (
-          <div className="w-64 bg-[#1a1e2b] flex flex-col z-10 flex-shrink-0 border-r border-slate-800 shadow-xl relative overflow-hidden">
-            <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-[#1a1e2b]">
-              <h3 className="font-extrabold text-sm text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
-                <i className="fa-solid fa-toolbox"></i> Verktøy
-              </h3>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-3">
-              <div className="flex flex-col gap-2">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Handling</div>
-                <button className="btn btn-sm btn-primary justify-start border-none bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30" onClick={() => { setShowStudentDrawer(!showStudentDrawer); setShowGroupDrawer(false); setShowFunDrawer(false); }}>
-                  <i className="fa-solid fa-users w-5"></i> Elever {unplacedStudents.length > 0 && <span className="badge badge-xs badge-error ml-auto">{unplacedStudents.length}</span>}
-                </button>
-                <button className={`btn btn-sm justify-start ${showGroupDrawer ? 'btn-neutral bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowGroupDrawer(!showGroupDrawer); if(showGroupDrawer) setActiveGroupId(null); setShowStudentDrawer(false); setShowFunDrawer(false); }}>
-                  <i className="fa-solid fa-object-group w-5 text-fuchsia-400"></i> Makkergrupper
-                </button>
-                <button className={`btn btn-sm justify-start ${hideGroups ? 'btn-neutral bg-amber-900/30 text-amber-400 border-amber-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => setHideGroups(!hideGroups)}>
-                  <i className={`fa-solid ${hideGroups ? 'fa-eye-slash' : 'fa-eye'} w-5 ${hideGroups ? 'text-amber-400' : 'text-slate-400'}`}></i> {hideGroups ? 'Vis Makkergrupper' : 'Skjul Makkergrupper'}
-                </button>
-                <button className={`btn btn-sm justify-start ${showFunDrawer ? 'btn-neutral bg-pink-900/30 text-pink-400 border-pink-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowFunDrawer(!showFunDrawer); setShowStudentDrawer(false); setShowGroupDrawer(false); }}>
-                  <i className="fa-solid fa-wand-magic-sparkles w-5 text-pink-400"></i> Fun Mode
-                </button>
-                <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handleRuleBasedFunSpin}>
-                  <i className="fa-solid fa-shuffle w-5 text-amber-400"></i> Randomiser (Med Regler)
-                </button>
-                <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={flipRoom}>
-                  <i className="fa-solid fa-rotate w-5 text-cyan-400"></i> Snu klasserommet
-                </button>
-                <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handlePrint}>
-                  <i className="fa-solid fa-print w-5 text-indigo-400"></i> Skriv ut / PDF
-                </button>
-                <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => document.getElementById('modal_sync_room').showModal()} title="Hent siste bordoppsett fra rom-editoren">
-                  <i className="fa-solid fa-arrows-rotate w-5 text-orange-400"></i> Hent fra rom
-                </button>
-              </div>
-              
-              <div className="h-px bg-slate-800/50 w-full my-1"></div>
-
-              <div className="flex flex-col gap-2">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Visning</div>
-                <button className={`btn btn-sm ${showHistory ? 'btn-neutral bg-slate-700 text-amber-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setShowHistory(!showHistory)}>
-                  <i className="fa-solid fa-clock-rotate-left w-5"></i> {showHistory ? 'Skjul historikk' : 'Vis historikk'}
-                </button>
-                <button className={`btn btn-sm ${showNumbers ? 'btn-neutral bg-slate-700 text-emerald-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setShowNumbers(!showNumbers)}>
-                  <i className="fa-solid fa-hashtag w-5"></i> {showNumbers ? 'Skjul numre' : 'Vis numre'}
-                </button>
-                <button className={`btn btn-sm ${showZones ? 'btn-neutral bg-slate-700 text-cyan-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setShowZones(!showZones)}>
-                  <i className="fa-solid fa-map w-5"></i> {showZones ? 'Skjul soner' : 'Vis soner'}
-                </button>
-                <button className={`btn btn-sm ${hideSensitiveInfo ? 'btn-neutral bg-slate-700 text-purple-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setHideSensitiveInfo(!hideSensitiveInfo)}>
-                  <i className="fa-solid fa-eye-slash w-5"></i> {hideSensitiveInfo ? 'Vis info' : 'Skjul info'}
-                </button>
-                <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => setIsProjectorMode(true)}>
-                  <i className="fa-solid fa-expand w-5 text-fuchsia-400"></i> Prosjektor
-                </button>
-              </div>
-              
-              <div className="h-px bg-slate-800/50 w-full my-1"></div>
-              
-              <div className="flex flex-col gap-2">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Administrasjon</div>
-                <button className="btn btn-sm btn-outline border-red-500/20 text-red-400 justify-start hover:bg-red-500/10" onClick={() => document.getElementById('modal_delete_seating').showModal()}>
-                  <i className="fa-solid fa-trash w-5"></i> Slett klassekart
-                </button>
-              </div>
-            </div>
-          </div>
+          <Toolbar
+            unplacedStudents={unplacedStudents}
+            showStudentDrawer={showStudentDrawer} setShowStudentDrawer={setShowStudentDrawer}
+            showGroupDrawer={showGroupDrawer} setShowGroupDrawer={setShowGroupDrawer} setActiveGroupId={setActiveGroupId}
+            showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
+            hideGroups={hideGroups} setHideGroups={setHideGroups}
+            handleRuleBasedFunSpin={handleRuleBasedFunSpin} flipRoom={flipRoom} handlePrint={handlePrint}
+            showHistory={showHistory} setShowHistory={setShowHistory}
+            showNumbers={showNumbers} setShowNumbers={setShowNumbers}
+            showZones={showZones} setShowZones={setShowZones}
+            hideSensitiveInfo={hideSensitiveInfo} setHideSensitiveInfo={setHideSensitiveInfo}
+            setIsProjectorMode={setIsProjectorMode}
+          />
         )}
 
         {/* 2. Elev Skuff */}
         {!isProjectorMode && (
-          <div className={`bg-[#171a25] border-slate-800 flex flex-col z-[49] transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 ${showStudentDrawer ? 'w-64 border-r' : 'w-0 border-r-0'}`}>
-             <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-[#1a1e2b] whitespace-nowrap min-w-[16rem]">
-               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                 <i className="fa-solid fa-users text-emerald-400"></i> Elever ({unplacedStudents.length})
-               </h3>
-               <button className="btn btn-ghost btn-xs btn-square hover:bg-slate-800 text-slate-400" onClick={() => setShowStudentDrawer(false)}>
-                 <i className="fa-solid fa-xmark"></i>
-               </button>
-             </div>
-             <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 bg-[#171a25] min-w-[16rem]">
-                {unplacedStudents.length === 0 ? (
-                  <div className="text-center opacity-50 text-xs text-slate-400 p-4 font-semibold mt-10">
-                    <i className="fa-solid fa-check-circle text-2xl mb-2 text-emerald-500 block"></i>
-                    Alle elever er plassert!
-                  </div>
-                ) : (
-                  unplacedStudents.map(student => (
-                    <div 
-                      key={student.id} 
-                      className="p-2.5 bg-[#202534] hover:bg-[#34d399] hover:text-slate-950 text-sm font-bold rounded-lg cursor-move flex justify-between items-center shadow-sm transition-colors text-slate-200 border border-slate-700/50"
-                      onMouseDown={(e) => startDrag(e, student, null)}
-                    >
-                      <span className="truncate">{student.name}</span>
-                      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                        <button className={`btn btn-ghost btn-xs btn-square ${studentRoles[student.id] === '⭐' ? 'text-warning' : 'opacity-30'}`} onClick={() => toggleRole(student.id, '⭐')} title="Gruppeleder ⭐">⭐</button>
-                        <button className={`btn btn-ghost btn-xs btn-square ${studentRoles[student.id] === '💬' ? 'text-info' : 'opacity-30'}`} onClick={() => toggleRole(student.id, '💬')} title="Elevråd 💬">💬</button>
-                      </div>
-                    </div>
-                  ))
-                )}
-             </div>
-          </div>
+          <StudentDrawer
+            showStudentDrawer={showStudentDrawer} setShowStudentDrawer={setShowStudentDrawer}
+            unplacedStudents={unplacedStudents} startDrag={startDrag}
+            studentRoles={studentRoles} toggleRole={toggleRole}
+          />
         )}
 
         {/* 3. Makkergruppe Skuff */}
         {!isProjectorMode && (
-          <div className={`bg-[#171a25] border-slate-800 flex flex-col z-[49] transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 ${showGroupDrawer ? 'w-64 border-r' : 'w-0 border-r-0'}`}>
-             <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-[#1a1e2b] whitespace-nowrap min-w-[16rem]">
-               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                 <i className="fa-solid fa-object-group text-fuchsia-400"></i> Makkergrupper
-               </h3>
-               <button className="btn btn-ghost btn-xs btn-square hover:bg-slate-800 text-slate-400" onClick={() => { setShowGroupDrawer(false); setActiveGroupId(null); }}>
-                 <i className="fa-solid fa-xmark"></i>
-               </button>
-             </div>
-             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-[#171a25] min-w-[16rem]">
-                <p className="text-xs text-slate-400 leading-tight">
-                  Velg en farge, klikk deretter på bordene i klassekartet for å koble dem sammen.
-                </p>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
-                    <button 
-                      key={g}
-                      className={`h-12 rounded-xl flex items-center justify-center font-black text-slate-900 shadow-md transition-all ${activeGroupId === g ? 'ring-4 ring-white scale-105' : 'hover:scale-105 opacity-80'}`}
-                      style={{ backgroundColor: GROUP_COLORS[(g-1) % GROUP_COLORS.length] }}
-                      onClick={() => setActiveGroupId(prev => prev === g ? null : g)}
-                    >
-                      GRUPPE {g}
-                    </button>
-                  ))}
-                </div>
-                
-                <div className="mt-4 pt-4 border-t border-slate-800 flex flex-col gap-2">
-                  <button 
-                    className={`w-full h-10 rounded-xl flex items-center justify-center font-bold text-slate-300 border-2 border-slate-700 border-dashed transition-all ${activeGroupId === 0 ? 'bg-red-500/20 border-red-500 text-red-400' : 'hover:bg-slate-800'}`}
-                    onClick={() => setActiveGroupId(0)}
-                  >
-                    <i className="fa-solid fa-eraser mr-2"></i> Fjern gruppe
-                  </button>
-                  {activeGroupId !== null && (
-                    <button 
-                      className="btn btn-xs btn-ghost text-slate-400 hover:text-white"
-                      onClick={() => setActiveGroupId(null)}
-                    >
-                      <i className="fa-solid fa-check mr-1"></i> Avslutt makkergruppe-modus
-                    </button>
-                  )}
-                </div>
-             </div>
-          </div>
+          <GroupDrawer
+            showGroupDrawer={showGroupDrawer} setShowGroupDrawer={setShowGroupDrawer}
+            activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId}
+            GROUP_COLORS={GROUP_COLORS}
+          />
         )}
 
         {/* 4. Fun Mode Skuff */}
         {!isProjectorMode && (
-          <div className={`bg-[#171a25] border-slate-800 flex flex-col z-[49] transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 ${showFunDrawer ? 'w-64 border-r' : 'w-0 border-r-0'}`}>
-             <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-[#1a1e2b] whitespace-nowrap min-w-[16rem]">
-               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                 <i className="fa-solid fa-wand-magic-sparkles text-pink-400"></i> Fun Mode
-               </h3>
-               <button className="btn btn-ghost btn-xs btn-square hover:bg-slate-800 text-slate-400" onClick={() => setShowFunDrawer(false)}>
-                 <i className="fa-solid fa-xmark"></i>
-               </button>
-             </div>
-             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-[#171a25] min-w-[16rem] items-center justify-center">
-                <div className="text-center">
-                  <i className={`fa-solid fa-wand-magic-sparkles text-4xl text-pink-400 mb-2 ${isSpinning ? 'animate-bounce' : ''}`}></i>
-                  <h4 className="font-bold text-white text-sm">Elev-Randomiserer</h4>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Spinn klassen for å plassere elevene med spennende visualisering og 100% regel-overholdelse.
-                  </p>
-                </div>
-
-                <button 
-                  className={`btn btn-pink bg-pink-600 hover:bg-pink-500 text-white w-full gap-2 font-bold shadow-lg ${isSpinning ? 'loading' : ''}`}
-                  onClick={handleRuleBasedFunSpin}
-                  disabled={isSpinning}
-                >
-                  <i className="fa-solid fa-play"></i> {isSpinning ? 'Spinner...' : 'Spin & Plasser (Med Regler)'}
-                </button>
-             </div>
-          </div>
+          <FunDrawer
+            showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
+            isSpinning={isSpinning} handleRuleBasedFunSpin={handleRuleBasedFunSpin}
+          />
         )}
 
         {/* 5. Main Canvas Area */}
@@ -1558,198 +1337,38 @@ export default function SeatingChart({ onBack, initialId }) {
             </div>
 
       {/* Modals and Context Menus */}
-      <dialog id="modal_student_note" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
-          <h3 className="font-bold text-lg text-amber-300 flex items-center gap-2">
-            📝 Notat for {editingNoteStudent?.name}
-          </h3>
-          <p className="py-2 text-xs text-slate-400">Skriv inn notat eller spesiell tilrettelegging for denne eleven:</p>
-          
-          <textarea 
-            className="textarea textarea-bordered w-full h-24 bg-[#262b3a] border-slate-700 text-white mt-2 font-medium focus:border-amber-400"
-            placeholder="Skriv notat her..."
-            value={noteInputValue}
-            onChange={(e) => setNoteInputValue(e.target.value)}
-          />
+      <Modals
+        editingNoteStudent={editingNoteStudent}
+        noteInputValue={noteInputValue}
+        setNoteInputValue={setNoteInputValue}
+        saveStudentNote={saveStudentNote}
+        chartName={chartName}
+        handleDelete={handleDelete}
+        editingPeriod={editingPeriod}
+        setEditingPeriod={setEditingPeriod}
+        handleSaveEditedPeriod={handleSaveEditedPeriod}
+        syncFromRoom={syncFromRoom}
+      />
 
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
-              <button className="btn btn-warning" onClick={saveStudentNote}>Lagre notat</button>
-            </form>
-          </div>
-        </div>
-      </dialog>
+      <DeskContextMenu
+        contextMenu={contextMenu}
+        lockedSeats={lockedSeats}
+        toggleLockDesk={toggleLockDesk}
+        setContextMenu={setContextMenu}
+        handleSetGroupContextMenu={handleSetGroupContextMenu}
+        GROUP_COLORS={GROUP_COLORS}
+      />
 
-      <dialog id="modal_delete_seating" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
-          <h3 className="font-bold text-red-400 text-lg flex items-center gap-2">
-            <i className="fa-solid fa-triangle-exclamation"></i> Slett klassekart?
-          </h3>
-          <p className="py-4 text-sm text-slate-300">Er du helt sikker på at du vil slette <strong>{chartName}</strong>?</p>
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
-              <button className="btn btn-error" onClick={handleDelete}>Ja, slett</button>
-            </form>
-          </div>
-        </div>
-      </dialog>
-
-      <dialog id="modal_edit_period" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
-          <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
-            <i className="fa-solid fa-pen text-slate-400"></i> Rediger periode
-          </h3>
-          <div className="py-4 flex flex-col gap-3">
-            <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn</label>
-              <input
-                type="text"
-                className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
-                value={editingPeriod?.name ?? ''}
-                onChange={(e) => setEditingPeriod(p => ({ ...p, name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Periode (f.eks Uke 1-4)</label>
-              <input
-                type="text"
-                className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
-                value={editingPeriod?.comment ?? ''}
-                onChange={(e) => setEditingPeriod(p => ({ ...p, comment: e.target.value }))}
-              />
-            </div>
-          </div>
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
-            </form>
-            <button className="btn btn-primary" onClick={handleSaveEditedPeriod}>Lagre</button>
-          </div>
-        </div>
-      </dialog>
-
-      <dialog id="modal_sync_room" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
-          <h3 className="font-bold text-orange-400 text-lg flex items-center gap-2">
-            <i className="fa-solid fa-triangle-exclamation"></i> Hent bordoppsett fra rommet?
-          </h3>
-          <p className="py-4 text-sm text-slate-300">
-            Dette klassekartet bruker en lagret kopi av bordoppsettet fra da det sist ble lagret.
-            Å hente fra rommet nå erstatter den kopien med rommets nåværende oppsett.
-            Elever plassert ved bord som ikke lenger finnes i rommet blir uplasserte.
-          </p>
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
-            </form>
-            <button className="btn btn-warning" onClick={syncFromRoom}>Ja, hent fra rom</button>
-          </div>
-        </div>
-      </dialog>
-
-      {/* Context Menu (Høyreklikk på Bord) */}
-      {contextMenu && contextMenu.desk && (
-        <>
-          <div className="fixed inset-0 z-[9998]" onClick={() => setContextMenu(null)}></div>
-          <div 
-            className="fixed z-[9999] bg-[#1a1e2b] border border-slate-700 shadow-2xl rounded-xl w-48 overflow-hidden flex flex-col"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-3 py-2 bg-[#202534] border-b border-slate-700 text-xs font-bold text-slate-300 flex justify-between items-center">
-              Bord-valg
-              {lockedSeats[`${contextMenu.desk.id}_seat_0`] && <i className="fa-solid fa-lock text-red-400"></i>}
-            </div>
-            
-            <button 
-              className="px-4 py-2.5 text-left text-sm hover:bg-[#262b3a] text-slate-200 flex items-center gap-2 transition-colors"
-              onClick={() => {
-                toggleLockDesk(contextMenu.desk.id);
-                setContextMenu(null);
-              }}
-            >
-              <i className={`fa-solid ${lockedSeats[`${contextMenu.desk.id}_seat_0`] ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4`}></i>
-              {lockedSeats[`${contextMenu.desk.id}_seat_0`] ? 'Lås opp bord' : 'Lås bord'}
-            </button>
-            
-            <div className="border-t border-slate-700/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-[#171a25]">
-              Sett makkergruppe:
-            </div>
-            <div className="grid grid-cols-4 gap-1 px-3 pb-3 pt-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(g => (
-                <button 
-                  key={g}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-900 shadow transition-transform hover:scale-110"
-                  style={{ backgroundColor: GROUP_COLORS[(g-1) % GROUP_COLORS.length] }}
-                  onClick={() => handleSetGroupContextMenu(g)}
-                >
-                  {g}
-                </button>
-              ))}
-              <button 
-                className="col-span-4 mt-2 h-7 rounded-lg border border-slate-700 text-xs text-slate-400 hover:bg-slate-800 transition-colors"
-                onClick={() => handleSetGroupContextMenu(null)}
-              >
-                Fjern gruppe
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Utskriftsvisning — usynlig på skjerm, vises kun av skriveren via @media print (print.css) */}
-      <div id="print-overlay">
-        <div className="print-header">
-          <div>
-            <div className="print-chart-name">{chartName || 'Klassekart'}</div>
-            <div className="print-meta">
-              {classes.find(c => c.id === Number(selectedClass))?.name || ''}
-              {chartComment ? ` · ${chartComment}` : ''}
-            </div>
-          </div>
-          <div className="print-meta">{new Date().toLocaleDateString('no-NO')}</div>
-        </div>
-        <div className="print-canvas-wrapper" style={{ width: '1100px', height: '700px' }}>
-          <div
-            style={{
-              position: 'absolute', left: boardObj.x, top: boardObj.y, width: 256, height: 36,
-              border: '1px solid #374151', borderRadius: 18, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.3em', color: '#374151',
-            }}
-          >
-            TAVLE
-          </div>
-          {desks.map((d) => {
-            const cap = d.capacity || 1;
-            const deskW = cap * 100;
-            const deskNumber = deskNumberMap[d.id] || '';
-            return (
-              <div key={d.id} className="print-desk" style={{ left: d.x, top: d.y, width: deskW, height: 60 }}>
-                <span style={{ position: 'absolute', top: -14, left: -4, fontSize: 10, fontWeight: 700, color: '#555' }}>{deskNumber}</span>
-                <div style={{ display: 'flex', width: '100%', height: '100%' }}>
-                  {Array.from({ length: cap }).map((_, slotIdx) => {
-                    const slotKey = `${d.id}_seat_${slotIdx}`;
-                    const studentVal = placements[slotKey];
-                    const studentObj = studentVal ? getStudentByIdOrName(studentVal) : null;
-                    return (
-                      <div
-                        key={slotIdx}
-                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: slotIdx > 0 ? '1px solid #e5e7eb' : 'none', overflow: 'hidden' }}
-                      >
-                        <span className={`print-desk-name ${studentObj ? '' : 'print-desk-empty'}`}>
-                          {studentObj ? studentObj.name : '—'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <PrintOverlay
+        chartName={chartName}
+        className={classes.find(c => c.id === Number(selectedClass))?.name || ''}
+        chartComment={chartComment}
+        boardObj={boardObj}
+        desks={desks}
+        deskNumberMap={deskNumberMap}
+        placements={placements}
+        getStudentByIdOrName={getStudentByIdOrName}
+      />
     </div>
   );
 }

@@ -6,6 +6,46 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Splittet SeatingChart.jsx (1755 → 1374 linjer)
+
+Filstørrelse-disiplinen fra v2-rebuilden (maks ~300 linjer/fil) var forlatt i
+React-migreringen. `SeatingChart.jsx` hadde vokst til 1755 linjer og var
+identifisert som teknisk gjeld i statusgjennomgangen tidligere i dag.
+
+**Tilnærming — kun trygge, rent presentasjonsmessige utrekk:** all
+tilstand/forretningslogikk (drag-and-drop, autolagring, periodebytte,
+randomisering osv.) er beholdt uendret i `SeatingChart.jsx`. Kun JSX-blokker
+som utelukkende leser props og kaller videreførte callback-funksjoner ble
+flyttet ut — ingen closures over delt tilstand ble flyttet. Dette var et
+bevisst valg: dagens økt viste to ganger (lastID-bug, stale closure i
+periodebytte) hvor lett denne typen kode introduserer subtile feil, så
+selve tilstandshåndteringen ble ikke rørt.
+
+**Nye filer i `src/components/SeatingChart/`:**
+- `HeaderBar.jsx` — klasse/rom/periode-valg, kartnavn, lagre-status
+- `Toolbar.jsx` — venstre verktøypanel (handling/visning/administrasjon)
+- `StudentDrawer.jsx`, `GroupDrawer.jsx`, `FunDrawer.jsx` — de tre skuffene
+- `Modals.jsx` — de fire bekreftelses-/redigeringsdialogene samlet
+- `DeskContextMenu.jsx` — høyreklikk-meny på bord
+- `PrintOverlay.jsx` — utskriftsvisningen
+
+**Verifisert end-to-end** i ekte kjørende app etter hvert steg (ikke bare
+bygget): periode-velger, skuffer (åpne/lukke/veksle), høyreklikk-meny på
+bord med korrekt makkergruppe-tildeling (bekreftet full rundtur til state og
+tilbake), dra-og-slipp av elev. All testdata ryddet fra ekte database
+etterpå.
+
+**Ikke gjort:** selve lerret-rendering (bord/dra-slipp-matematikk) ble
+bevisst IKKE flyttet ut — det er der drag-state og musehåndterere henger tett
+sammen, og risikoen for regresjon vurderes for høy til å gjøre det uten enda
+grundigere testing. `RoomEditor.jsx` (1197 linjer) er heller ikke rørt i
+denne økten.
+
+**Berørte filer:** `src/components/SeatingChart.jsx`,
+`src/components/SeatingChart/*.jsx` (7 nye filer)
+
+---
+
 ## 2026-07-27 — Oppdaterte school-features.md: var ikke en plan, men en fasit
 
 `docs/plans/2026-03-07-school-features.md` beskrev 8 "planlagte" skolefunksjoner.
