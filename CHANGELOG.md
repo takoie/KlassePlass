@@ -6,6 +6,31 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Splittet RoomEditor.jsx (1197 → 1075 linjer)
+
+Samme trygge tilnærming som `SeatingChart.jsx` rett over: kun rene
+presentasjonsblokker flyttet ut, all drag-and-drop-logikk (magnetisk
+snapping, kollisjonssjekk, `@dnd-kit`-integrasjon) beholdt uendret i
+hovedfilen. `RoomEditor.jsx` hadde allerede en del av arbeidet gjort fra før
+(`DeskItem`, `BoardItem`, `DoorItem`, `WindowItem`, `RoomToolsDrawer` var
+extrahert tidligere), så gjenstående trygt uttrekkbart innhold var mindre
+enn i klassekartet.
+
+**Nye filer i `src/components/RoomEditor/`:**
+- `HeaderBar.jsx` — rom-valg, nytt rom-knapp, lagre-status, slett-knapp
+- `DeskContextMenu.jsx` — høyreklikk-meny på valgte bord
+- `Modals.jsx` — opprett nytt rom (med preset-valg) + slett rom-dialog
+
+**Verifisert end-to-end** i ekte kjørende app: rom-valg, høyreklikk-meny med
+korrekt bordvalg-synkronisering mot sidepanelet, "Nytt rom"-modal med alle
+presets, "Slett rom"-modal med korrekt romnavn. Ingen endringer lagret til
+databasen under testing.
+
+**Berørte filer:** `src/components/RoomEditor.jsx`,
+`src/components/RoomEditor/*.jsx` (3 nye filer)
+
+---
+
 ## 2026-07-27 — Splittet SeatingChart.jsx (1755 → 1374 linjer)
 
 Filstørrelse-disiplinen fra v2-rebuilden (maks ~300 linjer/fil) var forlatt i

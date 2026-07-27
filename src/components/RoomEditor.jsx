@@ -5,6 +5,9 @@ import RoomToolsDrawer from './RoomEditor/RoomToolsDrawer';
 import BoardItem from './RoomEditor/BoardItem';
 import DoorItem from './RoomEditor/DoorItem';
 import WindowItem from './RoomEditor/WindowItem';
+import HeaderBar from './RoomEditor/HeaderBar';
+import DeskContextMenu from './RoomEditor/DeskContextMenu';
+import Modals from './RoomEditor/Modals';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -941,54 +944,11 @@ export default function RoomEditor({ onBack, initialId }) {
 
   return (
     <div className="flex flex-col h-full w-full bg-[#131620] overflow-hidden" onMouseUp={handleCanvasMouseUp}>
-      <div className="px-6 py-2.5 bg-[#1a1e2b] border-b border-slate-800 flex justify-between items-center z-20 flex-shrink-0">
-        <div className="flex items-center gap-4">
-          {onBack && (
-            <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
-              <i className="fa-solid fa-arrow-left"></i> Tilbake
-            </button>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Rom:</span>
-            <select 
-              className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold min-w-40"
-              value={selectedRoom?.id || ''}
-              onChange={(e) => {
-                const found = rooms.find(r => r.id === Number(e.target.value));
-                if (found) handleSelectRoom(found);
-              }}
-            >
-              {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
-          <button className="btn btn-primary btn-xs gap-1 font-bold" onClick={handleOpenNewModal}>
-            <i className="fa-solid fa-plus"></i> Nytt rom
-          </button>
-        </div>
-
-        {selectedRoom && (
-          <div className="flex items-center gap-2">
-            <div className="w-20 min-w-20 flex items-center justify-end">
-              {saveState === 'saving' ? (
-                <span className="text-amber-400 opacity-80 text-xs font-semibold flex items-center gap-1">
-                  <i className="fa-solid fa-spinner fa-spin"></i> Lagrer...
-                </span>
-              ) : (
-                <span className="text-[#34d399] text-xs font-semibold flex items-center gap-1">
-                  <i className="fa-solid fa-circle-check text-[#34d399]"></i> Lagret
-                </span>
-              )}
-            </div>
-
-            <button 
-              className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs" 
-              onClick={() => document.getElementById(`modal_delete_room_${selectedRoom.id}`).showModal()}
-            >
-              <i className="fa-solid fa-trash"></i> Slett rom
-            </button>
-          </div>
-        )}
-      </div>
+      <HeaderBar
+        onBack={onBack}
+        rooms={rooms} selectedRoom={selectedRoom} handleSelectRoom={handleSelectRoom}
+        handleOpenNewModal={handleOpenNewModal} saveState={saveState}
+      />
 
       <div className="flex flex-1 overflow-hidden relative">
         {selectedRoom ? (
@@ -1096,102 +1056,20 @@ export default function RoomEditor({ onBack, initialId }) {
       </div>
       
       {/* Context Menu Popup */}
-      {contextMenu && (
-        <ul 
-          className="menu bg-[#171a25] border border-slate-700 rounded-2xl shadow-2xl fixed z-50 p-2 text-xs text-slate-200 w-56"
-          style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-slate-400">Makkergrupper</li>
-          <li><a onClick={() => { createGroupForSelected(); setContextMenu(null); }}><i className="fa-solid fa-object-group text-amber-400"></i> Lag Makkergruppe</a></li>
-          <li><a onClick={() => { clearGroupForSelected(); setContextMenu(null); }}><i className="fa-solid fa-object-ungroup text-slate-400"></i> Fjern fra gruppe</a></li>
-          <div className="divider my-0 h-1"></div>
-          <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-slate-400">Plasser per bord</li>
-          <div className="flex gap-1 px-2 py-1">
-            <button className="btn btn-xs btn-outline flex-1 border-slate-700 text-[#34d399]" onClick={() => { setDeskCapacity(1); setContextMenu(null); }}>1</button>
-            <button className="btn btn-xs btn-outline flex-1 border-slate-700 text-cyan-300" onClick={() => { setDeskCapacity(2); setContextMenu(null); }}>2</button>
-            <button className="btn btn-xs btn-outline flex-1 border-slate-700 text-indigo-300" onClick={() => { setDeskCapacity(3); setContextMenu(null); }}>3</button>
-            <button className="btn btn-xs btn-outline flex-1 border-slate-700 text-purple-300" onClick={() => { setDeskCapacity(4); setContextMenu(null); }}>4</button>
-          </div>
-          <div className="divider my-0 h-1"></div>
-          <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-slate-400">Toggle soner ({selectedDesks.length})</li>
-          <li><a onClick={() => { toggleZoneOnSelected('window'); setContextMenu(null); }}><i className="fa-solid fa-sun text-yellow-400"></i> Vindurekke</a></li>
-          <li><a onClick={() => { toggleZoneOnSelected('door'); setContextMenu(null); }}><i className="fa-solid fa-door-open text-amber-400"></i> Dørsone</a></li>
-          <li><a onClick={() => { toggleZoneOnSelected('front'); setContextMenu(null); }}><i className="fa-solid fa-location-dot text-emerald-400"></i> Fremste rad</a></li>
-          <li><a onClick={() => { toggleZoneOnSelected('back'); setContextMenu(null); }}><i className="fa-solid fa-arrow-down text-purple-400"></i> Bakerste rad</a></li>
-          <li><a onClick={() => { toggleZoneOnSelected('center'); setContextMenu(null); }}><i className="fa-solid fa-align-center text-cyan-400"></i> Midtsone</a></li>
-          <div className="divider my-0 h-1"></div>
-          <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-slate-400">Handlinger</li>
-          <li><a onClick={handleDuplicateSelected}><i className="fa-solid fa-copy"></i> Dupliser bord ({selectedDesks.length})</a></li>
-          <div className="divider my-0 h-1"></div>
-          <li className="text-red-400"><a onClick={handleDeleteSelected}><i className="fa-solid fa-trash"></i> Slett bord ({selectedDesks.length})</a></li>
-        </ul>
-      )}
+      <DeskContextMenu
+        contextMenu={contextMenu} setContextMenu={setContextMenu} selectedDesks={selectedDesks}
+        createGroupForSelected={createGroupForSelected} clearGroupForSelected={clearGroupForSelected}
+        setDeskCapacity={setDeskCapacity} toggleZoneOnSelected={toggleZoneOnSelected}
+        handleDuplicateSelected={handleDuplicateSelected} handleDeleteSelected={handleDeleteSelected}
+      />
 
-      {/* Modal med Presets */}
-      <dialog id="modal_create_new_room" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
-          <h3 className="font-bold text-lg flex items-center gap-2 text-white">
-            <i className="fa-solid fa-wand-magic-sparkles text-[#f59e0b]"></i> Opprett nytt klasserom
-          </h3>
-          <p className="py-2 text-xs text-slate-400">Gi rommet et navn og velg et ferdig oppsett:</p>
-          
-          <input 
-            ref={inputModalRef}
-            type="text" 
-            value={newRoomModalName}
-            onChange={(e) => setNewRoomModalName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmCreateNew(); }}
-            placeholder="f.eks. Rom 204..." 
-            className="input input-bordered w-full mb-4 bg-[#262b3a] border-slate-700 text-white" 
-            autoFocus
-          />
-
-          <label className="text-xs font-bold uppercase opacity-50 text-slate-400 block mb-2">Velg oppsett (Preset)</label>
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            {presetsList.map(p => (
-              <div 
-                key={p.id}
-                className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col gap-1 ${selectedPreset === p.id ? 'border-[#34d399] bg-[#34d399]/10 shadow' : 'border-slate-800 bg-[#262b3a] hover:bg-slate-800'}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setSelectedPreset(p.id);
-                  inputModalRef.current?.focus();
-                }}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-white">{p.title}</span>
-                  <span className="text-xs font-mono opacity-50">{p.icon}</span>
-                </div>
-                <span className="text-[11px] opacity-60 text-slate-400">{p.subtitle}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="modal-action">
-            <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
-              <button className="btn btn-primary" onClick={handleConfirmCreateNew} disabled={!newRoomModalName.trim()}>Opprett rom</button>
-            </form>
-          </div>
-        </div>
-      </dialog>
-
-      {/* Slette-modal */}
-      {selectedRoom && (
-        <dialog id={`modal_delete_room_${selectedRoom.id}`} className="modal modal-bottom sm:modal-middle">
-          <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
-            <h3 className="font-bold text-lg text-red-400">Slett rom?</h3>
-            <p className="py-4 text-sm text-slate-300">Er du helt sikker på at du vil slette <strong>{selectedRoom.name}</strong>?</p>
-            <div className="modal-action">
-              <form method="dialog">
-                <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
-                <button className="btn btn-error" onClick={() => handleDelete(selectedRoom.id)}>Ja, slett</button>
-              </form>
-            </div>
-          </div>
-        </dialog>
-      )}
+      <Modals
+        inputModalRef={inputModalRef}
+        newRoomModalName={newRoomModalName} setNewRoomModalName={setNewRoomModalName}
+        handleConfirmCreateNew={handleConfirmCreateNew}
+        presetsList={presetsList} selectedPreset={selectedPreset} setSelectedPreset={setSelectedPreset}
+        selectedRoom={selectedRoom} handleDelete={handleDelete}
+      />
     </div>
   );
 }
