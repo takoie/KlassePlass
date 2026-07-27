@@ -119,7 +119,7 @@ export default function Settings() {
             <h3 className="text-xl font-bold mb-6 text-white">Visning & Generelt</h3>
             
             <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6 mb-6">
-              <h4 className="font-bold text-sm text-slate-200 mb-1">Standard Tavleplassering</h4>
+              <h4 className="font-bold text-sm text-slate-200 mb-1">Standard tavleplassering</h4>
               <p className="text-xs text-slate-400 mb-4">Velg om tavlen skal ligge øverst eller nederst i klasserommet som standard.</p>
               
               <div className="form-control max-w-xs">
@@ -182,11 +182,11 @@ export default function Settings() {
               <h1 className="text-4xl font-extrabold mb-2 text-white tracking-wider">
                 KLASSE<span className="text-[#f59e0b]">PLASS</span>
               </h1>
-              <p className="text-sm text-slate-400 max-w-md mx-auto">Det enkle, raske og 100% lokale verktøyet for lærere til å lage og administrere klassekart i norsk skole.</p>
+              <p className="text-sm text-slate-400 max-w-md mx-auto">Et enkelt, raskt og 100% lokalt verktøy for lærere — opprett klasser, design klasserom, sett sammen klassekart, fordel elever i grupper og kjør stasjonsundervisning.</p>
             </div>
-            
+
             <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6">
-              <h4 className="font-bold text-sm text-slate-200 mb-2">Utvikler & Informasjon</h4>
+              <h4 className="font-bold text-sm text-slate-200 mb-2">Utvikler & informasjon</h4>
               <p className="text-xs text-slate-400 mb-2">Utviklet med fokus på brukervennlighet og personvern for lærere.</p>
               <a href="https://stian.taknes.no" className="text-xs text-emerald-400 hover:underline font-bold" target="_blank" rel="noreferrer">stian.taknes.no</a>
             </div>
@@ -198,10 +198,10 @@ export default function Settings() {
             <h3 className="text-xl font-bold mb-6 text-white">Personvern og GDPR</h3>
             <div className="bg-amber-950/40 border border-amber-500/40 text-amber-200 rounded-2xl p-6 mb-6">
               <h4 className="font-bold mb-2 flex items-center gap-2 text-amber-300">
-                <i className="fa-solid fa-[#f59e0b] fa-shield-halved"></i> 100% Lokal Datatrygghet
+                <i className="fa-solid fa-[#f59e0b] fa-shield-halved"></i> 100% lokal datatrygghet
               </h4>
               <p className="text-xs leading-relaxed">
-                All data i KlassePlass lagres utelukkende lokalt på din egen PC (SQLite-database). Ingen elevnavn eller data sendes noen sinne til skytjenester eller eksterne servere.
+                All data i KlassePlass lagres utelukkende lokalt på din egen PC (SQLite-database). Ingen elevnavn eller annen data sendes til skytjenester eller eksterne servere.
               </p>
             </div>
             
@@ -226,11 +226,14 @@ export default function Settings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
-                  <tr><td className="py-2.5 px-4 font-semibold">React & Vite</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">React & React DOM</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">Electron</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">Tailwind CSS & DaisyUI</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">FontAwesome 6</td><td className="py-2.5 px-4 text-emerald-400">Free License</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">better-sqlite3</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">electron-updater</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Vite</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Tailwind CSS & daisyUI</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">dnd kit</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">sql.js (SQLite for nettleser/WASM)</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Font Awesome Free</td><td className="py-2.5 px-4 text-emerald-400">CC BY 4.0 / SIL OFL 1.1 / MIT</td></tr>
                 </tbody>
               </table>
             </div>

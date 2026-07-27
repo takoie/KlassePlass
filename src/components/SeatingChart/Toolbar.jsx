@@ -1,10 +1,14 @@
 import React from 'react';
 
-/** Venstre verktøypanel: handling/visning/administrasjon-knapper. */
+/**
+ * Venstre verktøypanel: handling/visning/administrasjon-knapper.
+ * Makkergrupper og Fun Mode utvider seg inline i panelet i stedet for å åpne
+ * egne skuffer — det holder selve klasseromsvisningen i konstant bredde.
+ */
 export default function Toolbar({
   unplacedStudents,
   showStudentDrawer, setShowStudentDrawer,
-  showGroupDrawer, setShowGroupDrawer, setActiveGroupId,
+  showGroupDrawer, setShowGroupDrawer, activeGroupId, setActiveGroupId, GROUP_COLORS,
   showFunDrawer, setShowFunDrawer,
   hideGroups, setHideGroups,
   handleRuleBasedFunSpin, flipRoom, handlePrint,
@@ -13,6 +17,7 @@ export default function Toolbar({
   showZones, setShowZones,
   hideSensitiveInfo, setHideSensitiveInfo,
   setIsProjectorMode,
+  revealMode, revealedCount, revealTotal, startReveal, revealNext, revealAll, endReveal,
 }) {
   return (
     <div className="w-64 bg-[#1a1e2b] flex flex-col z-10 flex-shrink-0 border-r border-slate-800 shadow-xl relative overflow-hidden">
@@ -28,15 +33,72 @@ export default function Toolbar({
           <button className="btn btn-sm btn-primary justify-start border-none bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30" onClick={() => { setShowStudentDrawer(!showStudentDrawer); setShowGroupDrawer(false); setShowFunDrawer(false); }}>
             <i className="fa-solid fa-users w-5"></i> Elever {unplacedStudents.length > 0 && <span className="badge badge-xs badge-error ml-auto">{unplacedStudents.length}</span>}
           </button>
-          <button className={`btn btn-sm justify-start ${showGroupDrawer ? 'btn-neutral bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowGroupDrawer(!showGroupDrawer); if(showGroupDrawer) setActiveGroupId(null); setShowStudentDrawer(false); setShowFunDrawer(false); }}>
+
+          <button className={`btn btn-sm justify-start ${showGroupDrawer ? 'btn-neutral bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowGroupDrawer(!showGroupDrawer); if (showGroupDrawer) setActiveGroupId(null); setShowStudentDrawer(false); setShowFunDrawer(false); }}>
             <i className="fa-solid fa-object-group w-5 text-fuchsia-400"></i> Makkergrupper
           </button>
+          {showGroupDrawer && (
+            <div className="flex flex-col gap-2 pl-2 ml-1 border-l-2 border-fuchsia-500/30">
+              <p className="text-[10px] text-slate-400 leading-tight px-1">Velg en farge, klikk deretter på bordene for å koble dem sammen.</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
+                  <button
+                    key={g}
+                    className={`h-9 rounded-lg flex items-center justify-center font-black text-slate-900 shadow transition-transform hover:scale-110 ${activeGroupId === g ? 'ring-2 ring-white scale-105' : 'opacity-90'}`}
+                    style={{ backgroundColor: GROUP_COLORS[(g - 1) % GROUP_COLORS.length] }}
+                    onClick={() => setActiveGroupId(prev => prev === g ? null : g)}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+              <button
+                className={`h-8 rounded-lg flex items-center justify-center text-xs font-bold border-2 border-dashed transition-all ${activeGroupId === 0 ? 'bg-red-500/20 border-red-500 text-red-400' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}
+                onClick={() => setActiveGroupId(0)}
+              >
+                <i className="fa-solid fa-eraser mr-2"></i> Fjern gruppe
+              </button>
+              {activeGroupId !== null && (
+                <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={() => setActiveGroupId(null)}>
+                  <i className="fa-solid fa-check mr-1"></i> Avslutt makkergruppe-modus
+                </button>
+              )}
+            </div>
+          )}
+
           <button className={`btn btn-sm justify-start ${hideGroups ? 'btn-neutral bg-amber-900/30 text-amber-400 border-amber-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => setHideGroups(!hideGroups)}>
             <i className={`fa-solid ${hideGroups ? 'fa-eye-slash' : 'fa-eye'} w-5 ${hideGroups ? 'text-amber-400' : 'text-slate-400'}`}></i> {hideGroups ? 'Vis Makkergrupper' : 'Skjul Makkergrupper'}
           </button>
+
           <button className={`btn btn-sm justify-start ${showFunDrawer ? 'btn-neutral bg-pink-900/30 text-pink-400 border-pink-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowFunDrawer(!showFunDrawer); setShowStudentDrawer(false); setShowGroupDrawer(false); }}>
             <i className="fa-solid fa-wand-magic-sparkles w-5 text-pink-400"></i> Fun Mode
           </button>
+          {showFunDrawer && (
+            <div className="flex flex-col gap-2 pl-2 ml-1 border-l-2 border-pink-500/30">
+              <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
+                <i className="fa-solid fa-masks-theater text-cyan-400"></i> Gradvis avdekking
+              </p>
+              {!revealMode ? (
+                <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-2 font-bold" onClick={startReveal}>
+                  <i className="fa-solid fa-eye-slash"></i> Start avdekking
+                </button>
+              ) : (
+                <>
+                  <p className="text-[10px] text-center text-cyan-300 font-semibold">{revealedCount} av {revealTotal} avslørt</p>
+                  <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-2 font-bold" onClick={revealNext} disabled={revealedCount >= revealTotal}>
+                    <i className="fa-solid fa-eye"></i> Avslør neste
+                  </button>
+                  <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={revealAll} disabled={revealedCount >= revealTotal}>
+                    Avslør alle
+                  </button>
+                  <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={endReveal}>
+                    <i className="fa-solid fa-xmark"></i> Avslutt avdekking
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handleRuleBasedFunSpin}>
             <i className="fa-solid fa-shuffle w-5 text-amber-400"></i> Randomiser (Med Regler)
           </button>

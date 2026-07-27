@@ -5,8 +5,6 @@ import DeskContextMenu from './SeatingChart/DeskContextMenu';
 import HeaderBar from './SeatingChart/HeaderBar';
 import Toolbar from './SeatingChart/Toolbar';
 import StudentDrawer from './SeatingChart/StudentDrawer';
-import GroupDrawer from './SeatingChart/GroupDrawer';
-import FunDrawer from './SeatingChart/FunDrawer';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -113,7 +111,10 @@ export default function SeatingChart({ onBack, initialId }) {
         const availH = height - 60;
         const sX = availW / 1100;
         const sY = availH / 700;
-        const s = Math.min(1, sX, sY);
+        // Skaler både ned OG opp for å fylle det tilgjengelige vinduet — ikke
+        // bare krymp på små vinduer. Øvre tak hindrer at klasserommet blir
+        // urimelig stort/uskarpt-følende på svært brede skjermer.
+        const s = Math.min(1.5, sX, sY);
         setScale(s);
 
         const scaledW = 1100 * s;
@@ -1115,7 +1116,8 @@ export default function SeatingChart({ onBack, initialId }) {
           <Toolbar
             unplacedStudents={unplacedStudents}
             showStudentDrawer={showStudentDrawer} setShowStudentDrawer={setShowStudentDrawer}
-            showGroupDrawer={showGroupDrawer} setShowGroupDrawer={setShowGroupDrawer} setActiveGroupId={setActiveGroupId}
+            showGroupDrawer={showGroupDrawer} setShowGroupDrawer={setShowGroupDrawer}
+            activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId} GROUP_COLORS={GROUP_COLORS}
             showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
             hideGroups={hideGroups} setHideGroups={setHideGroups}
             handleRuleBasedFunSpin={handleRuleBasedFunSpin} flipRoom={flipRoom} handlePrint={handlePrint}
@@ -1124,6 +1126,8 @@ export default function SeatingChart({ onBack, initialId }) {
             showZones={showZones} setShowZones={setShowZones}
             hideSensitiveInfo={hideSensitiveInfo} setHideSensitiveInfo={setHideSensitiveInfo}
             setIsProjectorMode={setIsProjectorMode}
+            revealMode={revealMode} revealedCount={revealedSlots.size} revealTotal={revealOrder.length}
+            startReveal={startReveal} revealNext={revealNext} revealAll={revealAll} endReveal={endReveal}
           />
         )}
 
@@ -1133,25 +1137,6 @@ export default function SeatingChart({ onBack, initialId }) {
             showStudentDrawer={showStudentDrawer} setShowStudentDrawer={setShowStudentDrawer}
             unplacedStudents={unplacedStudents} startDrag={startDrag}
             studentRoles={studentRoles} toggleRole={toggleRole}
-          />
-        )}
-
-        {/* 3. Makkergruppe Skuff */}
-        {!isProjectorMode && (
-          <GroupDrawer
-            showGroupDrawer={showGroupDrawer} setShowGroupDrawer={setShowGroupDrawer}
-            activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId}
-            GROUP_COLORS={GROUP_COLORS}
-          />
-        )}
-
-        {/* 4. Fun Mode Skuff */}
-        {!isProjectorMode && (
-          <FunDrawer
-            showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
-            isSpinning={isSpinning} handleRuleBasedFunSpin={handleRuleBasedFunSpin}
-            revealMode={revealMode} revealedCount={revealedSlots.size} revealTotal={revealOrder.length}
-            startReveal={startReveal} revealNext={revealNext} revealAll={revealAll} endReveal={endReveal}
           />
         )}
 

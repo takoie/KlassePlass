@@ -107,7 +107,7 @@ export default function RoomToolsDrawer({
       {/* Valgte Bord (Collapse) - Kun åpen hvis bord er valgt */}
       <details className="collapse collapse-arrow bg-[#262b3a] border border-slate-700 shadow-inner rounded-xl overflow-visible" open={selectedDesksCount > 0}>
         <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
-          <i className="fa-solid fa-pen-to-square text-fuchsia-400 mr-1.5"></i> Rediger Valgte ({selectedDesksCount})
+          <i className="fa-solid fa-pen-to-square text-fuchsia-400 mr-1.5"></i> Rediger valgte ({selectedDesksCount})
         </summary>
         <div className="collapse-content flex flex-col gap-3 pb-3">
           

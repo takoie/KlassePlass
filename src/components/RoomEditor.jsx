@@ -75,7 +75,10 @@ export default function RoomEditor({ onBack, initialId }) {
         const availH = height - 60;
         const sX = availW / 1100;
         const sY = availH / 700;
-        const s = Math.min(1, sX, sY);
+        // Skaler både ned OG opp for å fylle det tilgjengelige vinduet — ikke
+        // bare krymp på små vinduer. Øvre tak hindrer at klasserommet blir
+        // urimelig stort/uskarpt-følende på svært brede skjermer.
+        const s = Math.min(1.5, sX, sY);
         setScale(s);
         
         const scaledW = 1100 * s;

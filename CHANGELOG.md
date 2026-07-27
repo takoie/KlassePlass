@@ -6,6 +6,69 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Makkergrupper/Fun Mode inline, romskalering, tekstopprydding
+
+Videre brukertilbakemelding: Makkergrupper og Fun Mode-skuffene gjorde selve
+klasserommet mindre når de åpnet seg, rom-bakgrunnen i rom-editoren var mye
+større enn selve klasserommet og ikke tilpasset vinduet, "Rediger Valgte"
+hadde rar mid-tekst-stor bokstav, og Innstillinger-tekstene (Om KlassePlass,
+Personvern/GDPR, Lisenser) trengte oppdatering.
+
+**Makkergrupper og Fun Mode flyttet inn i verktøymenyen** (`Toolbar.jsx` i
+klassekartet): i stedet for å åpne en egen 256px-bred skuff som presset
+klasserommet sammen, utvider begge seg nå inline rett under sin egen knapp i
+det eksisterende venstre verktøypanelet — samme totale breddebruk uansett
+hvilket panel som er åpent. Fargevelgeren for makkergrupper er samtidig
+gjort mer kompakt (4×3 rutenett med tallmerkede firkanter, samme stil som
+høyreklikk-menyen på bord) for å passe godt i den smalere plassen. De
+gamle `GroupDrawer.jsx`/`FunDrawer.jsx`-filene er fjernet siden innholdet nå
+lever i `Toolbar.jsx`. `StudentDrawer` (Elever) er bevisst uendret — den er
+en reell, scrollbar elevliste som drar-og-slippes fra, og ble ikke nevnt
+som et problem.
+
+**Rom-/klassekart-skalering fikset:** begge canvas-visningene
+(`RoomEditor.jsx` og `SeatingChart.jsx`) hadde `Math.min(1, sX, sY)` —
+skalerte alltid NED for å passe små vinduer, men aldri OPP for å fylle
+store vinduer. På et stort vindu satt derfor det faste 1100×700-"rommet"
+fast på 100%, sentrert med mye tom prikkete bakgrunn rundt — nøyaktig det
+brukeren beskrev. Endret til `Math.min(1.5, sX, sY)` slik at begge
+visningene nå fyller det tilgjengelige vinduet bedre, med et tak på 150 %
+for å unngå at klasserommet blir urimelig stort på svært brede skjermer.
+Kunne ikke bekreftes visuelt via automatisert vindus-maksimering i denne
+økten (CDP-drevet `maximizeWindow()` ser ikke ut til å trigge en ekte
+resize av rendering-overflaten i dette testoppsettet — `window.innerWidth`
+rapporterte korrekt ny størrelse, men canvas sin `ResizeObserver` fikk
+aldri et nytt utslag) — koden følger likevel nøyaktig samme, allerede
+bekreftet fungerende mønster som nedskalering, så retting bør fungere ved
+ekte vindusendring. Bør sjekkes visuelt ved anledning.
+
+**Tekstopprydding:**
+- "Rediger Valgte" → "Rediger valgte" (`RoomToolsDrawer.jsx`), samme feil
+  funnet og fikset i "Standard Tavleplassering" → "Standard tavleplassering"
+  (`Settings.jsx`).
+- "Om KlassePlass": teksten nevnte kun klassekart — oppdatert til å
+  reflektere alt appen nå faktisk gjør (rom, klassekart, gruppearbeid,
+  stasjonsundervisning).
+- Personvern-teksten "sendes noen sinne til skytjenester" forenklet til
+  "sendes til skytjenester" — fjernet unødvendig verbal fyllord-frase
+  ("noen sinne" er dessuten feilskrevet, skal være ett ord "noensinne").
+  Samme sted: "100% Lokal Datatrygghet" → "100% lokal datatrygghet".
+- **Lisenser-tabellen var faktisk feil**, ikke bare utdatert: listet opp
+  "better-sqlite3" som ikke finnes i `package.json` i det hele tatt — appen
+  bruker `sql.js` (WASM SQLite), antagelig en rest fra et tidlig prototype-
+  valg før bytte til sql.js. Bygget tabellen på nytt direkte fra
+  `package.json`s faktiske avhengigheter (React, Electron, electron-updater,
+  Vite, Tailwind/daisyUI, @dnd-kit, sql.js, Font Awesome Free) med korrekte
+  lisenser.
+
+**Berørte filer:** `src/components/SeatingChart/Toolbar.jsx`,
+`src/components/SeatingChart.jsx`, `src/components/RoomEditor.jsx`,
+`src/components/RoomEditor/RoomToolsDrawer.jsx`, `src/components/Settings.jsx`
+(slettet: `src/components/SeatingChart/GroupDrawer.jsx`,
+`src/components/SeatingChart/FunDrawer.jsx`)
+
+---
+
 ## 2026-07-27 — Vindusstørrelse, titlebar-overlapp, headerbar-overflow, gradvis avdekking
 
 Brukertilbakemelding etter dagens funksjonsarbeid: droppet fire punkter fra
