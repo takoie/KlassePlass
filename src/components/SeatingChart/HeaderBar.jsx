@@ -1,12 +1,15 @@
 import React from 'react';
 
-/** Toppbar: klasse/rom/periode-valg, kartnavn, lagre-status og slett-knapp. */
+/**
+ * Toppbar: klasse/rom/periode-valg, lagre-status og slett-knapp.
+ * Kartets navn er gitt av klassen (ikke fritekst) — perioden identifiseres
+ * kun av ukeangivelsen, som vises direkte i nedtrekksmenyen.
+ */
 export default function HeaderBar({
   onBack,
   classes, selectedClass, setSelectedClass,
   rooms, selectedRoom, setSelectedRoom,
-  seatings, selectedSeatingId, handleSelectSeating, setEditingPeriod, handleStartNewPeriod,
-  chartName, setChartName, chartComment, setChartComment,
+  seatings, selectedSeatingId, handleSelectSeating, setEditingPeriod,
   saveState, handleDelete,
 }) {
   return (
@@ -49,11 +52,11 @@ export default function HeaderBar({
           {seatings
             .filter(s => s.class_id === Number(selectedClass))
             .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-            .map(s => <option key={s.id} value={s.id}>{s.comment && !s.name.includes(s.comment) ? `${s.name} (${s.comment})` : s.name}</option>)}
+            .map(s => <option key={s.id} value={s.id}>{s.comment || s.name}</option>)}
         </select>
         <button
           className="btn btn-ghost btn-xs text-slate-400 hover:text-white"
-          title="Rediger periodenavn"
+          title="Rediger ukeangivelse"
           onClick={() => {
             const existing = seatings.find(s => s.id === Number(selectedSeatingId));
             if (existing) setEditingPeriod({ id: existing.id, name: existing.name, comment: existing.comment || '' });
@@ -65,27 +68,10 @@ export default function HeaderBar({
         <button
           className="btn btn-outline btn-xs border-slate-700 text-slate-300 hover:bg-slate-800"
           title="Start ny periode (beholder dette kartet som historikk)"
-          onClick={handleStartNewPeriod}
+          onClick={() => document.getElementById('modal_new_period')?.showModal()}
         >
           <i className="fa-solid fa-plus"></i> Ny periode
         </button>
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap">
-        <input
-          type="text"
-          value={chartName}
-          onChange={(e) => setChartName(e.target.value)}
-          className="input input-ghost text-sm font-bold bg-[#262b3a] border border-slate-700 focus:border-[#34d399] px-3 h-8 rounded text-white w-36"
-          placeholder="Navn på klassekart..."
-        />
-        <input
-          type="text"
-          value={chartComment}
-          onChange={(e) => setChartComment(e.target.value)}
-          className="input input-ghost text-xs font-bold text-amber-300 bg-[#262b3a] border border-slate-700 px-3 h-8 w-24 text-center rounded"
-          placeholder="f.eks Uke 1-4..."
-        />
       </div>
 
       <div className="flex items-center gap-2">

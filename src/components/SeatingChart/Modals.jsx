@@ -5,6 +5,7 @@ export default function Modals({
   editingNoteStudent, noteInputValue, setNoteInputValue, saveStudentNote,
   chartName, handleDelete,
   editingPeriod, setEditingPeriod, handleSaveEditedPeriod,
+  newPeriodWeeks, setNewPeriodWeeks, handleStartNewPeriod,
   syncFromRoom,
 }) {
   return (
@@ -50,33 +51,52 @@ export default function Modals({
       <dialog id="modal_edit_period" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
           <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
-            <i className="fa-solid fa-pen text-slate-400"></i> Rediger periode
+            <i className="fa-solid fa-pen text-slate-400"></i> Rediger ukeangivelse
           </h3>
-          <div className="py-4 flex flex-col gap-3">
-            <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn</label>
-              <input
-                type="text"
-                className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
-                value={editingPeriod?.name ?? ''}
-                onChange={(e) => setEditingPeriod(p => ({ ...p, name: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Periode (f.eks Uke 1-4)</label>
-              <input
-                type="text"
-                className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
-                value={editingPeriod?.comment ?? ''}
-                onChange={(e) => setEditingPeriod(p => ({ ...p, comment: e.target.value }))}
-              />
-            </div>
+          <div className="py-4">
+            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Periode (f.eks Uke 1-4)</label>
+            <input
+              type="text"
+              className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
+              value={editingPeriod?.comment ?? ''}
+              onChange={(e) => setEditingPeriod(p => ({ ...p, comment: e.target.value }))}
+              autoFocus
+            />
           </div>
           <div className="modal-action">
             <form method="dialog">
               <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
             </form>
             <button className="btn btn-primary" onClick={handleSaveEditedPeriod}>Lagre</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="modal_new_period" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
+            <i className="fa-solid fa-plus text-emerald-400"></i> Ny periode
+          </h3>
+          <p className="py-2 text-sm text-slate-300">
+            Lagrer det nåværende oppsettet som historikk og starter en ny periode. Hvor mange uker skal den nye perioden vare?
+          </p>
+          <div className="py-2 flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              max="52"
+              className="input input-bordered w-24 bg-[#262b3a] border-slate-700 text-white text-center"
+              value={newPeriodWeeks}
+              onChange={(e) => setNewPeriodWeeks(e.target.value)}
+              autoFocus
+            />
+            <span className="text-sm text-slate-400">uker</span>
+          </div>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+            </form>
+            <button className="btn btn-primary" onClick={() => handleStartNewPeriod(newPeriodWeeks)}>Opprett periode</button>
           </div>
         </div>
       </dialog>

@@ -207,7 +207,6 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   
   // Modal state
-  const [newChartName, setNewChartName] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
 
@@ -248,17 +247,18 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   };
 
   const handleOpenCreate = () => {
-    setNewChartName('');
     const modal = document.getElementById('modal_create_seating');
     if (modal) modal.showModal();
   };
 
   const handleCreate = async () => {
-    if (!newChartName.trim() || !selectedClass || !selectedRoom) return;
+    if (!selectedClass || !selectedRoom) return;
     try {
+      // Klassekartets navn er gitt av klassen — ingen egen fritekst å taste inn.
+      const className = classes.find(c => c.id === Number(selectedClass))?.name || 'Klassekart';
       const result = await window.api.saveSeating({
         id: null,
-        name: newChartName.trim(),
+        name: className,
         classId: selectedClass,
         roomId: selectedRoom,
         placements: '{}',
@@ -266,15 +266,15 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       });
       const modal = document.getElementById('modal_create_seating');
       if (modal) modal.close();
-      
+
       await loadSeatings(); // Oppdaterer listen umiddelbart
-      
+
       if (result?.lastID) {
         onEdit(result.lastID);
       } else {
         // Fallback dersom lastID mangler fra backend
         const all = await window.api.getSeatings();
-        const created = all.find(s => s.name === newChartName.trim() && s.class_id === Number(selectedClass));
+        const created = all.find(s => s.name === className && s.class_id === Number(selectedClass));
         if (created) onEdit(created.id);
       }
     } catch(e){}
@@ -383,13 +383,8 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
           
           <div className="flex flex-col gap-4">
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på klassekart</label>
-              <input type="text" className="input input-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500 transition-colors" placeholder="F.eks Høstsemesteret" value={newChartName} onChange={e => setNewChartName(e.target.value)} autoFocus />
-            </div>
-
-            <div>
               <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasse</label>
-              <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+              <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)} autoFocus>
                 {classes.length === 0 && <option value="" disabled>Ingen klasser funnet</option>}
                 {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -408,7 +403,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
             <form method="dialog">
               <button className="btn btn-ghost text-slate-400 hover:text-slate-100">Avbryt</button>
             </form>
-            <button className="btn btn-primary font-bold px-8 shadow-lg shadow-emerald-900/50" onClick={handleCreate} disabled={!newChartName.trim() || !selectedClass || !selectedRoom}>
+            <button className="btn btn-primary font-bold px-8 shadow-lg shadow-emerald-900/50" onClick={handleCreate} disabled={!selectedClass || !selectedRoom}>
               Opprett & Rediger <i className="fa-solid fa-arrow-right ml-1"></i>
             </button>
           </div>

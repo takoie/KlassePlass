@@ -69,6 +69,7 @@ export default function SeatingChart({ onBack, initialId }) {
   const [historyConflicts, setHistoryConflicts] = useState({});
   const [contextMenu, setContextMenu] = useState(null);
   const [editingPeriod, setEditingPeriod] = useState(null);
+  const [newPeriodWeeks, setNewPeriodWeeks] = useState(4);
   
   // Grouping override state (Lasso)
   const [groupOverrides, setGroupOverrides] = useState({});
@@ -484,19 +485,19 @@ export default function SeatingChart({ onBack, initialId }) {
     } catch (e) {}
   };
 
-  const handleStartNewPeriod = async () => {
+  const handleStartNewPeriod = async (jumpWeeks) => {
     if (!selectedClass || !selectedRoom) return;
     const match = chartComment.match(/Uke\s+(\d+)\s*-\s*(\d+)/i);
-    let nextStart = 5;
-    let nextEnd = 8;
-
+    let nextStart = 1;
     if (match && match[2]) {
       nextStart = parseInt(match[2]) + 1;
-      nextEnd = nextStart + 3;
     }
+    const weeks = Math.max(1, Number(jumpWeeks) || 4);
+    const nextEnd = nextStart + weeks - 1;
 
     const newComment = `Uke ${nextStart}-${nextEnd}`;
-    const newName = `${chartName} (${newComment})`;
+    // Navnet er gitt av klassen — ingen fritekst å taste inn per periode.
+    const newName = classes.find(c => c.id === Number(selectedClass))?.name || chartName;
 
     try {
       const savePayload = JSON.stringify({
@@ -523,6 +524,7 @@ export default function SeatingChart({ onBack, initialId }) {
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
       if (result?.lastID) handleSelectSeating(result.lastID, newSeatings);
+      document.getElementById('modal_new_period')?.close();
     } catch (e) {}
   };
 
@@ -1103,9 +1105,7 @@ export default function SeatingChart({ onBack, initialId }) {
           classes={classes} selectedClass={selectedClass} setSelectedClass={setSelectedClass}
           rooms={rooms} selectedRoom={selectedRoom} setSelectedRoom={setSelectedRoom}
           seatings={seatings} selectedSeatingId={selectedSeatingId} handleSelectSeating={handleSelectSeating}
-          setEditingPeriod={setEditingPeriod} handleStartNewPeriod={handleStartNewPeriod}
-          chartName={chartName} setChartName={setChartName}
-          chartComment={chartComment} setChartComment={setChartComment}
+          setEditingPeriod={setEditingPeriod}
           saveState={saveState} handleDelete={handleDelete}
         />
       )}
@@ -1369,6 +1369,7 @@ export default function SeatingChart({ onBack, initialId }) {
         editingPeriod={editingPeriod}
         setEditingPeriod={setEditingPeriod}
         handleSaveEditedPeriod={handleSaveEditedPeriod}
+        newPeriodWeeks={newPeriodWeeks} setNewPeriodWeeks={setNewPeriodWeeks} handleStartNewPeriod={handleStartNewPeriod}
         syncFromRoom={syncFromRoom}
       />
 

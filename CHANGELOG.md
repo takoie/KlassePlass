@@ -6,6 +6,45 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Forenklet periode-systemet i klassekart, avklart skalerings-"bug"
+
+**Rom vs. klassekart så forskjellige ut — undersøkt, ikke en bug:**
+brukeren sammenlignet to skjermbilder av samme rom ("123") i hhv. rom-editor
+og klassekart, og lurte på om det var en autotilpasnings-feil. Sjekket
+faktiske bord-koordinater i databasen: klassekartets frosne øyeblikksbilde
+hadde 40px avstand mellom bordgrupper, det live rommet hadde 60px — ikke en
+skaleringsfeil, men nøyaktig det frosne-snapshot-systemet fra tidligere i
+dag som fungerer som tiltenkt (rommet er redigert etter at denne perioden
+sist ble lagret). Ingen kodeendring nødvendig her.
+
+**Periode-systemet forenklet betydelig**, etter tilbakemelding om at de to
+alltid synlige tekstboksene (kartnavn + ukeangivelse) i toppbaren var
+uklare:
+- **Kartnavnet er nå gitt av klassen** — ingen fritekstfelt lenger, verken i
+  toppbaren eller i "Opprett nytt klassekart"-dialogen. Nye kart/perioder
+  får automatisk klassens navn. Eksisterende kart med egendefinerte navn
+  (fra før denne endringen) er ikke rørt — men enhver ny periode opprettet
+  fra dem "helbreder" seg selv til klassenavnet fra det punktet.
+- **Periode-dropdownen viser nå kun ukeangivelsen** ("Uke 5-8") i stedet for
+  navn+ukeangivelse kombinert.
+- **"Ny periode" åpner nå en liten dialog** der man velger hvor mange uker
+  den nye perioden skal vare (standard 4, men fritt justerbart) — tidligere
+  var dette hardkodet til alltid å hoppe nøyaktig 4 uker fram.
+- Rediger-periode-dialogen (blyant-ikonet) er forenklet til kun å redigere
+  ukeangivelsen, siden navnet ikke lenger er noe brukeren setter manuelt.
+
+**Verifisert end-to-end** i ekte kjørende app: opprettet ny periode med
+2-ukers hopp fra "Uke 5-8" → fikk korrekt "Uke 9-10", nytt kort fikk
+automatisk klassenavnet ("1ST5") i stedet for det gamle egendefinerte
+navnet, dropdown viste rene ukeangivelser for alle perioder, rediger-dialog
+viste kun ett felt. Testperiode ryddet bort fra databasen etterpå.
+
+**Berørte filer:** `src/components/SeatingChart.jsx`,
+`src/components/SeatingChart/HeaderBar.jsx`,
+`src/components/SeatingChart/Modals.jsx`, `src/components/OverviewViews.jsx`
+
+---
+
 ## 2026-07-27 — Makkergrupper/Fun Mode inline, romskalering, tekstopprydding
 
 Videre brukertilbakemelding: Makkergrupper og Fun Mode-skuffene gjorde selve
