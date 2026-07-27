@@ -209,11 +209,23 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   // Modal state
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
+  const [chartName, setChartName] = useState('');
+  const [nameEdited, setNameEdited] = useState(false);
+  const [startWeek, setStartWeek] = useState(1);
+  const [periodWeeks, setPeriodWeeks] = useState(4);
 
-  useEffect(() => { 
-    loadSeatings(); 
+  useEffect(() => {
+    loadSeatings();
     loadFormData();
   }, []);
+
+  // Foreslå klassenavn som standard kartnavn, men bare inntil brukeren
+  // begynner å skrive sitt eget — da skal ikke klassebytte overstyre det.
+  useEffect(() => {
+    if (nameEdited) return;
+    const cls = classes.find(c => c.id === Number(selectedClass));
+    if (cls) setChartName(cls.name);
+  }, [selectedClass, classes, nameEdited]);
 
   const loadFormData = async () => {
     try {
@@ -247,6 +259,9 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   };
 
   const handleOpenCreate = () => {
+    setNameEdited(false);
+    setStartWeek(1);
+    setPeriodWeeks(4);
     const modal = document.getElementById('modal_create_seating');
     if (modal) modal.showModal();
   };
@@ -254,15 +269,18 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   const handleCreate = async () => {
     if (!selectedClass || !selectedRoom) return;
     try {
-      // Klassekartets navn er gitt av klassen — ingen egen fritekst å taste inn.
       const className = classes.find(c => c.id === Number(selectedClass))?.name || 'Klassekart';
+      const name = chartName.trim() || className;
+      const weeks = Math.max(1, Number(periodWeeks) || 1);
+      const start = Math.max(1, Number(startWeek) || 1);
+      const comment = `Uke ${start}-${start + weeks - 1}`;
       const result = await window.api.saveSeating({
         id: null,
-        name: className,
+        name,
         classId: selectedClass,
         roomId: selectedRoom,
         placements: '{}',
-        comment: 'Uke 1-4'
+        comment
       });
       const modal = document.getElementById('modal_create_seating');
       if (modal) modal.close();
@@ -274,11 +292,19 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       } else {
         // Fallback dersom lastID mangler fra backend
         const all = await window.api.getSeatings();
-        const created = all.find(s => s.name === className && s.class_id === Number(selectedClass));
+        const created = all.find(s => s.name === name && s.class_id === Number(selectedClass));
         if (created) onEdit(created.id);
       }
     } catch(e){}
   };
+
+  let modalDeskCount = 0;
+  try { modalDeskCount = (JSON.parse(rooms.find(r => r.id === Number(selectedRoom))?.layout_data || '{}').desks || []).length; } catch(e){}
+  let modalStudentCount = 0;
+  try {
+    const parsed = JSON.parse(classes.find(c => c.id === Number(selectedClass))?.students || '[]');
+    modalStudentCount = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
+  } catch(e){}
 
   return (
     <PageLayout title="Mine Klassekart" icon="fa-solid fa-map-location-dot" onAdd={handleOpenCreate}>
@@ -344,14 +370,24 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
           onEdit(latestChart.id);
         };
 
+        let studentCount = 0;
+        try {
+          const parsed = JSON.parse(cls.students || '[]');
+          studentCount = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
+        } catch (e) {}
+        const roomName = latestChart.room_name || rooms.find(r => r.id === latestChart.room_id)?.name || '—';
+
         return (
-          <Card 
+          <Card
             key={cls.id}
             title={cls.name}
+            badgeText={`${classSeatings.length} ${classSeatings.length === 1 ? 'PERIODE' : 'PERIODER'}`}
+            badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
             infoList={[
-              { icon: 'fa-solid fa-map-location-dot', text: `Aktivt: ${latestChart.name}` },
-              { icon: 'fa-solid fa-school', text: `Rom: ${latestChart.room_name || latestChart.room_id}` },
-              { icon: 'fa-solid fa-layer-group', text: `Historikk: ${classSeatings.length} perioder` }
+              { icon: 'fa-solid fa-signature', text: latestChart.name },
+              { icon: 'fa-solid fa-calendar-week', text: latestChart.comment || 'Ingen periode angitt' },
+              { icon: 'fa-solid fa-school', text: roomName },
+              { icon: 'fa-solid fa-users', text: `${studentCount} elever` }
             ]}
             icon="fa-solid fa-users-rectangle"
             onClick={() => onEdit(latestChart.id)}
@@ -383,19 +419,63 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
           
           <div className="flex flex-col gap-4">
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasse</label>
-              <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)} autoFocus>
-                {classes.length === 0 && <option value="" disabled>Ingen klasser funnet</option>}
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på klassekartet</label>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500"
+                value={chartName}
+                onChange={e => { setChartName(e.target.value); setNameEdited(true); }}
+                autoFocus
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasse</label>
+                <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+                  {classes.length === 0 && <option value="" disabled>Ingen klasser funnet</option>}
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {selectedClass && (
+                  <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                    <i className="fa-solid fa-users w-3 text-emerald-400"></i> {modalStudentCount} elever
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasserom</label>
+                <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)}>
+                  {rooms.length === 0 && <option value="" disabled>Ingen rom funnet</option>}
+                  {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+                {selectedRoom && (
+                  <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                    <i className="fa-solid fa-chair w-3 text-purple-400"></i> {modalDeskCount} bord-plasser
+                  </p>
+                )}
+              </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasserom</label>
-              <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)}>
-                {rooms.length === 0 && <option value="" disabled>Ingen rom funnet</option>}
-                {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
+              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Første periode</label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400">Uke</span>
+                <input
+                  type="number" min="1" max="52"
+                  className="input input-bordered w-20 bg-[#262b3a] border-slate-600 focus:border-emerald-500 text-center"
+                  value={startWeek}
+                  onChange={e => setStartWeek(e.target.value)}
+                />
+                <span className="text-xs text-slate-400">i</span>
+                <input
+                  type="number" min="1" max="52"
+                  className="input input-bordered w-20 bg-[#262b3a] border-slate-600 focus:border-emerald-500 text-center"
+                  value={periodWeeks}
+                  onChange={e => setPeriodWeeks(e.target.value)}
+                />
+                <span className="text-xs text-slate-400">uker</span>
+              </div>
             </div>
           </div>
 

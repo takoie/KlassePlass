@@ -6,6 +6,39 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Utvidet "Opprett nytt klassekart", presist innhold på klassekart-kortene
+
+**Ny-klassekart-modalen har nå alt brukeren trenger for å ta en informert
+avgjørelse ved opprettelse**, i stedet for bare klasse+rom-valg:
+- Eget navn på klassekartet (fritekst, foreslår klassenavnet som standard
+  helt til brukeren skriver noe selv — bytte av klasse i dropdownen
+  overstyrer da ikke lenger det brukeren har skrevet).
+- Antall elever i valgt klasse, vist rett under klasse-dropdownen.
+- Antall bord-plasser i valgt rom, vist rett under rom-dropdownen (samme
+  beregning som brukes i Rom-oversikten).
+- Startuke og lengde (i uker) for første periode, som til sammen bygger
+  periode-teksten (f.eks. uke 10 + 3 uker → "Uke 10-12") — samme
+  interaksjonsmønster som "Ny periode"-dialogen inne i et klassekart.
+
+**Kortene under "Mine Klassekart" viser nå presis informasjon** i stedet for
+et generisk "Aktivt: <navn>": klassekartets eget navn, gjeldende periode
+(f.eks. "Uke 5-8"), romnavn og antall elever — med antall perioder i
+historikken flyttet til en egen badge (samme mønster som "ROM-OPPSETT"-
+badgen i Rom-oversikten). Fant og fikset samtidig en `undefined elever`-visning
+underveis: elevtall ble regnet ut med `JSON.parse(students).length` uten å
+håndtere at `students`-kolonnen noen steder er lagret som `{ students: [...] }`
+i stedet for en ren array — samme mønster som allerede fantes riktig
+implementert i Klasser-oversikten, gjenbrukt her.
+
+**Verifisert i ekte kjørende app:** opprettet et klassekart med egendefinert
+navn, uke 10 + 3 uker → fikk riktig "Uke 10-12" i toppbaren; kortet i
+oversikten viste deretter navn, periode, rom og korrekt elevtall (28); ryddet
+opp testkartet igjen etterpå uten å påvirke eksisterende historikk.
+
+**Berørte filer:** `src/components/OverviewViews.jsx`
+
+---
+
 ## 2026-07-27 — Vindusstørrelse 1450×850, rom-visning uendrbar, Plasser alle, momentan randomisering
 
 **Standard vindusstørrelse** endret fra 1280×800 til 1450×850 (fortsatt
