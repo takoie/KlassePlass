@@ -31,6 +31,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   ]);
   const [allStudents, setAllStudents] = useState([]);
   const [groups, setGroups] = useState([[], []]);
+  const [groupLeaders, setGroupLeaders] = useState([null, null]);
   const [saveState, setSaveState] = useState('idle');
 
   useEffect(() => { loadInitial(); }, [initialId]);
@@ -49,7 +50,14 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           setClassId(s.class_id);
           setMinutesPerStation(s.minutes_per_station ?? 10);
           try { setStations(JSON.parse(s.stations || '[]')); } catch (e) {}
-          try { setGroups(JSON.parse(s.groups || '[]')); } catch (e) {}
+          let parsedGroups = [];
+          try { parsedGroups = JSON.parse(s.groups || '[]'); setGroups(parsedGroups); } catch (e) {}
+          try {
+            const gl = JSON.parse(s.group_leaders || '[]');
+            setGroupLeaders(Array.isArray(gl) && gl.length === parsedGroups.length ? gl : parsedGroups.map(() => null));
+          } catch (e) {
+            setGroupLeaders(parsedGroups.map(() => null));
+          }
           await loadStudentsForClass(s.class_id);
         }
       }
@@ -86,6 +94,11 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       while (next.length < target) next.push([]);
       return next;
     });
+    setGroupLeaders(prev => {
+      const next = prev.slice(0, target);
+      while (next.length < target) next.push(null);
+      return next;
+    });
   };
 
   const autoDistribute = () => {
@@ -98,6 +111,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       useConstraints: false,
     });
     setGroups(result.groups);
+    setGroupLeaders(result.groups.map(() => null));
   };
 
   const moveStudent = (studentId, fromIdx, toIdx) => {
@@ -106,6 +120,20 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       const next = prev.map(g => [...g]);
       next[fromIdx] = next[fromIdx].filter(id => id !== studentId);
       next[toIdx] = [...next[toIdx], studentId];
+      return next;
+    });
+    setGroupLeaders(prev => {
+      if (prev[fromIdx] !== studentId) return prev;
+      const next = [...prev];
+      next[fromIdx] = null;
+      return next;
+    });
+  };
+
+  const toggleLeader = (groupIdx, studentId) => {
+    setGroupLeaders(prev => {
+      const next = [...prev];
+      next[groupIdx] = next[groupIdx] === studentId ? null : studentId;
       return next;
     });
   };
@@ -125,6 +153,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
         classId,
         stations: validStations,
         groups,
+        groupLeaders,
         rotationPlan,
         minutesPerStation,
       });
