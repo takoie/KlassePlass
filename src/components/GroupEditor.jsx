@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DndContext, useDraggable, useDroppable, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer';
 import StudentContextMenu from './GroupWork/StudentContextMenu';
@@ -17,6 +18,7 @@ export default function GroupEditor({ onBack, initialId }) {
   const [leaderIds, setLeaderIds] = useState([]);
   const [lockedIds, setLockedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, studentId, groupIdx }
+  const [activeDragId, setActiveDragId] = useState(null);
   const [studentsById, setStudentsById] = useState({});
   const [allStudentIds, setAllStudentIds] = useState([]);
   const [constraints, setConstraints] = useState([]);
@@ -135,6 +137,20 @@ export default function GroupEditor({ onBack, initialId }) {
     setContextMenu({ x: e.clientX, y: e.clientY, studentId, groupIdx });
   };
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragStart = (event) => setActiveDragId(event.active.id);
+
+  const handleDragEnd = (event) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const toIdx = Number(String(over.id).slice('group-'.length));
+    const fromIdx = groups.findIndex(g => g.includes(active.id));
+    if (fromIdx === -1 || fromIdx === toIdx) return;
+    moveStudent(active.id, fromIdx, toIdx);
+  };
+
   const handleSave = async () => {
     if (!assignmentId) return;
     setSaveState('saving');
@@ -219,45 +235,50 @@ export default function GroupEditor({ onBack, initialId }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(220px, 1fr))` }}>
-          {groups.map((studentIds, idx) => {
-            const color = GROUP_COLORS[idx % GROUP_COLORS.length];
-            return (
-              <div key={idx} className="bg-[#1a1e2b] border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
-                  <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
-                  <span className="text-xs text-slate-400">{studentIds.length} elever</span>
-                </div>
-                <div className="p-2 flex flex-col gap-1.5 flex-1">
-                  {studentIds.length === 0 && (
-                    <p className="text-xs text-slate-500 italic text-center py-3">Ingen elever</p>
-                  )}
-                  {studentIds.map(sid => {
-                    const student = studentsById[sid];
-                    if (!student) return null;
-                    const isLeader = leaderIds.includes(sid);
-                    const isLocked = lockedIds.includes(sid);
-                    return (
-                      <div
-                        key={sid}
-                        onContextMenu={(e) => handleStudentContextMenu(e, sid, idx)}
-                        className="flex items-center justify-between gap-2 bg-[#262b3a] rounded-lg px-2.5 py-1.5 cursor-grab select-none"
-                      >
-                        <span className="text-sm text-slate-200 truncate flex items-center gap-1.5">
-                          {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
-                          {student.name}
-                        </span>
-                        {isLocked && <i className="fa-solid fa-lock text-red-400 text-[10px]" title="Låst"></i>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(220px, 1fr))` }}>
+            {groups.map((studentIds, idx) => {
+              const color = GROUP_COLORS[idx % GROUP_COLORS.length];
+              return (
+                <GroupPanel key={idx} idx={idx} color={color}>
+                  <div className="px-4 py-2.5 flex items-center justify-between" style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
+                    <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
+                    <span className="text-xs text-slate-400">{studentIds.length} elever</span>
+                  </div>
+                  <div className="p-2 flex flex-col gap-1.5 flex-1">
+                    {studentIds.length === 0 && (
+                      <p className="text-xs text-slate-500 italic text-center py-3">Ingen elever</p>
+                    )}
+                    {studentIds.map(sid => {
+                      const student = studentsById[sid];
+                      if (!student) return null;
+                      return (
+                        <StudentCard
+                          key={sid}
+                          sid={sid}
+                          student={student}
+                          isLeader={leaderIds.includes(sid)}
+                          isLocked={lockedIds.includes(sid)}
+                          onContextMenu={(e) => handleStudentContextMenu(e, sid, idx)}
+                        />
+                      );
+                    })}
+                  </div>
+                </GroupPanel>
+              );
+            })}
+          </div>
         </div>
-      </div>
+        <DragOverlay>
+          {activeDragId ? (
+            <div className="bg-[#262b3a] rounded-lg px-2.5 py-1.5 shadow-2xl border border-fuchsia-400 text-sm text-slate-100 flex items-center gap-1.5">
+              {leaderIds.includes(activeDragId) && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
+              {studentsById[activeDragId]?.name}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       <StudentContextMenu
         contextMenu={contextMenu}
@@ -284,6 +305,38 @@ export default function GroupEditor({ onBack, initialId }) {
           </div>
         </div>
       </dialog>
+    </div>
+  );
+}
+
+function StudentCard({ sid, student, isLeader, isLocked, onContextMenu }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: sid });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onContextMenu={onContextMenu}
+      className="flex items-center justify-between gap-2 bg-[#262b3a] rounded-lg px-2.5 py-1.5 cursor-grab select-none touch-none"
+      style={{ opacity: isDragging ? 0.4 : 1 }}
+    >
+      <span className="text-sm text-slate-200 truncate flex items-center gap-1.5">
+        {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
+        {student.name}
+      </span>
+      {isLocked && <i className="fa-solid fa-lock text-red-400 text-[10px]" title="Låst"></i>}
+    </div>
+  );
+}
+
+function GroupPanel({ idx, color, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `group-${idx}` });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`bg-[#1a1e2b] border rounded-2xl overflow-hidden flex flex-col transition-colors ${isOver ? 'border-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'border-slate-800'}`}
+    >
+      {children}
     </div>
   );
 }
