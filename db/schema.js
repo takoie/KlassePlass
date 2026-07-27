@@ -3,7 +3,7 @@
  * Kjøres ved oppstart. CREATE TABLE IF NOT EXISTS er idempotent.
  */
 
-const CURRENT_VERSION = 7;
+const CURRENT_VERSION = 8;
 
 /** Kjør alle migrations mot en åpen sql.js db-instans */
 function runMigrations(db) {
@@ -137,6 +137,9 @@ function runMigrations(db) {
 
       // ---- v7: Nabo-historikk — neighbors kolonne i seating_history ----
       try { db.run(`ALTER TABLE seating_history ADD COLUMN neighbors TEXT DEFAULT '[]'`); } catch(e){}
+
+      // ---- v8: Stasjon-gruppeledere — group_leaders kolonne ----
+      try { db.run(`ALTER TABLE station_sessions ADD COLUMN group_leaders TEXT DEFAULT '[]'`); } catch(e){}
 
       // Sett schema-versjon
       db.run(`INSERT OR IGNORE INTO schema_version (version) VALUES (?)`, [CURRENT_VERSION]);
