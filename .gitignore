@@ -10,6 +10,7 @@ venv/
 # Node / Electron
 node_modules/
 dist/
+dist-react/
 out/
 .DS_Store
 .env

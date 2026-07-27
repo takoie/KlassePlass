@@ -6,6 +6,45 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Fikset at rom-editor stille ødela eksisterende klassekart
+
+**Root cause (bekreftet ved kodelesing, ikke bare antatt):** dette var IKKE et
+formmismatch (rundbord vs. rektangel) — begge moduler tegner bord identisk
+(`kapasitet × 100px`). Det reelle problemet: bord-IDer er ikke stabile.
+
+- `SeatingChart.jsx` lagret kun `placements` (elev → `{bordId}_seat_{N}`),
+  aldri selve bordoppsettet, og leste bordene **live** fra romets
+  `layout_data` hver gang et klassekart ble åpnet (`setupNewChart(Local)`).
+- "Hurtiglayout"/generator-knappen i `RoomEditor.jsx` bygger hele
+  bord-arrayen på nytt med ferske `Date.now()`-baserte IDer
+  (linje ~181-189), selv på et rom som allerede har aktive klassekart.
+- Konsekvens: å regenerere et rom som allerede er i bruk gjorde alle
+  eksisterende elevplasseringer foreldreløse — stille, uten advarsel.
+  Klassekartet så ut som om alle elevene forsvant.
+
+**Fiks — klassekart får sitt eget frosne snapshot av bordoppsettet:**
+- `saveCurrentSeating`/`handleStartNewPeriod` lagrer nå `deskLayout: { desks,
+  doors, windows, boardObj }` sammen med `placements` i samme JSON-blob
+  (ingen skjemamigrering nødvendig — gjenbruker eksisterende `placements`-kolonne).
+- `setupNewChart`/`setupNewChartLocal` bruker snapshotet hvis det finnes,
+  og faller tilbake til å lese rommet live kun for kart lagret før denne
+  fiksen (bakoverkompatibelt).
+- Ny knapp **"Hent fra rom"** i verktøypanelet: henter bevisst det
+  nåværende romoppsettet inn i klassekartet, med bekreftelsesdialog som
+  forklarer at elever ved bord som ikke lenger finnes blir uplasserte.
+  Dette var en reell funksjon i v1 (`syncRoomLayout()`), som forsvant i
+  senere rebuilds — gjeninnført her som en eksplisitt, ikke-automatisk handling.
+
+**Verifisert end-to-end** via reell kjøring av appen (ikke bare bygget):
+plasserte en elev, regenererte rommet (nye bord-IDer), åpnet klassekartet
+på nytt — eleven satt fortsatt riktig. Trykket "Hent fra rom" — eleven
+ble korrekt uplassert og bord-tellingen oppdatert (27 → 28 uplasserte).
+
+**Berørte filer:** `src/components/SeatingChart.jsx`, `.gitignore` (la til
+`dist-react/`, som manglet fra Vite-migreringen)
+
+---
+
 ## 2026-07-27 — Fikset manglende utskrift/PDF + krasj ved oppstart (electron-updater)
 
 **1. "Skriv ut / PDF" i klassekart produserte ikke lenger et brukbart resultat**

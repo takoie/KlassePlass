@@ -138,6 +138,7 @@ export default function SeatingChart({ onBack, initialId }) {
           setChartComment(seating.comment || 'Uke 1-4');
           
           let parsedPlacements = {};
+          let deskSnapshot = null;
           try {
             const extraData = seating.placements ? JSON.parse(seating.placements) : {};
             if (extraData.placements) {
@@ -146,24 +147,39 @@ export default function SeatingChart({ onBack, initialId }) {
               setStudentRoles(extraData.studentRoles || {});
               setStudentNotes(extraData.studentNotes || {});
               setGroupOverrides(extraData.groupOverrides || {});
+              deskSnapshot = extraData.deskLayout || null;
             } else {
               parsedPlacements = extraData;
             }
           } catch(e) {}
-          
+
           setPlacements(parsedPlacements);
-          
+
           // Setup chart with local variables
           const clsObj = cls.find(c => c.id === Number(seating.class_id));
           const rmObj = rms.find(r => r.id === Number(seating.room_id));
-          setupNewChartLocal(clsObj, rmObj, parsedPlacements);
+          setupNewChartLocal(clsObj, rmObj, parsedPlacements, deskSnapshot);
         }
       }
     } catch (e) {}
   };
 
-  const setupNewChartLocal = (cls, rm, currentPlacements) => {
-    if (rm) {
+  // deskSnapshot (om satt): bordoppsettet slik det var da klassekartet sist ble lagret.
+  // Rommets layout_data leses live og kan ha blitt regenerert (nye bord-IDer) siden den
+  // gang — uten snapshot ville lagrede elevplasseringer da peke på bord som ikke finnes
+  // lenger og se ut som om alle elevene forsvant. Se "Hent fra rom"-knappen for bevisst sync.
+  const setupNewChartLocal = (cls, rm, currentPlacements, deskSnapshot) => {
+    if (deskSnapshot && Array.isArray(deskSnapshot.desks) && deskSnapshot.desks.length) {
+      setDesks(deskSnapshot.desks.map(d => ({
+        ...d,
+        capacity: d.capacity || 1,
+        zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
+        groupId: d.groupId || null
+      })));
+      setDoors(deskSnapshot.doors || []);
+      setWindows(deskSnapshot.windows || []);
+      setBoardObj(deskSnapshot.boardObj || { x: 422, y: 15 });
+    } else if (rm) {
       try {
         const layout = JSON.parse(rm.layout_data || '{}');
         setDesks((layout.desks || []).map(d => ({
@@ -342,6 +358,7 @@ export default function SeatingChart({ onBack, initialId }) {
       setChartComment(seating.comment || 'Uke 1-4');
       
       let parsedPlacements = {};
+      let deskSnapshot = null;
       try {
         const extraData = seating.placements ? JSON.parse(seating.placements) : {};
         if (extraData.placements) {
@@ -349,23 +366,34 @@ export default function SeatingChart({ onBack, initialId }) {
           setLockedSeats(extraData.lockedSeats || {});
           setStudentRoles(extraData.studentRoles || {});
           setStudentNotes(extraData.studentNotes || {});
+          deskSnapshot = extraData.deskLayout || null;
         } else {
           parsedPlacements = extraData;
         }
       } catch(e) {}
-      
+
       setPlacements(parsedPlacements);
-      setupNewChart(seating.class_id, seating.room_id, parsedPlacements);
+      setupNewChart(seating.class_id, seating.room_id, parsedPlacements, deskSnapshot);
     }
     setSaveState('saved');
     setTimeout(() => isInitialLoadRef.current = false, 100);
   };
 
-  const setupNewChart = (cId, rId, currentPlacements) => {
+  const setupNewChart = (cId, rId, currentPlacements, deskSnapshot) => {
     const cls = classes.find(c => c.id === Number(cId));
     const rm = rooms.find(r => r.id === Number(rId));
-    
-    if (rm) {
+
+    if (deskSnapshot && Array.isArray(deskSnapshot.desks) && deskSnapshot.desks.length) {
+      setDesks(deskSnapshot.desks.map(d => ({
+        ...d,
+        capacity: d.capacity || 1,
+        zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
+        groupId: d.groupId || null
+      })));
+      setDoors(deskSnapshot.doors || []);
+      setWindows(deskSnapshot.windows || []);
+      setBoardObj(deskSnapshot.boardObj || { x: 405, y: 25 });
+    } else if (rm) {
       try {
         const layout = JSON.parse(rm.layout_data || '{}');
         setDesks((layout.desks || []).map(d => ({
@@ -417,7 +445,12 @@ export default function SeatingChart({ onBack, initialId }) {
         placements,
         lockedSeats,
         studentRoles,
-        studentNotes
+        studentNotes,
+        groupOverrides,
+        // Frosset kopi av bordoppsettet. Uten denne ville rom-redigering (spesielt
+        // Hurtiglayout, som gir alle bord nye IDer) stille gjøre alle plasseringer
+        // her foreldreløse neste gang kartet åpnes.
+        deskLayout: { desks, doors, windows, boardObj }
       });
 
       const result = await window.api.saveSeating({
@@ -456,7 +489,12 @@ export default function SeatingChart({ onBack, initialId }) {
         placements,
         lockedSeats,
         studentRoles,
-        studentNotes
+        studentNotes,
+        groupOverrides,
+        // Frosset kopi av bordoppsettet. Uten denne ville rom-redigering (spesielt
+        // Hurtiglayout, som gir alle bord nye IDer) stille gjøre alle plasseringer
+        // her foreldreløse neste gang kartet åpnes.
+        deskLayout: { desks, doors, windows, boardObj }
       });
 
       const result = await window.api.saveSeating({
@@ -530,6 +568,41 @@ export default function SeatingChart({ onBack, initialId }) {
       x: Math.max(10, Math.min(1050 - 240, Math.round((2 * centerX - prev.x - 240) / 10) * 10)),
       y: Math.max(10, Math.min(700 - 40, Math.round((2 * centerY - prev.y - 40) / 10) * 10))
     }));
+  };
+
+  // Henter romets NÅVÆRENDE oppsett og erstatter bord-snapshotet i dette klassekartet.
+  // Bord-IDer som ikke lenger finnes i rommet mister plasseringen sin (studenten havner
+  // i "uplassert") — det er forventet og er selve poenget: dette er en bevisst handling,
+  // ikke noe som skal skje stille av seg selv når rommet redigeres.
+  const syncFromRoom = () => {
+    const rm = rooms.find(r => r.id === Number(selectedRoom));
+    if (!rm) return;
+    try {
+      const layout = JSON.parse(rm.layout_data || '{}');
+      const newDesks = (layout.desks || []).map(d => ({
+        ...d,
+        capacity: d.capacity || 1,
+        zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
+        groupId: d.groupId || null
+      }));
+      const newDeskIds = new Set(newDesks.map(d => String(d.id)));
+
+      setDesks(newDesks);
+      setDoors(layout.doors || []);
+      setWindows(layout.windows || []);
+      setBoardObj(layout.boardObj || { x: 422, y: 15 });
+
+      setPlacements(prev => {
+        const next = {};
+        for (const [slotKey, val] of Object.entries(prev)) {
+          if (newDeskIds.has(slotKey.split('_seat_')[0])) next[slotKey] = val;
+        }
+        const keptIds = Object.values(next);
+        setUnplacedStudents(allStudents.filter(s => !keptIds.includes(s.id) && !keptIds.includes(s.name)));
+        return next;
+      });
+    } catch (e) {}
+    document.getElementById('modal_sync_room')?.close();
   };
 
   const handleAutoFill = () => {
@@ -1085,6 +1158,9 @@ export default function SeatingChart({ onBack, initialId }) {
                 <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handlePrint}>
                   <i className="fa-solid fa-print w-5 text-indigo-400"></i> Skriv ut / PDF
                 </button>
+                <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => document.getElementById('modal_sync_room').showModal()} title="Hent siste bordoppsett fra rom-editoren">
+                  <i className="fa-solid fa-arrows-rotate w-5 text-orange-400"></i> Hent fra rom
+                </button>
               </div>
               
               <div className="h-px bg-slate-800/50 w-full my-1"></div>
@@ -1484,6 +1560,25 @@ export default function SeatingChart({ onBack, initialId }) {
               <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
               <button className="btn btn-error" onClick={handleDelete}>Ja, slett</button>
             </form>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="modal_sync_room" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-orange-400 text-lg flex items-center gap-2">
+            <i className="fa-solid fa-triangle-exclamation"></i> Hent bordoppsett fra rommet?
+          </h3>
+          <p className="py-4 text-sm text-slate-300">
+            Dette klassekartet bruker en lagret kopi av bordoppsettet fra da det sist ble lagret.
+            Å hente fra rommet nå erstatter den kopien med rommets nåværende oppsett.
+            Elever plassert ved bord som ikke lenger finnes i rommet blir uplasserte.
+          </p>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+            </form>
+            <button className="btn btn-warning" onClick={syncFromRoom}>Ja, hent fra rom</button>
           </div>
         </div>
       </dialog>
