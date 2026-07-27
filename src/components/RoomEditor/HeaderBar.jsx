@@ -3,8 +3,8 @@ import React from 'react';
 /** Toppbar: rom-valg, nytt rom-knapp, lagre-status og slett-knapp. */
 export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoom, handleOpenNewModal, saveState }) {
   return (
-    <div className="px-6 py-2.5 bg-[#1a1e2b] border-b border-slate-800 flex justify-between items-center z-20 flex-shrink-0">
-      <div className="flex items-center gap-4">
+    <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-wrap">
         {onBack && (
           <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake

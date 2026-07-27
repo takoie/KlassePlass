@@ -85,6 +85,11 @@ export default function SeatingChart({ onBack, initialId }) {
   const [spinTargetStudent, setSpinTargetStudent] = useState(null);
   const [hoverSlotKey, setHoverSlotKey] = useState(null);
 
+  // Gradvis avdekking (del av Fun Mode)
+  const [revealMode, setRevealMode] = useState(false);
+  const [revealOrder, setRevealOrder] = useState([]);
+  const [revealedSlots, setRevealedSlots] = useState(new Set());
+
   // Drag state
   const [draggedStudent, setDraggedStudent] = useState(null);
   const canvasRef = useRef(null);
@@ -829,6 +834,32 @@ export default function SeatingChart({ onBack, initialId }) {
     });
   };
 
+  // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
+  // læreren avsløre dem én og én i tilfeldig rekkefølge (foran klassen).
+  const startReveal = () => {
+    const placedSlots = Object.keys(placements).filter(k => placements[k]);
+    if (placedSlots.length === 0) return;
+    setRevealOrder([...placedSlots].sort(() => Math.random() - 0.5));
+    setRevealedSlots(new Set());
+    setRevealMode(true);
+  };
+
+  const revealNext = () => {
+    const nextSlot = revealOrder.find(slot => !revealedSlots.has(slot));
+    if (!nextSlot) return;
+    setRevealedSlots(prev => new Set(prev).add(nextSlot));
+  };
+
+  const revealAll = () => {
+    setRevealedSlots(new Set(revealOrder));
+  };
+
+  const endReveal = () => {
+    setRevealMode(false);
+    setRevealOrder([]);
+    setRevealedSlots(new Set());
+  };
+
   const toggleLockDesk = (deskId) => {
     const desk = desks.find(d => d.id === deskId);
     if (!desk) return;
@@ -1119,6 +1150,8 @@ export default function SeatingChart({ onBack, initialId }) {
           <FunDrawer
             showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
             isSpinning={isSpinning} handleRuleBasedFunSpin={handleRuleBasedFunSpin}
+            revealMode={revealMode} revealedCount={revealedSlots.size} revealTotal={revealOrder.length}
+            startReveal={startReveal} revealNext={revealNext} revealAll={revealAll} endReveal={endReveal}
           />
         )}
 
@@ -1269,10 +1302,14 @@ export default function SeatingChart({ onBack, initialId }) {
                                     </div>
                                   )}
 
-                                  {studentObj ? (
-                                    <div 
-                                      className={`w-full h-full flex items-center justify-center gap-1 px-1 truncate ${activeGroupId !== null ? '' : 'cursor-move'}`}
-                                      onMouseDown={(e) => { if (activeGroupId === null) startDrag(e, studentObj, slotKey); }}
+                                  {studentObj && revealMode && !revealedSlots.has(slotKey) ? (
+                                    <div className="w-full h-full flex items-center justify-center px-1 bg-cyan-950/60 border border-cyan-500/30 rounded-lg">
+                                      <span className="text-lg font-black text-cyan-400">?</span>
+                                    </div>
+                                  ) : studentObj ? (
+                                    <div
+                                      className={`w-full h-full flex items-center justify-center gap-1 px-1 truncate ${activeGroupId !== null || revealMode ? '' : 'cursor-move'}`}
+                                      onMouseDown={(e) => { if (activeGroupId === null && !revealMode) startDrag(e, studentObj, slotKey); }}
                                       onDoubleClick={() => openNoteModal(studentObj)}
                                     >
                                       {!hideSensitiveInfo && role && <span className="text-[10px]">{role}</span>}

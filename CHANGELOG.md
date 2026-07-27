@@ -6,6 +6,72 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Vindusstørrelse, titlebar-overlapp, headerbar-overflow, gradvis avdekking
+
+Brukertilbakemelding etter dagens funksjonsarbeid: droppet fire punkter fra
+gjenoppbyggingslisten (deltakelseslogg, timeplan, nivåbasert gruppering,
+grupperotering-statistikk — bevisst ikke bygget), pekte ut at "gradvis
+avdekking" hører hjemme i Fun Mode i klassekartet (ikke egen modul), og
+meldte to konkrete visuelle feil pluss et ønske om mer uniformt design og en
+vindusstørrelse tilpasset bærbare.
+
+**Rotårsak til begge visuelle feil, funnet ved kodegjennomgang:**
+`Layout.jsx` ga alle sider en 40px topp-avstand for å unngå de tilpassede
+vinduskontrollene (minimer/maksimer/lukk) øverst til høyre — bortsett fra
+`seating` og (nylig lagt til) `station-presenter`, som eksplisitt hoppet
+over denne innpakningen for å få edge-to-edge lerret. Det var nettopp dette
+avviket som fikk disse to sidenes egne topplinjer til å kollidere visuelt
+med vinduskontrollene. `rooms` hadde derimot alltid fått riktig avstand —
+et rent inkonsistens-avvik mellom sidene, ikke en tilsiktet forskjell.
+
+- **Fikset:** Fjernet spesialtilfellet i `Layout.jsx` — alle sider (også
+  klassekart og stasjonspresentasjon) får nå samme innrammede boks +
+  topp-avstand. Løser overlappen og gjør sidene visuelt uniforme.
+- **Vindusstørrelse:** Standard endret fra fast 1400×820 til 1280×800,
+  klemt mot skjermens faktiske arbeidsområde (`screen.getPrimaryDisplay()`)
+  slik at vinduet aldri åpnes større enn skjermen — 1400px bredde er
+  faktisk større enn en vanlig 1366×768-bærbar-skjerm i høyden. Fortsatt
+  fritt endrbart av brukeren (satt `minWidth:1024, minHeight:650`).
+- **Ny bug oppdaget som følge av den mindre standardstørrelsen:** flere
+  headerbarer (klassekart, rom, gruppearbeid, stasjonsoppsett,
+  klasseadministrasjon) var bygget for full bredde på et 1400px-vindu og
+  klippet av innhold (usynlige/utilgjengelige knapper) ved 1280px, siden
+  den omsluttende beholderen har `overflow-hidden`. Fikset ved å gjøre alle
+  disse headerbarene fleksible (`flex-wrap` + strammere bredder på
+  select-bokser og navnefelt) slik at de får plass komfortabelt ved
+  1280px, med linjebryting som sikkerhetsnett ved uvanlig lange
+  klasse-/rom-/kartnavn i stedet for at innhold rett og slett forsvinner.
+
+**Gradvis avdekking lagt til i Fun Mode** (`SeatingChart.jsx`): ny seksjon
+i Fun Mode-skuffen ved siden av "Spin & Plasser". "Start avdekking" skjuler
+navnene til alle plasserte elever (viser "?"), "Avslør neste" avslører én
+tilfeldig elev om gangen, "Avslør alle" avslører resten, "Avslutt
+avdekking" nullstiller. Elever kan ikke dras mens avdekking pågår (unngår
+utilsiktet flytting midt i en presentasjon foran klassen). Dette var
+funksjonen som i school-features.md-planen aldri fikk noen ekte v2-kode
+(kun pseudokode) — bygget her for første gang, som en del av Fun Mode
+fremfor egen modul, per brukerens ønske.
+
+**Undersøkt, men IKKE fikset ennå:** brukeren meldte at vanlige
+`<select>`-nedtrekksbokser (Klasse/Rom/Periode m.fl.) åpner listen på feil
+sted i vinduet. Kodegjennomgang fant ingen CSS-transform eller zoom som
+skulle forklare dette i selve appen — mistanken er en kjent
+Electron/Chromium-begrensning der `frame:false` + `transparent:true`
+(brukt her for det tilpassede, avrundede vindusdesignet) kan gi feil
+skjermplassering av native dropdown-popups. Kunne ikke bekreftes visuelt
+via automatisert testing (native popups fanges ikke pålitelig av
+skjermbilde-verktøyet). Reell fiks (erstatte native `<select>` med
+egne-rendrede dropdown-komponenter overalt i appen) er et stort, eget
+arbeid — ikke påbegynt, avventer prioritering.
+
+**Berørte filer:** `src/window-manager.js`, `src/components/Layout.jsx`,
+`src/components/SeatingChart.jsx`, `src/components/SeatingChart/FunDrawer.jsx`,
+`src/components/SeatingChart/HeaderBar.jsx`, `src/components/RoomEditor/HeaderBar.jsx`,
+`src/components/GroupEditor.jsx`, `src/components/StationSetup.jsx`,
+`src/components/ClassManager.jsx`
+
+---
+
 ## 2026-07-27 — Gjeninnført stasjonsundervisning
 
 Andre av de opprinnelig utsatte "punkt 4"-funksjonene, gjenoppbygd i React.

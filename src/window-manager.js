@@ -3,16 +3,33 @@
  * winRef.win og winRef.presentationWin er delt referanse.
  */
 
-const { BrowserWindow, ipcMain, app } = require('electron');
+const { BrowserWindow, ipcMain, app, screen } = require('electron');
 const path = require('path');
 
 /** Delt referanse til vinduer — slik at ipc-handlers.js kan lese dem */
 const winRef = { win: null, presentationWin: null };
 
+// Standardstørrelse valgt for å passe godt på vanlige bærbare skjermer
+// (1366×768 er fortsatt svært utbredt). Klemmes mot faktisk tilgjengelig
+// arbeidsområde slik at vinduet aldri åpnes større enn skjermen — det var
+// tidligere mulig siden 1400×820 er større enn en 1366×768-skjerm i høyden.
+function getInitialWindowSize() {
+  const { width: workW, height: workH } = screen.getPrimaryDisplay().workAreaSize;
+  const targetW = 1280;
+  const targetH = 800;
+  return {
+    width: Math.min(targetW, workW - 20),
+    height: Math.min(targetH, workH - 20),
+  };
+}
+
 function createMainWindow() {
+  const { width, height } = getInitialWindowSize();
   winRef.win = new BrowserWindow({
-    width: 1400,
-    height: 820,
+    width,
+    height,
+    minWidth: 1024,
+    minHeight: 650,
     icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
     frame: false,
     transparent: true,

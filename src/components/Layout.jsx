@@ -79,17 +79,16 @@ export default function Layout({ currentView, setCurrentView, children }) {
       </div>
       )}
 
-      {/* Main Content Area */}
-      {currentView === 'seating' || currentView === 'station-presenter' ? (
-        children
-      ) : (
-        <div className="flex-1 flex flex-col overflow-hidden relative bg-[#202534] rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">
-          {/* Her rendres siden */}
-          <div className="flex-1 overflow-hidden pt-10">
-            {children}
-          </div>
+      {/* Main Content Area — samme innrammet-boks + topp-avstand for titlebar-knappene
+          på alle sider, uansett om sidemenyen er skjult (canvas-fokuserte visninger som
+          klassekart/rom/stasjonspresentasjon) eller synlig. Tidligere hoppet "seating" og
+          "station-presenter" over denne innpakningen, som fikk deres egne topplinjer til
+          å kollidere visuelt med vinduskontrollene (minimer/maksimer/lukk). */}
+      <div className="flex-1 flex flex-col overflow-hidden relative bg-[#202534] rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">
+        <div className="flex-1 overflow-hidden pt-10">
+          {children}
         </div>
-      )}
+      </div>
     </div>
   );
 }

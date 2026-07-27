@@ -141,8 +141,8 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
 
   return (
     <div className="flex flex-col h-full w-full bg-[#202534] overflow-hidden">
-      <div className="px-6 py-3 bg-[#1a1e2b] border-b border-slate-800 flex justify-between items-center z-10 flex-shrink-0">
-        <div className="flex items-center gap-4">
+      <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
           <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake
           </button>
@@ -151,7 +151,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Navn på økt..."
-            className="input input-ghost text-base font-bold bg-[#262b3a] border border-slate-700 focus:border-orange-400 px-3 h-8 rounded text-white min-w-48"
+            className="input input-ghost text-sm font-bold bg-[#262b3a] border border-slate-700 focus:border-orange-400 px-3 h-8 rounded text-white w-40"
           />
           <select
             className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold"
@@ -162,7 +162,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {sessionId && (
             <button className="btn btn-sm bg-orange-500/20 text-orange-300 border-none hover:bg-orange-500/30 gap-2" onClick={() => onStartPresenting(sessionId)}>
               <i className="fa-solid fa-play"></i> Start økt

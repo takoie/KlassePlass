@@ -146,8 +146,8 @@ export default function GroupEditor({ onBack, initialId }) {
 
   return (
     <div className="flex flex-col h-full w-full bg-[#202534] overflow-hidden">
-      <div className="px-6 py-2.5 bg-[#1a1e2b] border-b border-slate-800 flex justify-between items-center z-20 flex-shrink-0">
-        <div className="flex items-center gap-4 min-w-0">
+      <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1 flex-shrink-0" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake
           </button>
@@ -155,12 +155,12 @@ export default function GroupEditor({ onBack, initialId }) {
             type="text"
             value={name}
             onChange={(e) => { setName(e.target.value); setDirty(true); }}
-            className="input input-ghost text-base font-bold bg-[#262b3a] border border-slate-700 focus:border-fuchsia-400 px-3 h-8 rounded text-white min-w-48"
+            className="input input-ghost text-sm font-bold bg-[#262b3a] border border-slate-700 focus:border-fuchsia-400 px-3 h-8 rounded text-white w-40"
           />
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400 flex-shrink-0">{className}</span>
         </div>
 
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
           {dirty && (
             <span className="text-amber-400 opacity-80 text-xs font-semibold">Ulagrede endringer</span>
           )}

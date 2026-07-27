@@ -214,8 +214,8 @@ export default function ClassManager({ onBack, initialId }) {
   return (
     <div className="flex flex-col h-full w-full bg-[#202534] overflow-hidden">
       {/* Topp-bar */}
-      <div className="px-6 py-3 bg-[#1a1e2b] border-b border-slate-800 flex justify-between items-center z-10 flex-shrink-0">
-        <div className="flex items-center gap-4">
+      <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
           {onBack && (
             <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
               <i className="fa-solid fa-arrow-left"></i> Tilbake
