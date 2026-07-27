@@ -6,6 +6,48 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Vindusstørrelse 1450×850, rom-visning uendrbar, Plasser alle, momentan randomisering
+
+**Standard vindusstørrelse** endret fra 1280×800 til 1450×850 (fortsatt
+klemt mot skjermens arbeidsområde, og fritt endrbart av brukeren).
+
+**Rom-nedtrekksmenyen fjernet fra klassekart-toppbaren.** Intensjonen er at
+klasse og rom kobles sammen én gang (ved opprettelse av klassekartet), ikke
+byttes løpende mens man redigerer et kart. Rommet vises nå som en enkel
+skrivebeskyttet tekst i stedet for en `<select>`.
+
+**Ny "Plasser alle"-knapp** rett under "Elever" i verktøypanelet — fyller
+alle ledige (ulåste) plasser med uplasserte elever. Logikken
+(`handleAutoFill`) fantes allerede ferdig skrevet i koden, men var aldri
+koblet til noen knapp — nok et eksempel på samme mønster som periode-bytte
+og romsynkronisering tidligere i dag (funksjonalitet bygget, men glemt
+koblet til UI). Samtidig økt størrelsen på det røde tallet som viser antall
+uplasserte elever (`badge-xs` → `badge-sm` + fet skrift), som var vanskelig
+å lese.
+
+**Randomisering er nå momentan.** "Randomiser (Med Regler)" hadde en
+innebygd "lotteri-spinn"-animasjon (30 iterasjoner av tilfeldige
+midlertidige plasseringer over ~2 sekunder) før den til slutt viste det
+faktiske resultatet. Fjernet animasjonen — regelbasert randomisering
+(uendret algoritme: 35 forsøk internt, beholder det beste) skjer nå
+umiddelbart når man trykker knappen. Omdøpt knapp til bare "Randomiser".
+Ryddet samtidig bort `handleFunModeSpin` — en tilhørende individuell
+"spinn-avsløring per elev"-animasjon som var blitt helt frakoblet fra UI-et
+tidligere i dag (da den gamle Fun Mode-skuffens duplikat-spinn-knapp ble
+fjernet) og dermed var død kode.
+
+**Verifisert i ekte kjørende app:** rom vises som ren tekst (ingen
+nedtrekksmeny), "Plasser alle"-knapp tilstede og koblet til riktig
+funksjon, "Randomiser"-tekst uten "(Med Regler)", og — viktigst — en elev
+byttet bord umiddelbart ved klikk på "Randomiser" uten synlig forsinkelse
+eller mellomtilstand (bekreftet ved å lese av bordnummer rett før og rett
+etter klikket, ingen animasjonsventing innimellom).
+
+**Berørte filer:** `src/window-manager.js`, `src/components/SeatingChart.jsx`,
+`src/components/SeatingChart/HeaderBar.jsx`, `src/components/SeatingChart/Toolbar.jsx`
+
+---
+
 ## 2026-07-27 — Forenklet periode-systemet i klassekart, avklart skalerings-"bug"
 
 **Rom vs. klassekart så forskjellige ut — undersøkt, ikke en bug:**

@@ -9,14 +9,12 @@ const path = require('path');
 /** Delt referanse til vinduer — slik at ipc-handlers.js kan lese dem */
 const winRef = { win: null, presentationWin: null };
 
-// Standardstørrelse valgt for å passe godt på vanlige bærbare skjermer
-// (1366×768 er fortsatt svært utbredt). Klemmes mot faktisk tilgjengelig
-// arbeidsområde slik at vinduet aldri åpnes større enn skjermen — det var
-// tidligere mulig siden 1400×820 er større enn en 1366×768-skjerm i høyden.
+// Standardstørrelse ved oppstart. Klemmes mot faktisk tilgjengelig
+// arbeidsområde slik at vinduet aldri åpnes større enn skjermen selv.
 function getInitialWindowSize() {
   const { width: workW, height: workH } = screen.getPrimaryDisplay().workAreaSize;
-  const targetW = 1280;
-  const targetH = 800;
+  const targetW = 1450;
+  const targetH = 850;
   return {
     width: Math.min(targetW, workW - 20),
     height: Math.min(targetH, workH - 20),

@@ -79,9 +79,6 @@ export default function SeatingChart({ onBack, initialId }) {
 
   // Fun Mode state
   const [showFunDrawer, setShowFunDrawer] = useState(false);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [spinTargetSlot, setSpinTargetSlot] = useState(null);
-  const [spinTargetStudent, setSpinTargetStudent] = useState(null);
   const [hoverSlotKey, setHoverSlotKey] = useState(null);
 
   // Gradvis avdekking (del av Fun Mode)
@@ -692,6 +689,8 @@ export default function SeatingChart({ onBack, initialId }) {
     setUnplacedStudents(finalUnplaced);
   };
 
+  // Randomiserer elevplassering umiddelbart (ingen animasjon) — kjører 35
+  // tilfeldige forsøk internt og beholder det beste i tråd med reglene.
   const handleRuleBasedFunSpin = () => {
     let seatSlots = [];
     desks.forEach(d => {
@@ -704,10 +703,9 @@ export default function SeatingChart({ onBack, initialId }) {
       }
     });
 
-    if (seatSlots.length === 0 || allStudents.length === 0 || isSpinning) return;
+    if (seatSlots.length === 0 || allStudents.length === 0) return;
 
-    let availableStudents = [...allStudents];
-    let bestPlacement = { ...placements };
+    const availableStudents = [...allStudents];
 
     // Evaluering av plasseringer i tråd med regler (separasjon, makker, soner)
     const evaluatePlacementScore = (candidatePlacements) => {
@@ -750,91 +748,9 @@ export default function SeatingChart({ onBack, initialId }) {
       }
     }
 
-    setIsSpinning(true);
-    let iterations = 0;
-    const interval = setInterval(() => {
-      iterations++;
-      const randomTempPlacements = { ...placements };
-      const tempStus = [...availableStudents].sort(() => Math.random() - 0.5);
-      seatSlots.forEach((slot, idx) => {
-        if (idx < tempStus.length) {
-          randomTempPlacements[slot.slotKey] = tempStus[idx].id;
-        }
-      });
-      setPlacements(randomTempPlacements);
-
-      if (iterations >= 30) {
-        clearInterval(interval);
-        setPlacements(topPlacements);
-        const finalVals = Object.values(topPlacements);
-        setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id)));
-        setIsSpinning(false);
-      }
-    }, 70);
-  };
-
-  const handleFunModeSpin = (spinAll = false) => {
-    // Hvis kalt fra timeout, må vi sjekke latest state, men vi kan bare stole på at funksjonen trigger state updates riktig
-    // For å unngå stale state i setInterval, bruker vi en ref eller funksjonell state updates.
-    // Vi bruker setTimeout og kaller en lokal nextSpin() funksjon
-    
-    setUnplacedStudents(currentUnplaced => {
-      if (currentUnplaced.length === 0 || isSpinning) return currentUnplaced;
-
-      let currentPlacements = {};
-      let currentLocked = {};
-      setPlacements(p => { currentPlacements = p; return p; });
-      setLockedSeats(l => { currentLocked = l; return l; });
-
-      const emptySlots = [];
-      sortedDesks.forEach(d => {
-        const cap = d.capacity || 1;
-        for (let s = 0; s < cap; s++) {
-          const slotKey = `${d.id}_seat_${s}`;
-          if (!currentLocked[slotKey] && !currentPlacements[slotKey]) {
-            emptySlots.push(slotKey);
-          }
-        }
-      });
-
-      if (emptySlots.length === 0) return currentUnplaced;
-
-      setShowFunDrawer(false); // Lukk skuffen!
-      setIsSpinning(true);
-      const nextSlot = emptySlots[0];
-      const winningStudent = currentUnplaced[Math.floor(Math.random() * currentUnplaced.length)];
-      setSpinTargetSlot(nextSlot);
-      
-      let spins = 0;
-      const interval = setInterval(() => {
-        spins++;
-        setSpinTargetStudent(currentUnplaced[Math.floor(Math.random() * currentUnplaced.length)]);
-        
-        if (spins > (spinAll ? 8 : 20)) { // Raskere spinning hvis spinAll
-          clearInterval(interval);
-          setSpinTargetStudent(winningStudent);
-          
-          setTimeout(() => {
-            setPlacements(prev => ({ ...prev, [nextSlot]: winningStudent.id }));
-            setIsSpinning(false);
-            setSpinTargetSlot(null);
-            setSpinTargetStudent(null);
-            
-            // Fiks arrayet
-            const newUnplaced = currentUnplaced.filter(s => s.id !== winningStudent.id);
-            setUnplacedStudents(newUnplaced);
-            
-            if (spinAll && newUnplaced.length > 0 && emptySlots.length > 1) {
-              setTimeout(() => {
-                handleFunModeSpin(true);
-              }, 300);
-            }
-          }, spinAll ? 600 : 1500); // Kortere visning hvis spinAll
-        }
-      }, spinAll ? 50 : 100);
-
-      return currentUnplaced; // State blir faktisk oppdatert i timeout
-    });
+    setPlacements(topPlacements);
+    const finalVals = Object.values(topPlacements);
+    setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id)));
   };
 
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
@@ -1120,7 +1036,7 @@ export default function SeatingChart({ onBack, initialId }) {
             activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId} GROUP_COLORS={GROUP_COLORS}
             showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
             hideGroups={hideGroups} setHideGroups={setHideGroups}
-            handleRuleBasedFunSpin={handleRuleBasedFunSpin} flipRoom={flipRoom} handlePrint={handlePrint}
+            handleRuleBasedFunSpin={handleRuleBasedFunSpin} handleAutoFill={handleAutoFill} flipRoom={flipRoom} handlePrint={handlePrint}
             showHistory={showHistory} setShowHistory={setShowHistory}
             showNumbers={showNumbers} setShowNumbers={setShowNumbers}
             showZones={showZones} setShowZones={setShowZones}
@@ -1299,11 +1215,6 @@ export default function SeatingChart({ onBack, initialId }) {
                                     >
                                       {!hideSensitiveInfo && role && <span className="text-[10px]">{role}</span>}
                                       <span className={`truncate ${fontSizeClass} tracking-wide`}>{studentObj.name}</span>
-                                    </div>
-                                  ) : spinTargetSlot === slotKey ? (
-                                    <div className="w-full h-full flex items-center justify-center px-1 bg-pink-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.8)] rounded-lg font-black text-xs truncate z-50 overflow-hidden relative">
-                                      <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
-                                      <span className="relative z-10">{spinTargetStudent ? spinTargetStudent.name : '???'}</span>
                                     </div>
                                   ) : (
                                     <span className="text-[10px] uppercase tracking-widest opacity-30 font-bold">Ledig</span>

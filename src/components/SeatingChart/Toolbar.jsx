@@ -11,7 +11,7 @@ export default function Toolbar({
   showGroupDrawer, setShowGroupDrawer, activeGroupId, setActiveGroupId, GROUP_COLORS,
   showFunDrawer, setShowFunDrawer,
   hideGroups, setHideGroups,
-  handleRuleBasedFunSpin, flipRoom, handlePrint,
+  handleRuleBasedFunSpin, handleAutoFill, flipRoom, handlePrint,
   showHistory, setShowHistory,
   showNumbers, setShowNumbers,
   showZones, setShowZones,
@@ -31,7 +31,10 @@ export default function Toolbar({
         <div className="flex flex-col gap-2">
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Handling</div>
           <button className="btn btn-sm btn-primary justify-start border-none bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30" onClick={() => { setShowStudentDrawer(!showStudentDrawer); setShowGroupDrawer(false); setShowFunDrawer(false); }}>
-            <i className="fa-solid fa-users w-5"></i> Elever {unplacedStudents.length > 0 && <span className="badge badge-xs badge-error ml-auto">{unplacedStudents.length}</span>}
+            <i className="fa-solid fa-users w-5"></i> Elever {unplacedStudents.length > 0 && <span className="badge badge-sm badge-error font-bold ml-auto">{unplacedStudents.length}</span>}
+          </button>
+          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handleAutoFill} disabled={unplacedStudents.length === 0} title="Fyll alle ledige plasser med uplasserte elever">
+            <i className="fa-solid fa-people-arrows w-5 text-emerald-400"></i> Plasser alle
           </button>
 
           <button className={`btn btn-sm justify-start ${showGroupDrawer ? 'btn-neutral bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowGroupDrawer(!showGroupDrawer); if (showGroupDrawer) setActiveGroupId(null); setShowStudentDrawer(false); setShowFunDrawer(false); }}>
@@ -100,7 +103,7 @@ export default function Toolbar({
           )}
 
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handleRuleBasedFunSpin}>
-            <i className="fa-solid fa-shuffle w-5 text-amber-400"></i> Randomiser (Med Regler)
+            <i className="fa-solid fa-shuffle w-5 text-amber-400"></i> Randomiser
           </button>
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={flipRoom}>
             <i className="fa-solid fa-rotate w-5 text-cyan-400"></i> Snu klasserommet

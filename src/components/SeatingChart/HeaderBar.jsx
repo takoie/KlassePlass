@@ -1,17 +1,20 @@
 import React from 'react';
 
 /**
- * Toppbar: klasse/rom/periode-valg, lagre-status og slett-knapp.
+ * Toppbar: klasse-valg, periode-valg, lagre-status og slett-knapp.
  * Kartets navn er gitt av klassen (ikke fritekst) — perioden identifiseres
- * kun av ukeangivelsen, som vises direkte i nedtrekksmenyen.
+ * kun av ukeangivelsen, som vises direkte i nedtrekksmenyen. Rommet knyttes
+ * til klassen én gang (ved opprettelse) og vises derfor kun som info her,
+ * ikke som en egen nedtrekksmeny å endre løpende.
  */
 export default function HeaderBar({
   onBack,
   classes, selectedClass, setSelectedClass,
-  rooms, selectedRoom, setSelectedRoom,
+  rooms, selectedRoom,
   seatings, selectedSeatingId, handleSelectSeating, setEditingPeriod,
   saveState, handleDelete,
 }) {
+  const roomName = rooms.find(r => r.id === Number(selectedRoom))?.name || '—';
   return (
     <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0 shadow-md">
       <div className="flex items-center gap-2 flex-wrap">
@@ -30,15 +33,9 @@ export default function HeaderBar({
             {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" title="Rommet er knyttet til klassen og endres i rom-editoren">
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Rom:</span>
-          <select
-            className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold max-w-28"
-            value={selectedRoom}
-            onChange={(e) => setSelectedRoom(Number(e.target.value))}
-          >
-            {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-          </select>
+          <span className="text-xs font-bold text-slate-300 px-2 py-1 bg-[#262b3a] border border-slate-700 rounded">{roomName}</span>
         </div>
       </div>
 
