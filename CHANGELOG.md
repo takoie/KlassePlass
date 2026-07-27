@@ -6,6 +6,51 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Gjeninnført periodebytte for klassekart + fikset at nye rader alltid fikk id 0
+
+**Bakgrunn:** "se historikk" var ett av de fire opprinnelige kjernekravene, men
+i React-migreringen manglet det helt en måte å bytte mellom tidligere lagrede
+klassekart-perioder for en klasse. Ved kodegjennomgang viste det seg at all
+logikken for dette (`handleStartNewPeriod`, `handleSelectSeating`,
+`editingPeriod`/`handleSaveEditedPeriod`) allerede fantes i `SeatingChart.jsx`
+— men var aldri koblet til noen knapp eller `<select>` i JSX. "Mine
+Klassekart"-oversikten viste kun "Historikk: N perioder" som ren tekst, uten
+noen måte å faktisk åpne de eldre periodene.
+
+**Lagt til i verktøylinjen:**
+- **Periode**-nedtrekksmeny: lister alle lagrede perioder for gjeldende
+  klasse (nyeste først), bytter direkte til valgt periode.
+- **Ny periode**-knapp: lagrer gjeldende oppsett som en ny, separat periode
+  (f.eks. "Uke 5-8") og bytter til den — den forrige perioden blir liggende
+  urørt som historikk.
+- Blyant-ikon åpner en rediger-modal for periodens navn/kommentar
+  (gjenbruker den eksisterende `handleSaveEditedPeriod`-logikken).
+
+**Reell bug funnet og fikset underveis (uavhengig av UI-jobben over):**
+`dbRun()` i `ipc-handlers.js` beregnet `lastID` via `SELECT
+last_insert_rowid()` **etter** `saveDbToDisk()` — men `saveDbToDisk()` kaller
+`db.export()` (sql.js), som nullstiller tilkoblingens `last_insert_rowid()`.
+Resultat: *alle* nye rader i hele appen (nye klasser, rom, klassekart) fikk
+`lastID: 0` tilbake til rendereren, uavhengig av at raden ble opprettet
+korrekt i databasen med riktig auto-increment-id. Dette gjorde at kode som
+stolte på `result.lastID` for å automatisk åpne/velge en nyopprettet rad
+(bl.a. den nye periode-bytte-funksjonaliteten) stille feilet — databasen var
+riktig, men UI-et ble stående på den gamle raden.
+Fikset ved å snu rekkefølgen: hent `lastID` **før** `saveDbToDisk()` kalles.
+Bekreftet årsak ved isolert testing direkte mot IPC-laget (samme kall med og
+uten `saveDbToDisk()` i mellom ga hhv. korrekt id og alltid 0).
+
+**Verifisert end-to-end** i ekte kjørende app: opprettet ny periode fra et
+klassekart med en plassert elev → periode-velgeren byttet automatisk til den
+nye perioden (id fra databasen, ikke 0) → byttet tilbake til den opprinnelige
+perioden via nedtrekksmenyen → begge perioder beholdt riktig data uavhengig
+av hverandre. Ryddet bort alt testdata (testklasser/perioder) fra den ekte
+brukerdatabasen etter verifisering.
+
+**Berørte filer:** `src/components/SeatingChart.jsx`, `src/ipc-handlers.js`
+
+---
+
 ## 2026-07-27 — Fikset at rom-editor stille ødela eksisterende klassekart
 
 **Root cause (bekreftet ved kodelesing, ikke bare antatt):** dette var IKKE et

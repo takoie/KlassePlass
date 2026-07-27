@@ -338,9 +338,9 @@ export default function SeatingChart({ onBack, initialId }) {
     setHistoryConflicts(conflicts);
   }, [showHistory, placements, selectedClass, selectedSeatingId, seatings, desks]);
 
-  const handleSelectSeating = async (id) => {
+  const handleSelectSeating = async (id, seatingsList = seatings) => {
     isInitialLoadRef.current = true;
-    const seating = seatings.find(s => s.id === Number(id));
+    const seating = seatingsList.find(s => s.id === Number(id));
     if (!seating) {
       setSelectedSeatingId('');
       setChartName('Nytt klassekart');
@@ -508,7 +508,7 @@ export default function SeatingChart({ onBack, initialId }) {
 
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
-      if (result?.lastID) handleSelectSeating(result.lastID);
+      if (result?.lastID) handleSelectSeating(result.lastID, newSeatings);
     } catch (e) {}
   };
 
@@ -544,7 +544,7 @@ export default function SeatingChart({ onBack, initialId }) {
       setPlacements({});
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
-      if (newSeatings.length > 0) handleSelectSeating(newSeatings[0].id);
+      if (newSeatings.length > 0) handleSelectSeating(newSeatings[0].id, newSeatings);
     } catch (e) {}
   };
 
@@ -1087,16 +1087,48 @@ export default function SeatingChart({ onBack, initialId }) {
             </div>
           </div>
 
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Periode:</span>
+            <select
+              className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold min-w-36"
+              value={selectedSeatingId}
+              onChange={(e) => handleSelectSeating(e.target.value)}
+            >
+              {seatings
+                .filter(s => s.class_id === Number(selectedClass))
+                .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                .map(s => <option key={s.id} value={s.id}>{s.comment && !s.name.includes(s.comment) ? `${s.name} (${s.comment})` : s.name}</option>)}
+            </select>
+            <button
+              className="btn btn-ghost btn-xs text-slate-400 hover:text-white"
+              title="Rediger periodenavn"
+              onClick={() => {
+                const existing = seatings.find(s => s.id === Number(selectedSeatingId));
+                if (existing) setEditingPeriod({ id: existing.id, name: existing.name, comment: existing.comment || '' });
+                document.getElementById('modal_edit_period')?.showModal();
+              }}
+            >
+              <i className="fa-solid fa-pen"></i>
+            </button>
+            <button
+              className="btn btn-outline btn-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+              title="Start ny periode (beholder dette kartet som historikk)"
+              onClick={handleStartNewPeriod}
+            >
+              <i className="fa-solid fa-plus"></i> Ny periode
+            </button>
+          </div>
+
           <div className="flex items-center gap-3">
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={chartName}
               onChange={(e) => setChartName(e.target.value)}
               className="input input-ghost text-base font-bold bg-[#262b3a] border border-slate-700 focus:border-[#34d399] px-3 h-8 rounded text-white min-w-44"
               placeholder="Navn på klassekart..."
             />
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={chartComment}
               onChange={(e) => setChartComment(e.target.value)}
               className="input input-ghost text-xs font-bold text-amber-300 bg-[#262b3a] border border-slate-700 px-3 h-8 w-28 text-center rounded"
@@ -1560,6 +1592,40 @@ export default function SeatingChart({ onBack, initialId }) {
               <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
               <button className="btn btn-error" onClick={handleDelete}>Ja, slett</button>
             </form>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="modal_edit_period" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
+            <i className="fa-solid fa-pen text-slate-400"></i> Rediger periode
+          </h3>
+          <div className="py-4 flex flex-col gap-3">
+            <div>
+              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn</label>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
+                value={editingPeriod?.name ?? ''}
+                onChange={(e) => setEditingPeriod(p => ({ ...p, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Periode (f.eks Uke 1-4)</label>
+              <input
+                type="text"
+                className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
+                value={editingPeriod?.comment ?? ''}
+                onChange={(e) => setEditingPeriod(p => ({ ...p, comment: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+            </form>
+            <button className="btn btn-primary" onClick={handleSaveEditedPeriod}>Lagre</button>
           </div>
         </div>
       </dialog>

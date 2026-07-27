@@ -36,9 +36,9 @@ const dbRun = (sql, p = []) => new Promise((res, rej) => {
     const stmt = getDb().prepare(sql);
     stmt.run(p);
     stmt.free();
-    saveDbToDisk();
-    
-    // sql.js don't easily have lastInsertRowid, we must fetch it manually
+
+    // sql.js don't easily have lastInsertRowid, we must fetch it manually.
+    // Må skje FØR saveDbToDisk() — db.export() nullstiller last_insert_rowid().
     let lastID = 0;
     try {
         const resObj = getDb().exec("SELECT last_insert_rowid() as id");
@@ -46,7 +46,8 @@ const dbRun = (sql, p = []) => new Promise((res, rej) => {
             lastID = resObj[0].values[0][0];
         }
     } catch(err) {}
-    
+
+    saveDbToDisk();
     res({ lastID, changes: 1 });
   } catch(e) { rej(e); }
 });
