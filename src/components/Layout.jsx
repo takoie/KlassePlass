@@ -13,7 +13,8 @@ export default function Layout({ currentView, setCurrentView, children }) {
     { id: 'classes-overview', label: 'Klasser', icon: 'fa-solid fa-users', activeIds: ['classes-overview', 'classes'] },
     { id: 'rooms-overview', label: 'Rom', icon: 'fa-solid fa-school', activeIds: ['rooms-overview', 'rooms'] },
     { id: 'seating-overview', label: 'Klassekart', icon: 'fa-solid fa-map-location-dot', activeIds: ['seating-overview', 'seating'] },
-    { id: 'group-overview', label: 'Gruppearbeid', icon: 'fa-solid fa-people-group', activeIds: ['group-overview', 'group-editor'] }
+    { id: 'group-overview', label: 'Gruppearbeid', icon: 'fa-solid fa-people-group', activeIds: ['group-overview', 'group-editor'] },
+    { id: 'station-overview', label: 'Stasjoner', icon: 'fa-solid fa-arrows-rotate', activeIds: ['station-overview', 'station-setup', 'station-presenter'] }
   ];
 
   return (
@@ -36,7 +37,7 @@ export default function Layout({ currentView, setCurrentView, children }) {
       )}
 
       {/* Sidebar for Desktop */}
-      {!isFullscreen && currentView !== 'seating' && currentView !== 'rooms' && (
+      {!isFullscreen && currentView !== 'seating' && currentView !== 'rooms' && currentView !== 'station-presenter' && (
         <div className="w-56 bg-[#1a1e2b] flex flex-col z-50 flex-shrink-0 rounded-2xl border border-slate-800/80 shadow-2xl p-3">
         
         {/* Logo Area - Perfekt Midtstilt */}
@@ -79,7 +80,7 @@ export default function Layout({ currentView, setCurrentView, children }) {
       )}
 
       {/* Main Content Area */}
-      {currentView === 'seating' ? (
+      {currentView === 'seating' || currentView === 'station-presenter' ? (
         children
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden relative bg-[#202534] rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">

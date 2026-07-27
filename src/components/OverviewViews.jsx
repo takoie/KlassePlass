@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CreateGroupModal from './GroupWork/CreateGroupModal';
 
-const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
+export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
   <div 
     className="bg-[#262b3a] border border-slate-700/70 rounded-2xl p-5 flex flex-col justify-between cursor-pointer hover:border-slate-500 hover:shadow-[0_8px_25px_rgba(0,0,0,0.4)] transition-all group duration-200 relative overflow-hidden"
     onClick={onClick}
@@ -52,7 +52,7 @@ const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-4
   </div>
 );
 
-const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCancel }) => {
+export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
     <dialog className="modal modal-open backdrop-blur-sm">
@@ -73,7 +73,7 @@ const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCancel }) =>
   );
 };
 
-const PageLayout = ({ title, icon, onAdd, children }) => (
+export const PageLayout = ({ title, icon, onAdd, children }) => (
   <div className="h-full flex flex-col p-8 bg-[#1e2230] overflow-y-auto">
     <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
       <div className="flex items-center gap-3">

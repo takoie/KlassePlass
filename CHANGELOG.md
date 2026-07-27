@@ -6,6 +6,63 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Gjeninnført stasjonsundervisning
+
+Andre av de opprinnelig utsatte "punkt 4"-funksjonene, gjenoppbygd i React.
+
+**Funn før implementering:** `station_sessions`-tabellen har en `teacher_station_id`-kolonne
+(lagt til i v6-migreringen), men et repo-vidt søk viste at den aldri er lest
+eller skrevet noe sted — verken i IPC-laget eller i noen UI-kode.
+Sannsynligvis planlagt scaffolding for en "lærerstasjon er nå her"-visning
+som aldri ble ferdigstilt. **`station-presenter.js` fantes heller aldri i
+git-historikken** — kun `station-setup.js` (oppsett/dashboard) ble noensinne
+committet i v2. Rotasjonsvisningen med tidtaker eksisterte altså kun som
+pseudokode i `docs/plans/2026-03-07-school-features.md`, ikke som ekte,
+kjørende v2-kode. Denne økten bygger derfor den faktiske
+rotasjons/tidtaker-visningen for første gang.
+
+**Ny funksjonalitet:**
+- Ny fane "Stasjoner" i hovednavigasjonen.
+- **StationSetup**: navn, klasse, minutter per stasjon, stasjoner (navn,
+  instruksjon, "Lærerstasjon"-merking), grupper (manuell flytting av
+  enkeltelever mellom grupper — samme lavrisiko-mønster som gruppearbeid,
+  ikke dra-og-slipp) + "Auto-fordel" (gjenbruker `generateGroups()`).
+  Rotasjonsplan (enkel round-robin) beregnes og lagres ved "Lagre".
+- **StationPresenter**: fullskjerm-visning (samme behandling som
+  klassekart/rom — ingen sidemeny, egnet for projisering). Viser hver
+  stasjon med gjeldende gruppe og elevliste, nedtelling-tidtaker
+  (start/pause/nullstill), "Forrige"/"Neste rotasjon".
+
+**Bevisst forenklet fra den opprinnelige planen:** ingen bruk av
+`teacher_station_id` (siden den aldri var reelt wired opp) — "Lærerstasjon"
+er i stedet en ren visningsmerking på selve stasjonen, som var det som
+faktisk fantes og fungerte i v2s `station-setup.js`.
+
+**Verifisert end-to-end** i ekte kjørende app: opprettet økt med 2 stasjoner
+og auto-fordelte 28 elever i 2 grupper à 14 → lagret → startet økt →
+bekreftet riktig gruppe/elevliste per stasjon → tidtaker talte ned korrekt
+(verifisert faktisk forløpt tid) → "Neste rotasjon" byttet gruppene riktig
+mellom stasjonene og nullstilte tidtakeren → "Forrige"/"Neste"-knappene
+deaktiveres riktig ved henholdsvis første og siste rotasjon → "Avslutt"
+returnerte til oppsett med data intakt → oversiktskort viste riktig
+stasjons-/gruppe-/historikktall. All testdata slettet fra databasen
+etterpå.
+
+**Underveis oppdaget, men lot stå urørt:** samme skjulte
+`Page.captureScreenshot`-timeout-mønster som tidligere i økten dukket opp
+igjen (vinduet mistet `document.hidden`-synlighet etter mange
+testkjøringer/prosess-omstarter) — løst ved å drepe og starte
+Electron-prosessen på nytt, ikke en kodefeil.
+
+**Nye filer:** `src/components/StationOverview.jsx`,
+`src/components/StationSetup.jsx`, `src/components/StationPresenter.jsx`
+
+**Berørte filer:** `src/App.jsx`, `src/components/Layout.jsx`,
+`src/components/OverviewViews.jsx` (eksporterer nå `Card`/`PageLayout`/
+`ConfirmDeleteModal` slik at `StationOverview.jsx` kan gjenbruke dem)
+
+---
+
 ## 2026-07-27 — Gjeninnført gruppetildeling for gruppearbeid
 
 Første av de bevisst utsatte "punkt 4"-funksjonene fra v2 som er gjenoppbygd

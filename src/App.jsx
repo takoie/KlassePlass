@@ -5,6 +5,9 @@ import RoomEditor from './components/RoomEditor';
 import SeatingChart from './components/SeatingChart';
 import Settings from './components/Settings';
 import GroupEditor from './components/GroupEditor';
+import StationOverview from './components/StationOverview';
+import StationSetup from './components/StationSetup';
+import StationPresenter from './components/StationPresenter';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
 
 function App() {
@@ -27,10 +30,13 @@ function App() {
       case 'rooms-overview': return <RoomsOverview onEdit={(id) => handleEdit('rooms', id)} onAdd={() => handleAdd('rooms')} />;
       case 'seating-overview': return <SeatingOverview onEdit={(id) => handleEdit('seating', id)} onAdd={() => handleAdd('seating')} />;
       case 'group-overview': return <GroupOverview onEdit={(id) => handleEdit('group-editor', id)} />;
+      case 'station-overview': return <StationOverview onEdit={(id) => handleEdit('station-setup', id)} onAdd={() => handleAdd('station-setup')} />;
       case 'classes': return <ClassManager initialId={editId} onBack={() => setCurrentView('classes-overview')} />;
       case 'rooms': return <RoomEditor initialId={editId} onBack={() => setCurrentView('rooms-overview')} />;
       case 'seating': return <SeatingChart initialId={editId} onBack={() => setCurrentView('seating-overview')} />;
       case 'group-editor': return <GroupEditor initialId={editId} onBack={() => setCurrentView('group-overview')} />;
+      case 'station-setup': return <StationSetup initialId={editId} onBack={() => setCurrentView('station-overview')} onStartPresenting={(id) => { setEditId(id); setCurrentView('station-presenter'); }} />;
+      case 'station-presenter': return <StationPresenter initialId={editId} onBack={() => setCurrentView('station-setup')} />;
       case 'settings': return <Settings />;
       default: return <div>Not found</div>;
     }
