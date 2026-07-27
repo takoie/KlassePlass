@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CreateGroupModal from './GroupWork/CreateGroupModal';
 
 const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
   <div 
@@ -417,6 +418,76 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
         </form>
       </dialog>
 
+    </PageLayout>
+  );
+};
+
+export const GroupOverview = ({ onEdit, onAdd }) => {
+  const [assignments, setAssignments] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  useEffect(() => { loadAll(); }, []);
+
+  const loadAll = async () => {
+    try {
+      const [a, c] = await Promise.all([window.api.getGroupAssignments(), window.api.getClasses()]);
+      setAssignments(a);
+      setClasses(c);
+    } catch (e) {}
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      if (deleteTarget.isClassGroup) {
+        const classAssignments = assignments.filter(a => a.class_id === deleteTarget.id);
+        for (const a of classAssignments) {
+          await window.api.deleteGroupAssignment(a.id);
+        }
+      } else {
+        await window.api.deleteGroupAssignment(deleteTarget.id);
+      }
+      await loadAll();
+    } catch (e) {}
+    setDeleteTarget(null);
+  };
+
+  return (
+    <PageLayout title="Gruppearbeid" icon="fa-solid fa-people-group" onAdd={() => document.getElementById('modal_create_group')?.showModal()}>
+      {assignments.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen gruppeinndelinger opprettet enda.</p> : null}
+
+      {classes.map(cls => {
+        const classAssignments = assignments.filter(a => a.class_id === cls.id).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        if (classAssignments.length === 0) return null;
+
+        const latest = classAssignments[0];
+
+        return (
+          <Card
+            key={cls.id}
+            title={cls.name}
+            infoList={[
+              { icon: 'fa-solid fa-people-group', text: `Siste: ${latest.name}` },
+              { icon: 'fa-solid fa-object-group', text: `${latest.group_count} grupper` },
+              { icon: 'fa-solid fa-layer-group', text: `Historikk: ${classAssignments.length} inndelinger` }
+            ]}
+            icon="fa-solid fa-people-group"
+            onClick={() => onEdit(latest.id)}
+            onDelete={() => setDeleteTarget({ ...cls, isClassGroup: true, name: `Klasse ${cls.name}` })}
+          />
+        );
+      })}
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteTarget}
+        title={deleteTarget?.isClassGroup ? "all gruppehistorikk" : "gruppeinndeling"}
+        itemName={deleteTarget?.name}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      <CreateGroupModal classes={classes} onCreated={(id) => { loadAll(); onEdit(id); }} />
     </PageLayout>
   );
 };

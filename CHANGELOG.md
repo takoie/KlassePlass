@@ -6,6 +6,56 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Gjeninnført gruppetildeling for gruppearbeid
+
+Første av de bevisst utsatte "punkt 4"-funksjonene fra v2 som er gjenoppbygd
+i React (brukervalgt prioritet av de resterende: gruppetildeling,
+stasjonsundervisning, deltakelseslogg, onboarding-wizard).
+
+**Ny funksjonalitet:**
+- Ny fane "Gruppearbeid" i hovednavigasjonen.
+- **Opprett ny inndeling**: velg klasse, antall grupper, regler
+  (aldri/alltid sammen — gjenbruker eksisterende `student_constraints`),
+  unngå nylige gruppekombinasjoner (siste N inndelinger), og valgfri
+  gruppeleder-spredning (én leder per gruppe).
+- Grupper genereres og lagres med det samme, så redigeringsvisningen alltid
+  åpnes med en ekte, lagret inndeling (samme mønster som klassekart).
+- Redigeringsvisning: se genererte grupper i fargede kolonner, flytt
+  enkeltelever manuelt mellom grupper, "Generer på nytt", eksplisitt
+  "Lagre" (lagrer inndelingen OG skriver til historikk-tabellen — historikk
+  skrives bevisst kun ved eksplisitt lagring, ikke ved hver regenerering).
+
+**Reell bug funnet og fikset underveis:** `groupRandomizer.js`s
+`generateGroups()`-funksjon forventer constraint-objekter med camelCase-felt
+(`studentA`/`studentB`), men `get-constraints`-IPC-en returnerer rader
+direkte fra SQLite med snake_case-kolonnenavn (`student_a`/`student_b`).
+Uten oversettelse ville "Respekter plasserings-regler" vært en stille no-op
+— reglene ville aldri faktisk blitt sjekket. Dette gjaldt sannsynligvis
+allerede i v2 (samme mismatch fantes der). Fikset ved å mappe feltnavnene
+riktig før kall til `generateGroups()` i både opprettelses- og
+regenereringsstegene.
+
+**Bevisst forenklet fra v2:** kun "alle elever i klassen" støttes som kilde
+for gruppeinndeling i denne runden (v2 støttet også "fra eksisterende
+klassekart" som delmengde) — dekker de fleste bruksmåter, og
+klassekart-kilde kan legges til senere om det trengs.
+
+**Verifisert end-to-end** i ekte kjørende app mot ekte data (28 elever):
+opprettet inndeling → 4 grupper à 7 elever generert og lagret korrekt →
+flyttet en elev manuelt mellom grupper → lagret → bekreftet i databasen at
+`group_assignment_groups` og `group_history` (85 par, matcher
+kombinatorikken nøyaktig) ble skrevet riktig → regenerering ga ny,
+gyldig fordeling → oversiktskort viser riktig antall grupper og
+historikk-teller. All testdata slettet fra databasen etterpå.
+
+**Nye filer:** `src/components/GroupEditor.jsx`,
+`src/components/GroupWork/CreateGroupModal.jsx`
+
+**Berørte filer:** `src/App.jsx`, `src/components/Layout.jsx`,
+`src/components/OverviewViews.jsx` (ny `GroupOverview`-eksport)
+
+---
+
 ## 2026-07-27 — Splittet RoomEditor.jsx (1197 → 1075 linjer)
 
 Samme trygge tilnærming som `SeatingChart.jsx` rett over: kun rene
