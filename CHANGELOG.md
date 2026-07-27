@@ -6,6 +6,38 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Oppdaterte school-features.md: var ikke en plan, men en fasit
+
+`docs/plans/2026-03-07-school-features.md` beskrev 8 "planlagte" skolefunksjoner.
+Ved gjennomgang viste det seg at samtlige 8 allerede var bygget ferdig i
+v2-arkitekturen (bekreftet ved å lese `db/schema.js` og `src/ipc-handlers.js`
+direkte — ikke bare anta ut fra dokumentet):
+
+- **Deltakelseslogg** (`participation_logs`-tabell + full IPC) — helt ny
+  oppdagelse, ikke tidligere nevnt som manglende funksjonalitet.
+- **Timeplan/Dagsoversikt** (`schedule`-tabell + full IPC) — samme, ny
+  oppdagelse.
+- Stasjonsundervisning og gruppetildeling — bekrefter det som allerede var
+  kjent som utsatt "punkt 4"-funksjonalitet.
+- Parvisning, grupperotering-statistikk, nivåbasert gruppering, gradvis
+  avdekking i presentasjon — krever ingen nye databasetabeller, kan bygges
+  direkte i React.
+- Utskrift/vikarmodus — allerede løst (se fiksen tidligere i dag).
+
+Alt dette ble bygget i v2 (`src/views/*.js`), men de filene ble slettet i
+React-migreringen uten at funksjonaliteten ble gjenoppbygd — kun databasen,
+IPC-laget og preload-broen overlevde uendret. Dokumentet er nå merket som
+arkivert/historisk referanse i stedet for aktiv plan, med en tydelig statusboks
+som lister nøyaktig hva som er bekreftet intakt i backend.
+
+**Ingen kodeendringer** — kun dokumentasjon. Dette utvider listen over
+funksjonalitet som gjenstår å gjenoppbygge i React utover det som tidligere
+var identifisert (gruppetildeling, onboarding-wizard, stasjonsundervisning).
+
+**Berørte filer:** `docs/plans/2026-03-07-school-features.md`
+
+---
+
 ## 2026-07-27 — Lagt til Database & Sikkerhetskopi-fane i Innstillinger
 
 Backend har hele tiden hatt full støtte for database-backup/restore/flytting

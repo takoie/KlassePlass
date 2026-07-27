@@ -1,12 +1,39 @@
-# KlassePlass — Skole-arbeidsmåter: Implementasjonsplan
+# KlassePlass — Skole-arbeidsmåter: Implementasjonsplan (ARKIVERT — se status under)
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Status (2026-07-27):** Denne planen er IKKE lenger en fremtidig plan — den er
+> et historisk referansedokument. Alle 8 features under ble faktisk bygget
+> ferdig i v2-arkitekturen (vanilla JS, `src/views/*.js`) gjennom våren 2026.
+> Da appen ble migrert til React (v3, juli 2026) ble ALLE `src/views/*.js`-filene
+> slettet, men databaseskjema (`db/schema.js`), IPC-handlere
+> (`src/ipc-handlers.js`) og preload-bridge (`src/preload.js`) ble beholdt uendret.
+>
+> **Bekreftet fortsatt intakt i backend (2026-07-27), men UTEN React-UI:**
+> - `participation_logs`-tabell + full IPC (`get/save/clear-participation`,
+>   `get-participation-summary`) — **Feature 2, Deltakelseslogg**
+> - `schedule`-tabell + full IPC (`get-schedule`, `save/delete-schedule-entry`)
+>   — **Feature 8, Timeplan/Dagsoversikt**
+> - `station_sessions`-tabell + full IPC — **Feature 4, Stasjonsundervisning**
+>   (kjent fra før, "punkt 4" i tidligere samtale — station-setup.js fantes i v2)
+> - `group_assignments`/`group_assignment_groups`/`group_history` + full IPC —
+>   gruppetildeling for gruppearbeid (kjent fra før, også "punkt 4")
+> - Feature 3 (Parvisning), 5 (Grupperotering-statistikk), 6 (Nivåbasert
+>   gruppering) og 7 (Gradvis avdekking i presentasjon) krever ingen egne
+>   tabeller og kan gjenoppbygges direkte i React uten skjemaendringer.
+> - Feature 1 (Utskrift/Vikarmodus) er allerede løst i React (`print.css` +
+>   `#print-overlay` i `SeatingChart.jsx`, fikset 2026-07-27).
+>
+> **Konsekvens:** Koden/algoritmene under (rotasjonsplan, par-beregning,
+> nivågruppering, deltakelse-events) er fortsatt gyldig referanse — men alle
+> filstier (`src/views/*.js`, `index.html`, `src/renderer.js`) er fra
+> v2-arkitekturen og finnes ikke lengre. En gjenoppbygging må skrives som
+> React-komponenter (`src/components/*.jsx`) mot den eksisterende, uendrede
+> IPC-en — ikke som nye vanilla-JS-views.
 
-**Goal:** Implementere 8 nye funksjoner i KlassePlass som støtter vanlige arbeidsmåter i norsk skole, alt offline uten pålogging.
+**Opprinnelig mål:** Implementere 8 nye funksjoner i KlassePlass som støtter vanlige arbeidsmåter i norsk skole, alt offline uten pålogging.
 
-**Architecture:** Hvert feature følger eksisterende mønster: views i `src/views/`, IPC-handlers i `src/ipc-handlers.js`, bridge i `src/preload.js`, schema i `db/schema.js`. Nye features er uavhengige og kan implementeres i hvilken rekkefølge som helst.
+**Opprinnelig arkitektur (IKKE lenger gyldig, se status over):** Hvert feature følger eksisterende mønster: views i `src/views/`, IPC-handlers i `src/ipc-handlers.js`, bridge i `src/preload.js`, schema i `db/schema.js`. Nye features er uavhengige og kan implementeres i hvilken rekkefølge som helst.
 
-**Tech Stack:** Electron 28, Vanilla JS ES-modules, DaisyUI v4 + Tailwind CSS, SQLite3, Font Awesome 6.
+**Opprinnelig tech stack (IKKE lenger gyldig — appen er nå React + Vite):** Electron 28, Vanilla JS ES-modules, DaisyUI v4 + Tailwind CSS, SQLite3, Font Awesome 6.
 
 ---
 
