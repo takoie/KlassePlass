@@ -14,6 +14,8 @@ export default function GroupEditor({ onBack, initialId }) {
   const [avoidLastN, setAvoidLastN] = useState(3);
   const [requireLeaders, setRequireLeaders] = useState(false);
   const [leaderIds, setLeaderIds] = useState([]);
+  const [lockedIds, setLockedIds] = useState([]);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, studentId, groupIdx }
   const [studentsById, setStudentsById] = useState({});
   const [allStudentIds, setAllStudentIds] = useState([]);
   const [constraints, setConstraints] = useState([]);
@@ -53,6 +55,7 @@ export default function GroupEditor({ onBack, initialId }) {
       setAvoidLastN(assignment.avoid_last_n ?? 3);
       setRequireLeaders(!!assignment.require_leaders);
       try { setLeaderIds(JSON.parse(assignment.leader_ids || '[]')); } catch (e) { setLeaderIds([]); }
+      try { setLockedIds(JSON.parse(assignment.locked_ids || '[]')); } catch (e) { setLockedIds([]); }
       setStudentsById(byId);
       setAllStudentIds(students.map(s => s.id));
       setConstraints(mappedConstraints);
@@ -74,12 +77,19 @@ export default function GroupEditor({ onBack, initialId }) {
           try { return JSON.parse(row.pairs); } catch (e) { return []; }
         });
       }
+      const lockedPlacements = lockedIds
+        .map(sid => {
+          const groupIndex = groups.findIndex(g => g.includes(sid));
+          return groupIndex === -1 ? null : { studentId: sid, groupIndex };
+        })
+        .filter(Boolean);
       const result = generateGroups({
         studentIds: allStudentIds,
         studentsById,
         numGroups: groups.length,
         constraints,
         useConstraints,
+        lockedPlacements,
         leaderIds,
         requireLeaders,
         recentPairs,
@@ -101,6 +111,29 @@ export default function GroupEditor({ onBack, initialId }) {
     setDirty(true);
   };
 
+  const toggleLock = (studentId) => {
+    setLockedIds(prev => prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]);
+    setDirty(true);
+  };
+
+  const setGroupLeader = (studentId, groupIdx) => {
+    setLeaderIds(prev => {
+      const others = new Set(groups[groupIdx].filter(id => id !== studentId));
+      return [...prev.filter(id => !others.has(id) && id !== studentId), studentId];
+    });
+    setDirty(true);
+  };
+
+  const removeGroupLeader = (studentId) => {
+    setLeaderIds(prev => prev.filter(id => id !== studentId));
+    setDirty(true);
+  };
+
+  const handleStudentContextMenu = (e, studentId, groupIdx) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, studentId, groupIdx });
+  };
+
   const handleSave = async () => {
     if (!assignmentId) return;
     setSaveState('saving');
@@ -108,7 +141,7 @@ export default function GroupEditor({ onBack, initialId }) {
       const groupsPayload = groups.map((studentIds, i) => ({ groupNumber: i + 1, studentIds }));
       await window.api.saveGroupAssignment({
         id: assignmentId, name: name.trim() || 'Uten navn', classId,
-        sourceSeatingId: null, useConstraints, avoidLastN, requireLeaders, leaderIds,
+        sourceSeatingId: null, useConstraints, avoidLastN, requireLeaders, leaderIds, lockedIds,
         groups: groupsPayload,
       });
       const pairs = buildGroupPairs(groups, studentsById);
