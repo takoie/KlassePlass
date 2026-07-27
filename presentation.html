@@ -1,40 +1,63 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="no" data-theme="night">
 <head>
   <meta charset="UTF-8">
   <title>KlassePlass Presentasjon</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: {} }, plugins: [] };</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="src/styles/base.css">
-  <link rel="stylesheet" href="src/styles/desk-types.css">
+  <link rel="stylesheet" href="src/styles/layout.css">
+  <link rel="stylesheet" href="src/styles/canvas.css">
   <style>
-    body { background: var(--bg-app); overflow: hidden; }
+    *, body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    body { background: oklch(var(--b1)); overflow: hidden; user-select: none; margin: 0; padding: 0; }
 
-    .pres-toolbar {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      height: 48px;
-      background: var(--bg-surface);
-      border-top: 1px solid var(--border);
-      display: flex; align-items: center;
-      padding: 0 16px; gap: 8px;
-      z-index: 100;
-      transition: opacity 0.3s ease;
+    /* ---- Window control buttons ---- */
+    .win-btn {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: oklch(var(--bc) / 0.4);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      transition: background 0.15s, color 0.15s;
     }
-    .pres-toolbar.hidden-toolbar { opacity: 0; pointer-events: none; }
-    body:hover .pres-toolbar.hidden-toolbar { opacity: 1; pointer-events: auto; }
+    .win-btn:hover { background: oklch(var(--b3)); color: oklch(var(--bc)); }
+    .win-btn-close:hover { background: oklch(var(--er) / 0.2); color: oklch(var(--er)); }
 
+    /* ---- Tittel-/dra-bar ---- */
+    .pres-titlebar {
+      height: 28px;
+      background: oklch(var(--b2));
+      border-bottom: 1px solid oklch(var(--b3) / 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 6px;
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+    }
+    .pres-titlebar-btns { -webkit-app-region: no-drag; display: flex; gap: 4px; }
+
+    /* ---- Canvas-area ---- */
     .canvas-outer {
       width: 100vw;
-      height: calc(100vh - 48px);
+      height: calc(100vh - 28px - 52px);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: auto;
+      background: oklch(var(--b1));
     }
     .pres-canvas {
       position: relative;
       transform-origin: top center;
-      background: var(--canvas-bg);
-      border: 1px solid var(--border);
+      background: oklch(var(--b2));
+      border: 1px solid oklch(var(--b3));
       border-radius: 8px;
     }
 
@@ -42,15 +65,47 @@
     .pres-canvas .student-name { font-size: 13px; font-weight: 600; }
     .pres-canvas .desk { font-size: 13px; }
 
-    /* High-contrast modus */
+    /* ---- Verktøylinje ---- */
+    .pres-toolbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 52px;
+      background: oklch(var(--b2));
+      border-top: 1px solid oklch(var(--b3));
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 6px;
+      z-index: 100;
+      transition: opacity 0.3s ease;
+    }
+    .pres-toolbar.hidden-toolbar { opacity: 0; pointer-events: none; }
+    body:hover .pres-toolbar.hidden-toolbar { opacity: 1; pointer-events: auto; }
+
+    /* Aktiv-tilstand for toggle-knapper */
+    .pres-toolbar .btn.active {
+      background: oklch(var(--p) / 0.15);
+      color: oklch(var(--p));
+      border-color: oklch(var(--p) / 0.3);
+    }
+
+    /* ---- High-contrast modus ---- */
     .high-contrast .desk         { background: #000 !important; border: 2px solid #fff !important; }
     .high-contrast .student-name { color: #fff !important; font-size: 14px; }
-    .high-contrast .front-board  { background: #fff !important; color: #000 !important; }
 
-    /* Trekk-animasjon overlay */
+    /* ---- Avdeknings-modus ---- */
+    @keyframes revealPop {
+      0%   { transform: scale(1.15); box-shadow: 0 0 0 4px oklch(var(--p)); }
+      100% { transform: scale(1);    box-shadow: none; }
+    }
+    .pres-canvas .desk.reveal-highlight {
+      animation: revealPop 1.2s ease-out forwards;
+    }
+
+    /* ---- Trekk-animasjon overlay ---- */
     #draw-overlay {
       position: fixed; inset: 0;
-      background: var(--bg-overlay);
+      background: rgba(0, 0, 0, 0.65);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -58,16 +113,16 @@
       pointer-events: none;
     }
     #draw-card {
-      background: var(--bg-card);
-      border: 2px solid var(--accent);
+      background: oklch(var(--b2));
+      border: 2px solid oklch(var(--p));
       border-radius: 16px;
       padding: 32px 48px;
       font-size: 32px;
       font-weight: 700;
-      color: var(--text-primary);
+      color: oklch(var(--bc));
       text-align: center;
       box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      animation: cardPop 0.5s cubic-bezier(0.22,1,0.36,1);
+      animation: cardPop 0.5s cubic-bezier(0.22, 1, 0.36, 1);
     }
     @keyframes cardPop {
       from { transform: scale(0.5); opacity: 0; }
@@ -76,45 +131,85 @@
   </style>
 </head>
 <body>
-  <div class="canvas-outer" id="canvas-outer">
-    <div class="pres-canvas" id="pres-canvas">
-      <div id="pres-board" class="front-board board-top">TAVLE</div>
+  <!-- Tittelbar med dra-region og vinduskontroller -->
+  <div class="pres-titlebar">
+    <div class="pres-titlebar-btns">
+      <button class="win-btn win-btn-min" onclick="window.api.minimizeWindow()" title="Minimer">
+        <i class="fa-solid fa-minus"></i>
+      </button>
+      <button class="win-btn win-btn-max" onclick="window.api.maximizeWindow()" title="Maksimer">
+        <i class="fa-regular fa-square"></i>
+      </button>
+      <button class="win-btn win-btn-close" onclick="window.close()" title="Lukk">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
   </div>
 
-  <!-- Trekk-animasjon overlay (skjult som standard) -->
+  <!-- Canvas-område -->
+  <div class="canvas-outer" id="canvas-outer">
+    <div class="pres-canvas" id="pres-canvas">
+    </div>
+  </div>
+
+  <!-- Trekk-animasjon overlay -->
   <div id="draw-overlay" style="display:none">
     <div id="draw-card"></div>
   </div>
 
-  <!-- Verktøylinje -->
+  <!-- Verktøylinje (bunn) -->
   <div class="pres-toolbar" id="pres-toolbar">
     <button class="btn btn-ghost btn-sm" id="btn-zoom-in"    title="Zoom inn"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
     <button class="btn btn-ghost btn-sm" id="btn-zoom-out"   title="Zoom ut"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
     <button class="btn btn-ghost btn-sm" id="btn-zoom-reset" title="Tilbakestill zoom"><i class="fa-solid fa-expand"></i></button>
-    <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-    <button class="btn btn-ghost btn-sm" id="btn-toggle-names"   title="Vis/skjul navn"><i class="fa-solid fa-user"></i></button>
+
+    <div class="toolbar-divider"></div>
+
+    <button class="btn btn-ghost btn-sm active" id="btn-toggle-names"   title="Vis/skjul navn"><i class="fa-solid fa-user"></i></button>
     <button class="btn btn-ghost btn-sm" id="btn-toggle-numbers" title="Vis/skjul numre"><i class="fa-solid fa-hashtag"></i></button>
     <button class="btn btn-ghost btn-sm" id="btn-high-contrast"  title="Høy kontrast"><i class="fa-solid fa-circle-half-stroke"></i></button>
-    <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+
+    <div class="toolbar-divider"></div>
+
     <button class="btn btn-accent btn-sm" id="btn-draw-start" title="Start trekke-modus">
-      <i class="fa-solid fa-wand-magic-sparkles"></i> Trekk
+      <i class="fa-solid fa-wand-magic-sparkles"></i> <span class="toolbar-btn-label">Trekk</span>
     </button>
     <button class="btn btn-secondary btn-sm hidden" id="btn-draw-next" title="Trekk neste elev">
-      Neste <i class="fa-solid fa-chevron-right"></i>
+      <span class="toolbar-btn-label">Neste</span> <i class="fa-solid fa-chevron-right"></i>
     </button>
     <button class="btn btn-ghost btn-sm hidden" id="btn-draw-all" title="Vis alle">
-      Vis alle
+      <span class="toolbar-btn-label">Vis alle</span>
     </button>
+
+    <div class="toolbar-divider"></div>
+
+    <button class="btn btn-ghost btn-sm" id="btn-reveal-start" title="Gradvis avdekking">
+      <i class="fa-solid fa-masks-theater"></i> <span class="toolbar-btn-label">Avdekk</span>
+    </button>
+    <button class="btn btn-primary btn-sm hidden" id="btn-reveal-next" title="Avslør neste pult">
+      <i class="fa-solid fa-eye"></i> <span class="toolbar-btn-label">Neste</span>
+    </button>
+    <button class="btn btn-ghost btn-sm hidden" id="btn-reveal-all" title="Avslør alle">
+      <span class="toolbar-btn-label">Vis alle</span>
+    </button>
+    <button class="btn btn-ghost btn-sm hidden" id="btn-reveal-end" title="Avslutt avdekking">
+      <span class="toolbar-btn-label">Avslutt</span>
+    </button>
+    <span id="reveal-progress" class="text-xs opacity-50 ml-1"></span>
+
     <div style="flex:1"></div>
-    <span id="pres-chart-name" style="font-size:13px;color:var(--text-secondary)"></span>
-    <button class="btn btn-ghost btn-sm" id="btn-close" title="Lukk"><i class="fa-solid fa-xmark"></i></button>
+
+    <span id="pres-chart-name" class="text-xs opacity-50"></span>
+
+    <div class="toolbar-divider"></div>
+
+    <button class="btn btn-ghost btn-sm" id="btn-close" title="Lukk (Esc)">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
   </div>
 
   <script>
-    // Presentation-vindu bruker CommonJS siden det er et separat Electron-vindu
     const { ipcRenderer } = require('electron');
-    // Dynamisk import av ES-modules
     import('./src/views/presentation.js').then(m => m.init(ipcRenderer));
   </script>
 </body>

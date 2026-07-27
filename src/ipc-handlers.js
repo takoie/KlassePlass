@@ -6,13 +6,50 @@
 const { ipcMain, dialog, app } = require('electron');
 const path    = require('path');
 const fs      = require('fs');
-const sqlite3 = require('sqlite3').verbose();
-const { getDb, getDbPathFn, loadSettings, saveSettings } = require('./db.js');
+const { getDb, getDbPathFn, loadSettings, saveSettings, saveDbToDisk } = require('./db.js');
 
-/** Hjelpefunksjon: pakk db.all/get/run inn i Promise */
-const dbAll  = (sql, p = []) => new Promise((res, rej) => getDb().all(sql, p, (e, r) => e ? rej(e) : res(r)));
-const dbGet  = (sql, p = []) => new Promise((res, rej) => getDb().get(sql, p, (e, r) => e ? rej(e) : res(r)));
-const dbRun  = (sql, p = []) => new Promise((res, rej) => getDb().run(sql, p, function(e) { e ? rej(e) : res({ lastID: this.lastID, changes: this.changes }); }));
+/** Hjelpefunksjon: pakk sql.js inn i Promise for bakoverkompatibilitet */
+const dbAll = (sql, p = []) => new Promise((res, rej) => {
+  try {
+    const stmt = getDb().prepare(sql);
+    stmt.bind(p);
+    const results = [];
+    while (stmt.step()) results.push(stmt.getAsObject());
+    stmt.free();
+    res(results);
+  } catch(e) { rej(e); }
+});
+
+const dbGet = (sql, p = []) => new Promise((res, rej) => {
+  try {
+    const stmt = getDb().prepare(sql);
+    stmt.bind(p);
+    let result = null;
+    if (stmt.step()) result = stmt.getAsObject();
+    stmt.free();
+    res(result);
+  } catch(e) { rej(e); }
+});
+
+const dbRun = (sql, p = []) => new Promise((res, rej) => {
+  try {
+    const stmt = getDb().prepare(sql);
+    stmt.run(p);
+    stmt.free();
+    saveDbToDisk();
+    
+    // sql.js don't easily have lastInsertRowid, we must fetch it manually
+    let lastID = 0;
+    try {
+        const resObj = getDb().exec("SELECT last_insert_rowid() as id");
+        if (resObj && resObj.length > 0 && resObj[0].values.length > 0) {
+            lastID = resObj[0].values[0][0];
+        }
+    } catch(err) {}
+    
+    res({ lastID, changes: 1 });
+  } catch(e) { rej(e); }
+});
 
 function registerHandlers(winRef) {
   // ---- Window controls ----

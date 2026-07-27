@@ -51,6 +51,7 @@ export async function buildChartFromParams(params) {
     decorations: params.decorations ?? [],
     flipForDisplay: params.flipForDisplay ?? false,
     avoidLastN: params.avoidLastN ?? 3,
+    constraints: [],
   };
 }
 
@@ -75,5 +76,6 @@ export async function buildChartFromDb(raw, getClassFn) {
     decorations: raw.decorations ? parseJSON(raw.decorations) : [],
     flipForDisplay: false,
     avoidLastN: 3,
+    constraints: [],
   };
 }

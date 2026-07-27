@@ -3,12 +3,12 @@
  * Kjøres ved oppstart. CREATE TABLE IF NOT EXISTS er idempotent.
  */
 
-const CURRENT_VERSION = 4;
+const CURRENT_VERSION = 7;
 
-/** Kjør alle migrations mot en åpen sqlite3 db-instans */
+/** Kjør alle migrations mot en åpen sql.js db-instans */
 function runMigrations(db) {
   return new Promise((resolve, reject) => {
-    db.serialize(() => {
+    try {
       // ---- Schema-versjonering ----
       db.run(`CREATE TABLE IF NOT EXISTS schema_version (
         version INTEGER PRIMARY KEY,
@@ -62,8 +62,8 @@ function runMigrations(db) {
       )`);
 
       // ---- v3: ROM-migrering — legg til designMode og roomHeight kolonner om de mangler ----
-      db.run(`ALTER TABLE rooms ADD COLUMN design_mode TEXT DEFAULT 'board-top'`, () => {});
-      db.run(`ALTER TABLE rooms ADD COLUMN room_height INTEGER DEFAULT 500`, () => {});
+      try { db.run(`ALTER TABLE rooms ADD COLUMN design_mode TEXT DEFAULT 'board-top'`); } catch(e){}
+      try { db.run(`ALTER TABLE rooms ADD COLUMN room_height INTEGER DEFAULT 500`); } catch(e){}
 
       // ---- v4: Gruppearbeid ----
       db.run(`CREATE TABLE IF NOT EXISTS group_assignments (
@@ -98,47 +98,78 @@ function runMigrations(db) {
         FOREIGN KEY(assignment_id) REFERENCES group_assignments(id)
       )`);
 
+      // ---- v5: Deltakelseslogg ----
+      db.run(`CREATE TABLE IF NOT EXISTS participation_logs (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        seating_id  INTEGER NOT NULL,
+        student_id  TEXT NOT NULL,
+        date        TEXT NOT NULL,
+        events      TEXT NOT NULL DEFAULT '[]',
+        UNIQUE(seating_id, student_id, date),
+        FOREIGN KEY(seating_id) REFERENCES seatings(id)
+      )`);
+
+      // ---- v5: Timeplan ----
+      db.run(`CREATE TABLE IF NOT EXISTS schedule (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        class_id  INTEGER NOT NULL,
+        weekday   INTEGER NOT NULL,
+        period    INTEGER NOT NULL,
+        note      TEXT DEFAULT '',
+        FOREIGN KEY(class_id) REFERENCES classes(id)
+      )`);
+
+      // ---- v5: Stasjonsundervisning ----
+      db.run(`CREATE TABLE IF NOT EXISTS station_sessions (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        name                TEXT NOT NULL,
+        class_id            INTEGER NOT NULL,
+        stations            TEXT NOT NULL DEFAULT '[]',
+        groups              TEXT NOT NULL DEFAULT '[]',
+        rotation_plan       TEXT NOT NULL DEFAULT '[]',
+        minutes_per_station INTEGER DEFAULT 10,
+        created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(class_id) REFERENCES classes(id)
+      )`);
+
+      // ---- v6: Stasjonskart utbedring — teacher_station_id kolonne ----
+      try { db.run(`ALTER TABLE station_sessions ADD COLUMN teacher_station_id INTEGER DEFAULT NULL`); } catch(e){}
+
+      // ---- v7: Nabo-historikk — neighbors kolonne i seating_history ----
+      try { db.run(`ALTER TABLE seating_history ADD COLUMN neighbors TEXT DEFAULT '[]'`); } catch(e){}
+
       // Sett schema-versjon
-      db.run(
-        `INSERT OR IGNORE INTO schema_version (version) VALUES (?)`,
-        [CURRENT_VERSION],
-        (err) => {
-          if (err) reject(err);
-          else resolve();
-        }
-      );
-    });
+      db.run(`INSERT OR IGNORE INTO schema_version (version) VALUES (?)`, [CURRENT_VERSION]);
+      resolve();
+    } catch(err) {
+      reject(err);
+    }
   });
 }
 
 /** Migrer eksisterende rom-data fra gammelt array-format til nytt objekt-format */
 function migrateRoomLayouts(db) {
   return new Promise((resolve, reject) => {
-    db.all('SELECT id, layout_data FROM rooms', [], (err, rows) => {
-      if (err) return reject(err);
-
-      const updates = [];
-      for (const row of rows) {
+    try {
+      const stmt = db.prepare('SELECT id, layout_data FROM rooms');
+      let updates = 0;
+      while (stmt.step()) {
+        const row = stmt.getAsObject();
         if (!row.layout_data) continue;
         try {
           const layout = JSON.parse(row.layout_data);
           if (Array.isArray(layout)) {
             const newLayout = { desks: layout, designMode: 'board-top', roomHeight: 500, decorations: [] };
-            updates.push({ id: row.id, layout: JSON.stringify(newLayout) });
+            db.run('UPDATE rooms SET layout_data = ? WHERE id = ?', [JSON.stringify(newLayout), row.id]);
+            updates++;
           }
         } catch { /* skip invalid JSON */ }
       }
-
-      if (updates.length === 0) return resolve(0);
-
-      let done = 0;
-      for (const u of updates) {
-        db.run('UPDATE rooms SET layout_data = ? WHERE id = ?', [u.layout, u.id], () => {
-          done++;
-          if (done === updates.length) resolve(done);
-        });
-      }
-    });
+      stmt.free();
+      resolve(updates);
+    } catch(err) {
+      reject(err);
+    }
   });
 }
 

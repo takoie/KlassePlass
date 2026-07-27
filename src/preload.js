@@ -39,8 +39,9 @@ contextBridge.exposeInMainWorld('api', {
   importBundle:     (data)   => ipcRenderer.invoke('import-bundle', data),
 
   // Presentasjonsvindu
-  openPresentation: (data)   => ipcRenderer.send('open-presentation', data),
-  presentationCmd:  (cmd)    => ipcRenderer.send('presentation-cmd', cmd),
+  openPresentation:       (data)   => ipcRenderer.send('open-presentation', data),
+  presentationCmd:        (cmd)    => ipcRenderer.send('presentation-cmd', cmd),
+  syncPresentationTheme:  (data)   => ipcRenderer.send('sync-presentation-theme', data),
 
   // Settings
   getSettings:      ()       => ipcRenderer.invoke('get-settings'),
@@ -63,6 +64,23 @@ contextBridge.exposeInMainWorld('api', {
   getGroupAssignmentGroups: (id)     => ipcRenderer.invoke('get-group-assignment-groups', id),
   getGroupHistory:          (cid, n) => ipcRenderer.invoke('get-group-history', cid, n),
   saveGroupHistory:         (d)      => ipcRenderer.invoke('save-group-history', d),
+
+  // Deltakelseslogg
+  getParticipation:        (sid, date) => ipcRenderer.invoke('get-participation', sid, date),
+  saveParticipation:       (d)         => ipcRenderer.invoke('save-participation', d),
+  getParticipationSummary: (sid)       => ipcRenderer.invoke('get-participation-summary', sid),
+  clearParticipation:      (sid, date) => ipcRenderer.invoke('clear-participation', sid, date),
+
+  // Timeplan
+  getSchedule:          ()      => ipcRenderer.invoke('get-schedule'),
+  saveScheduleEntry:    (d)     => ipcRenderer.invoke('save-schedule-entry', d),
+  deleteScheduleEntry:  (id)    => ipcRenderer.invoke('delete-schedule-entry', id),
+
+  // Stasjonsundervisning
+  getStationSessions:   (cid)   => ipcRenderer.invoke('get-station-sessions', cid),
+  getStationSession:    (id)    => ipcRenderer.invoke('get-station-session', id),
+  saveStationSession:   (d)     => ipcRenderer.invoke('save-station-session', d),
+  deleteStationSession: (id)    => ipcRenderer.invoke('delete-station-session', id),
 
   // App info
   getVersion:       ()       => ipcRenderer.invoke('get-version'),

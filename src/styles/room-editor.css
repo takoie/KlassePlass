@@ -4,6 +4,11 @@
    desk-picker, design-mode toggle.
    ============================================================ */
 
+/* Room editor: keep centering + counter-rotate the front-board text when canvas is flipped */
+.room-canvas.canvas-rotated .front-board {
+  transform: translateX(-50%) rotate(-180deg);
+}
+
 /* ---- Room canvas ---- */
 .room-canvas {
   position: relative;
@@ -13,63 +18,154 @@
   border: 1px solid oklch(var(--b3));
   border-radius: 10px;
   flex-shrink: 0;
+  touch-action: none;
+  user-select: none;
 }
 
 /* ---- Romdesigner: bevegbare bord ---- */
 .room-desk {
   cursor: move;
   position: absolute;
+  /* Override canvas.css base border so desks are visible against any theme background */
+  border: 2px solid oklch(var(--bc) / 0.25) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+.room-desk-label {
+  position: absolute;
+  bottom: 4px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 9px;
+  font-weight: 500;
+  color: oklch(var(--bc) / 0.45);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.room-desk-number {
+  position: absolute;
+  top: 3px; right: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  color: oklch(var(--bc) / 0.55);
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
+.room-desk:hover:not(.selected) {
+  border-color: oklch(var(--p) / 0.6) !important;
+  box-shadow: 0 0 0 2px oklch(var(--p) / 0.2), 0 2px 8px rgba(0,0,0,0.35) !important;
 }
 .room-desk.selected {
-  box-shadow: 0 0 0 2px oklch(var(--p)), 0 2px 8px rgba(0,0,0,0.25);
-  border-color: oklch(var(--p));
+  border-color: oklch(var(--p)) !important;
+  background: oklch(var(--p) / 0.18) !important;
+  box-shadow:
+    0 0 0 2px oklch(var(--p)),
+    0 0 0 5px oklch(var(--p) / 0.25),
+    0 3px 12px rgba(0,0,0,0.4) !important;
+  transition: none !important;
+  animation: desk-selected-pulse 1.8s ease-in-out infinite;
+}
+@keyframes desk-selected-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px oklch(var(--p)), 0 0 0 5px oklch(var(--p) / 0.25), 0 3px 12px rgba(0,0,0,0.4); }
+  50%       { box-shadow: 0 0 0 2px oklch(var(--p)), 0 0 0 7px oklch(var(--p) / 0.12), 0 3px 12px rgba(0,0,0,0.4); }
 }
 .room-desk.drag-ghost { opacity: 0.5; }
 
 /* ---- Dekorasjoner ---- */
 .decoration {
   position: absolute;
-  border-radius: 4px;
+  border-radius: 2px;
   cursor: move;
+  overflow: visible;
 }
+.decoration svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* Vegg/Skillevegg — bruker base-3 lag for tydelig kontrast i alle temaer */
 .decoration-wall {
-  background: oklch(var(--b3) / 0.5);
-  border: 2px solid oklch(var(--b3));
+  background: oklch(var(--bc) / 0.6);
+  border: none;
+  border-radius: 2px;
+  min-height: 8px;
 }
+/* Skap — brun-oransje med diagonalkryssing */
 .decoration-cabinet {
-  background: rgba(120,53,15,0.25);
-  border: 2px solid rgba(180,83,9,0.5);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: rgba(180,83,9,0.7);
+  background: transparent;
+  border: none;
 }
+/* Vindu — lyseblå med arkitektstriper */
 .decoration-window {
-  background: rgba(125,211,252,0.08);
-  border: 2px dashed rgba(125,211,252,0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: rgba(125,211,252,0.6);
+  background: transparent;
+  border: none;
 }
+/* Dør — grønn svingbue */
 .decoration-door {
-  background: rgba(34,197,94,0.08);
-  border: 2px solid rgba(34,197,94,0.35);
-  border-radius: 0 0 4px 4px;
+  background: transparent;
+  border: none;
+}
+/* Tavle — CSS-label i sentrum, ingen SVG-tekst */
+.decoration-whiteboard {
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: rgba(34,197,94,0.6);
+  overflow: hidden;
 }
-.decoration-label { background: transparent; font-size: 11px; font-weight: 500; pointer-events: none; }
+.deco-whiteboard-label {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 18%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: oklch(var(--p));
+  pointer-events: none;
+  white-space: nowrap;
+}
+.decoration-label {
+  background: transparent;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: default;
+  white-space: nowrap;
+  color: oklch(var(--bc));
+}
 .decoration.selected-deco {
-  outline: 2px dashed oklch(var(--p));
-  outline-offset: 2px;
+  outline: 3px solid oklch(var(--p));
+  outline-offset: 3px;
+  filter: brightness(1.15);
 }
+
+/* ---- Resize-håndtak ---- */
+.resize-handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: oklch(var(--p));
+  border: 2px solid oklch(var(--b1));
+  border-radius: 2px;
+  z-index: 20;
+  box-shadow: 0 1px 3px oklch(0% 0 0 / 0.3);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.decoration:hover .resize-handle,
+.decoration.selected-deco .resize-handle {
+  opacity: 1;
+}
+.resize-handle.resize-nw { top: -5px;    left: -5px;   cursor: nw-resize; }
+.resize-handle.resize-ne { top: -5px;    right: -5px;  cursor: ne-resize; }
+.resize-handle.resize-sw { bottom: -5px; left: -5px;   cursor: sw-resize; }
+.resize-handle.resize-se { bottom: -5px; right: -5px;  cursor: se-resize; }
 
 /* ---- Selection box (multi-select) ---- */
 .selection-box {
@@ -80,41 +176,134 @@
   z-index: 100;
 }
 
-/* ---- Desk picker toolbar ---- */
+/* ---- Room action buttons (Hurtiglayout, Roter visning) ---- */
+.room-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 12px;
+  border: 1px solid oklch(var(--b3));
+  border-radius: 8px;
+  background: oklch(var(--b2));
+  color: oklch(var(--bc) / 0.7);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  line-height: 1;
+}
+.room-action-btn i { font-size: 14px; }
+.room-action-btn:hover {
+  background: oklch(var(--p) / 0.12);
+  border-color: oklch(var(--p) / 0.5);
+  color: oklch(var(--p));
+}
+.room-action-btn.btn-active {
+  background: oklch(var(--p) / 0.15);
+  border-color: oklch(var(--p) / 0.6);
+  color: oklch(var(--p));
+}
+
+/* ---- Deco subtoolbar ---- */
+.deco-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  border-bottom: 1px solid oklch(var(--b3));
+  background: oklch(var(--b1));
+  flex-shrink: 0;
+}
+
+/* ---- Desk/Deco picker ---- */
 .desk-picker, .deco-picker {
   display: flex;
   gap: 4px;
   align-items: center;
 }
+.picker-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: oklch(var(--bc) / 0.35);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-right: 4px;
+}
+/* Base button used in deco-toolbar (icon + label stacked) */
 .desk-add-btn {
-  padding: 5px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px 4px;
   border: 1px solid oklch(var(--b3));
   border-radius: 6px;
   background: oklch(var(--b2));
   cursor: pointer;
   color: oklch(var(--bc) / 0.5);
-  font-size: 11px;
-  transition: background 0.15s, border-color 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
+  font-size: 10px;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 .desk-add-btn:hover {
   background: oklch(var(--p) / 0.15);
   border-color: oklch(var(--p) / 0.5);
   color: oklch(var(--p));
 }
+
+/* Typed desk-picker buttons: thumbnail icon + label stacked */
+.desk-add-btn--typed {
+  min-width: 50px;
+  padding: 7px 6px 5px;
+  gap: 5px;
+}
+.desk-thumb-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.desk-thumb-cap {
+  position: absolute;
+  top: -5px;
+  right: -2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: oklch(var(--p));
+  background: oklch(var(--b1));
+  border: 1px solid oklch(var(--p) / 0.4);
+  border-radius: 4px;
+  padding: 0 3px;
+  line-height: 14px;
+  pointer-events: none;
+}
+.desk-thumb-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: oklch(var(--bc) / 0.5);
+  white-space: nowrap;
+}
+.desk-add-btn--typed:hover .desk-thumb-label { color: oklch(var(--p)); }
+.desk-add-btn--typed:hover .desk-thumb-cap {
+  background: oklch(var(--p) / 0.15);
+  border-color: oklch(var(--p) / 0.7);
+}
+
 .desk-mini {
   display: inline-block;
-  background: oklch(var(--b3));
-  border: 1px solid oklch(var(--bc) / 0.3);
-  border-radius: 2px;
+  background: oklch(var(--bc) / 0.2);
+  border: 1.5px solid oklch(var(--bc) / 0.4);
+  border-radius: 3px;
+  flex-shrink: 0;
 }
-.desk-mini.single { width: 14px; height: 9px; }
-.desk-mini.bench2 { width: 22px; height: 9px; }
-.desk-mini.round  { width: 12px; height: 12px; border-radius: 50%; }
+.desk-mini.single { width: 26px; height: 17px; }
+.desk-mini.bench2 { width: 40px; height: 17px; }
+.desk-mini.bench4 { width: 54px; height: 17px; }
+.desk-mini.round  { width: 22px; height: 22px; border-radius: 50%; }
 
 /* ---- Design mode toggle ---- */
 .design-mode-toggle {

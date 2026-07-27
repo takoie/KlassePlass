@@ -93,7 +93,191 @@
 ::-webkit-scrollbar-thumb { background: oklch(var(--b3)); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(var(--bc) / 0.2); }
 
+/* ---- Focus-ring (tilgjengelighet) ---- */
+:focus-visible {
+  outline: 2px solid oklch(var(--p));
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 4px);
+}
+/* Inputs bruker custom border-focus, ikke outline */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+/* ---- Soft danger ghost-knapp ---- */
+.btn-ghost-danger {
+  color: oklch(var(--er) / 0.75);
+}
+.btn-ghost-danger:hover {
+  background: oklch(var(--er) / 0.1);
+  color: oklch(var(--er));
+}
+
 /* ---- Animasjoner (trekk-modus) ---- */
 .anim-fly-in {
   transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22,1,0.36,1) !important;
+}
+
+/* ---- Respekter prefers-reduced-motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Onboarding wizard ---- */
+.onboarding-wizard {
+  max-height: 85vh;
+}
+
+/* Steg-indikator */
+.wizard-steps-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 24px;
+}
+.wiz-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+.wiz-step.wiz-step-active { opacity: 1; }
+.wiz-step.wiz-step-done   { opacity: 0.7; }
+.wiz-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: oklch(var(--b3));
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s;
+}
+.wiz-step.wiz-step-active .wiz-step-num {
+  background: oklch(var(--p));
+  color: oklch(var(--pc));
+}
+.wiz-step.wiz-step-done .wiz-step-num {
+  background: oklch(var(--su) / 0.3);
+  color: oklch(var(--su));
+}
+.wiz-step-line {
+  flex: 1;
+  height: 2px;
+  background: oklch(var(--b3));
+  min-width: 24px;
+  max-width: 48px;
+  margin: 0 4px;
+}
+
+/* Steg-innhold */
+.wizard-step-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.wizard-step-desc {
+  font-size: 13px;
+  color: oklch(var(--bc) / 0.65);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* ---- Stasjonsmodul: drag-and-drop grupper ---- */
+.student-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  background: oklch(var(--b3));
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.student-chip:active { cursor: grabbing; }
+.student-chip.dragging { opacity: 0.35; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+.group-bucket {
+  min-height: 64px;
+  border: 2px dashed oklch(var(--b3));
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-content: flex-start;
+  transition: border-color 0.15s, background 0.15s;
+}
+.group-bucket.drag-over {
+  border-color: oklch(var(--p));
+  background: oklch(var(--p) / 0.05);
+}
+.group-bucket-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: oklch(var(--bc) / 0.45);
+  margin-bottom: 4px;
+}
+
+.station-teacher-card {
+  border: 2px solid oklch(var(--a)) !important;
+  background: oklch(var(--a) / 0.08) !important;
+}
+
+/* Station overview table */
+.station-overview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.station-overview-table th,
+.station-overview-table td {
+  padding: 8px 12px;
+  border: 1px solid oklch(var(--b3));
+  text-align: left;
+  vertical-align: top;
+}
+.station-overview-table th {
+  background: oklch(var(--b2));
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: oklch(var(--bc) / 0.5);
+}
+.station-overview-table tr.done-row td {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+/* Layout-forhåndsvisning */
+.wiz-layout-preview {
+  margin-top: 12px;
+  background: oklch(var(--b1));
+  border: 1px solid oklch(var(--b3));
+  border-radius: 10px;
+  padding: 8px 12px;
+  min-height: 60px;
+  overflow: hidden;
 }

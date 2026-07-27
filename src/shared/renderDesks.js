@@ -15,7 +15,9 @@ import { DESK_TYPES, DESK_COLOR_CLASS } from './constants.js';
  * @param {boolean} options.showNames        - Vis elevnavn (default true)
  * @param {boolean} options.showNumbers      - Vis bordnumre
  * @param {boolean} options.showGroups       - Vis gruppefarger
- * @param {boolean} options.hideIcons        - Skjul lås/notat ikoner (presentasjon)
+ * @param {boolean} options.hideIcons        - Skjul alle lås/notat ikoner
+ * @param {boolean} options.hideLocks        - Skjul lås-ikoner
+ * @param {boolean} options.hideNotes        - Skjul notat-ikoner
  * @param {Function} options.onStudentDrop   - (sourceDeskId, sourceSlot, targetDeskId, targetSlot)
  * @param {Function} options.onDeskContextMenu - (deskId, event)
  * @param {Function} options.onStudentContextMenu - (deskId, slotIndex, event)
@@ -27,6 +29,8 @@ export function renderDesks(container, desks, studentsById, options = {}) {
     showNumbers = false,
     showGroups = false,
     hideIcons = false,
+    hideLocks = false,
+    hideNotes = false,
     onStudentDrop = null,
     onDeskContextMenu = null,
     onStudentContextMenu = null,
@@ -36,7 +40,8 @@ export function renderDesks(container, desks, studentsById, options = {}) {
 
   desks.forEach((desk, idx) => {
     const el = buildDeskElement(desk, idx, studentsById, {
-      interactive, showNames, showNumbers, showGroups, hideIcons,
+      interactive, showNames, showNumbers, showGroups,
+      hideIcons, hideLocks, hideNotes,
       onStudentDrop, onDeskContextMenu, onStudentContextMenu,
     });
     container.appendChild(el);
@@ -64,6 +69,15 @@ function buildDeskElement(desk, idx, studentsById, opts) {
   el.style.cssText = `left:${desk.x}px;top:${desk.y}px;width:${typeInfo.width}px;height:${typeInfo.height}px;`;
   if (desk.rotation) el.style.transform = `rotate(${desk.rotation}deg)`;
 
+  // Gruppenummer for fargeblind-sikker visning
+  if (opts.showGroups && desk.groupId != null) {
+    const groupNum = document.createElement('span');
+    groupNum.className = 'desk-group-number';
+    groupNum.textContent = (desk.groupId % 8) + 1;
+    groupNum.setAttribute('aria-hidden', 'true');
+    el.appendChild(groupNum);
+  }
+
   if (opts.showNumbers) {
     const num = document.createElement('span');
     num.className = 'desk-number';
@@ -86,7 +100,55 @@ function buildDeskElement(desk, idx, studentsById, opts) {
     });
   }
 
+  // Desk-level drag fallback: catches drops on the padding area between the
+  // desk border and the slots, and drops that miss individual slot elements
+  // (common with round tables and small slots).
+  if (opts.interactive && opts.onStudentDrop) {
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    el.addEventListener('drop', e => {
+      // Only handle if no slot already handled it (slot handlers call stopPropagation)
+      e.preventDefault();
+      const data = _parseDropData(e.dataTransfer);
+      if (!data) return;
+
+      // Find the best target slot: prefer empty slots, fall back to first slot
+      const slotEls = el.querySelectorAll('.desk-slot');
+      let targetSlotIdx = 0;
+      // Find the slot the pointer is closest to
+      let bestDist = Infinity;
+      slotEls.forEach((slotEl, i) => {
+        const r = slotEl.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+        if (dist < bestDist) { bestDist = dist; targetSlotIdx = i; }
+      });
+
+      if (data.fromSidebar) {
+        const customEvt = new CustomEvent('sidebar-drop', {
+          bubbles: true,
+          detail: { studentId: data.studentId, deskId: desk.id, slotIdx: targetSlotIdx },
+        });
+        el.dispatchEvent(customEvt);
+      } else if (data.deskId !== undefined) {
+        opts.onStudentDrop(data.deskId, data.slotIdx, desk.id, targetSlotIdx);
+      }
+    });
+  }
+
   return el;
+}
+
+function _parseDropData(dataTransfer) {
+  try {
+    const raw = dataTransfer.getData('text/plain');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
 
 function buildSlotElement(desk, slotIdx, slot, studentsById, opts, isRound) {
@@ -97,7 +159,14 @@ function buildSlotElement(desk, slotIdx, slot, studentsById, opts, isRound) {
 
   const student = slot ? studentsById[slot.studentId] : null;
 
-  if (opts.showNames && student) {
+  if (student && !opts.showNames) {
+    // Hidden name mode (e.g. student-build) — show placeholder
+    const placeholder = document.createElement('span');
+    placeholder.className = 'student-name';
+    placeholder.textContent = '?';
+    placeholder.style.opacity = '0.3';
+    el.appendChild(placeholder);
+  } else if (opts.showNames && student) {
     const nameEl = document.createElement('span');
     nameEl.className = 'student-name';
     nameEl.textContent = student.name;
@@ -119,13 +188,13 @@ function buildSlotElement(desk, slotIdx, slot, studentsById, opts, isRound) {
     el.appendChild(nameEl);
 
     if (!opts.hideIcons) {
-      if (slot.locked) {
+      if (slot.locked && !opts.hideLocks) {
         const lock = document.createElement('i');
         lock.className = 'fa-solid fa-lock lock-icon';
         lock.title = 'Låst posisjon';
         el.appendChild(lock);
       }
-      if (student.note) {
+      if (student.note && !opts.hideNotes) {
         const note = document.createElement('i');
         note.className = 'fa-solid fa-note-sticky note-icon';
         note.title = student.note;
@@ -138,7 +207,7 @@ function buildSlotElement(desk, slotIdx, slot, studentsById, opts, isRound) {
 
   if (opts.interactive && opts.onStudentDrop) {
     el.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drag-over'); });
-    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('dragleave', e => { if (!el.contains(e.relatedTarget)) el.classList.remove('drag-over'); });
     el.addEventListener('drop', e => {
       e.preventDefault();
       e.stopPropagation();

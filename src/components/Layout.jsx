@@ -1,0 +1,93 @@
+import React, { useState, useEffect } from 'react';
+
+export default function Layout({ currentView, setCurrentView, children }) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => setIsFullscreen(e.detail);
+    window.addEventListener('toggle-projector', handler);
+    return () => window.removeEventListener('toggle-projector', handler);
+  }, []);
+
+  const mainTabs = [
+    { id: 'classes-overview', label: 'Klasser', icon: 'fa-solid fa-users', activeIds: ['classes-overview', 'classes'] },
+    { id: 'rooms-overview', label: 'Rom', icon: 'fa-solid fa-school', activeIds: ['rooms-overview', 'rooms'] },
+    { id: 'seating-overview', label: 'Klassekart', icon: 'fa-solid fa-map-location-dot', activeIds: ['seating-overview', 'seating'] }
+  ];
+
+  return (
+    <div className="flex h-full w-full bg-[#12151e] p-3 gap-3 relative">
+      {/* Global Titlebar (Always on top) */}
+      {!isFullscreen && (
+        <div className="titlebar flex items-center justify-end pr-3 pt-3 flex-shrink-0 bg-transparent absolute top-0 right-0 w-full z-[100] pointer-events-none" style={{ WebkitAppRegion: 'drag', height: '40px' }}>
+          <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag', pointerEvents: 'auto' }}>
+            <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.minimizeWindow()} title="Minimer">
+              <i className="fa-solid fa-minus text-xs"></i>
+            </button>
+            <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.maximizeWindow()} title="Maksimer">
+              <i className="fa-regular fa-square text-xs"></i>
+            </button>
+            <button className="w-9 h-7 flex items-center justify-center rounded bg-[#ef4444] text-white hover:bg-red-600 transition-colors shadow" onClick={() => window.api?.closeWindow()} title="Lukk">
+              <i className="fa-solid fa-xmark text-sm font-bold"></i>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sidebar for Desktop */}
+      {!isFullscreen && currentView !== 'seating' && currentView !== 'rooms' && (
+        <div className="w-56 bg-[#1a1e2b] flex flex-col z-50 flex-shrink-0 rounded-2xl border border-slate-800/80 shadow-2xl p-3">
+        
+        {/* Logo Area - Perfekt Midtstilt */}
+        <div className="h-16 flex items-center justify-center mb-3" style={{ WebkitAppRegion: 'drag' }}>
+          <div className="select-none flex items-center justify-center tracking-tight text-center">
+            <span className="font-extrabold text-white text-2xl tracking-wider">KLASSE</span>
+            <span className="font-extrabold text-[#f59e0b] text-2xl tracking-wider drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]">PLASS</span>
+          </div>
+        </div>
+        
+        {/* Hovedmeny */}
+        <div className="flex flex-col w-full flex-1 gap-2 overflow-y-auto">
+          {mainTabs.map((tab) => {
+            const isActive = tab.activeIds.includes(currentView);
+            return (
+              <button 
+                key={tab.id}
+                className={`overblikk-nav-btn ${isActive ? 'active' : ''}`}
+                onClick={() => setCurrentView(tab.id)}
+              >
+                <i className={`${tab.icon} text-sm flex-shrink-0 ${isActive ? 'text-[#34d399]' : 'text-slate-400'}`}></i>
+                <span className="leading-none">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Nederst i Sidemenyen - Kun Innstillinger */}
+        <div className="pt-3 border-t border-slate-800/80 mt-auto">
+          <button 
+            className={`overblikk-nav-btn ${currentView === 'settings' ? 'active' : ''}`}
+            onClick={() => setCurrentView('settings')}
+          >
+            <i className="fa-solid fa-gear text-sm flex-shrink-0 text-slate-400"></i>
+            <span className="leading-none">Innstillinger</span>
+          </button>
+        </div>
+
+      </div>
+      )}
+
+      {/* Main Content Area */}
+      {currentView === 'seating' ? (
+        children
+      ) : (
+        <div className="flex-1 flex flex-col overflow-hidden relative bg-[#202534] rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">
+          {/* Her rendres siden */}
+          <div className="flex-1 overflow-hidden pt-10">
+            {children}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

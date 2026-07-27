@@ -149,6 +149,45 @@ function scoreGroups(groups, studentsById, recentPairs) {
 }
 
 /**
+ * Grupppér homogent — elever med samme nivå i samme gruppe.
+ * Elever uten nivå behandles som nivå 2 (standard).
+ * @param {Array} students - [{ id, name, level }]
+ * @param {number} numGroups
+ * @returns {string[][]} — groups[i] = array of studentIds
+ */
+export function groupByLevelHomogeneous(students, numGroups) {
+  const byLevel = { '1': [], '2': [], '3': [], null: [] };
+  for (const s of students) {
+    const key = s.level ? String(s.level) : null;
+    (byLevel[key] ?? byLevel[null]).push(s.id);
+  }
+  const groups = Array.from({ length: numGroups }, () => []);
+  let gi = 0;
+  for (const bucket of [byLevel['1'], byLevel['2'], byLevel['3'], byLevel[null]]) {
+    for (const id of bucket) {
+      groups[gi % numGroups].push(id);
+      gi++;
+    }
+  }
+  return groups;
+}
+
+/**
+ * Grupppér heterogent — spre nivåene jevnt over grupper.
+ * @param {Array} students - [{ id, name, level }]
+ * @param {number} numGroups
+ * @returns {string[][]} — groups[i] = array of studentIds
+ */
+export function groupByLevelHeterogeneous(students, numGroups) {
+  // Sorter: nivå 1 → 2 → 3 → null, deretter distribuer round-robin
+  const levelOrder = s => s.level ? parseInt(s.level) : 2;
+  const sorted = [...students].sort((a, b) => levelOrder(a) - levelOrder(b));
+  const groups = Array.from({ length: numGroups }, () => []);
+  sorted.forEach((s, i) => groups[i % numGroups].push(s.id));
+  return groups;
+}
+
+/**
  * Bygg alle par fra en gruppeinndelng, for lagring i group_history.
  * @param {string[][]} groups
  * @param {Object} studentsById

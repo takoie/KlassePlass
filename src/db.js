@@ -1,16 +1,12 @@
-/**
- * db.js — SQLite database-tilkobling, settings og db-path-logikk.
- * Eksporterer db-instansen og hjelpefunksjoner.
- */
-
 const path    = require('path');
 const fs      = require('fs');
-const sqlite3 = require('sqlite3').verbose();
+const initSqlJs = require('sql.js');
 const { app } = require('electron');
 const { runMigrations, migrateRoomLayouts } = require('../db/schema.js');
 
 let db = null;
 let dbPath = null;
+let SQL = null;
 
 function getDbPath() {
   const configPath = path.join(app.getPath('userData'), 'db-location.json');
@@ -32,7 +28,7 @@ function loadSettings() {
   if (fs.existsSync(p)) {
     try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { /* fall through */ }
   }
-  return { theme: 'dark', colorTheme: 'night', defaultFlipDisplay: false, onboardingCompleted: false };
+  return { theme: 'dark', colorTheme: 'night', canvasBg: 'solid', defaultFlipDisplay: false, onboardingCompleted: false };
 }
 
 function saveSettings(settings) {
@@ -45,13 +41,29 @@ function saveSettings(settings) {
 async function initDb() {
   dbPath = getDbPath();
   console.log('Database:', dbPath);
-  db = new sqlite3.Database(dbPath);
+  
+  SQL = await initSqlJs();
+  if (fs.existsSync(dbPath)) {
+    const filebuffer = fs.readFileSync(dbPath);
+    db = new SQL.Database(filebuffer);
+  } else {
+    db = new SQL.Database();
+  }
+  
   await runMigrations(db);
   await migrateRoomLayouts(db);
+  saveDbToDisk();
   return db;
+}
+
+function saveDbToDisk() {
+  if (!db || !dbPath) return;
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(dbPath, buffer);
 }
 
 function getDb()     { return db; }
 function getDbPathFn() { return dbPath; }
 
-module.exports = { initDb, getDb, getDbPathFn, loadSettings, saveSettings };
+module.exports = { initDb, getDb, getDbPathFn, loadSettings, saveSettings, saveDbToDisk };

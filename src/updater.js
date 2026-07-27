@@ -3,9 +3,13 @@
  * Sjekker for oppdateringer og sender melding til renderer når klar.
  */
 
-const { autoUpdater } = require('electron-updater');
-
 function setupUpdater(winRef) {
+  // Lazy require: electron-updater instansierer NsisUpdater ved property-access
+  // på `autoUpdater`, og den konstruktøren leser `app.getVersion()` med en gang.
+  // Kravd for tidlig (modul-nivå, før app.whenReady()) ga `app` som undefined
+  // og krasjet hele prosessen ved oppstart.
+  const { autoUpdater } = require('electron-updater');
+
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 

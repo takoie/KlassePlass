@@ -31,9 +31,15 @@ export const DESK_COLOR_CLASS = {
 };
 
 export const DECORATION_TYPES = {
-  wall:    { label: 'Vegg/Skillevegg', icon: 'fa-minus',          resizable: true  },
-  cabinet: { label: 'Skap',            icon: 'fa-box',             resizable: true  },
-  window:  { label: 'Vindu',           icon: 'fa-window-maximize', resizable: true  },
-  door:    { label: 'Dør',             icon: 'fa-door-open',       resizable: false },
-  label:   { label: 'Tekst-label',     icon: 'fa-font',            resizable: false },
+  wall:         { label: 'Vegg/Skillevegg',  icon: 'fa-minus',          resizable: true  },
+  cabinet:      { label: 'Skap',             icon: 'fa-box',             resizable: true  },
+  window:       { label: 'Vindu',            icon: 'fa-window-maximize', resizable: true  },
+  door:         { label: 'Dør',              icon: 'fa-door-open',       resizable: false },
+
+  whiteboard:   { label: 'Tavle',            icon: 'fa-chalkboard',      resizable: true  },
+  screen:       { label: 'TV/Projektor',     icon: 'fa-display',         resizable: true  },
+  bookshelf:    { label: 'Bokhylle',         icon: 'fa-book',            resizable: true  },
+  sink:         { label: 'Vask',             icon: 'fa-sink',            resizable: false },
+  trashcan:     { label: 'Søppelkasse',      icon: 'fa-trash',           resizable: false },
+  label:        { label: 'Tekst-label',      icon: 'fa-font',            resizable: false },
 };

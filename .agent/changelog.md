@@ -5,6 +5,42 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet.
 
 ---
 
+## 2026-07-22 - Rom-editor & Klassekart: Fast A4-flate, glatt snapping, lærerperspektiv-nummerering og UI-redesign
+
+**Kategori:** Feature / UX / Performance / Bugfix
+
+**Branch:** `main`
+
+### 1. Fast Låst Klasseromsflate (1050px × 700px A4-Format)
+- Romstørrelsen er nå fiksert til **1050px × 700px** i liggende A4-proposjon, sentrert i viewporten med en myk skyggekant.
+- Gir 100 % identisk og forutsigbar utskrift til PDF og papir uavhengig av om brukeren har stor 4K-skjerm eller en bærbar PC.
+- Rommer komfortabelt opp til 40 elevplasser for eksamen og gruppearbeid.
+- Streng vegg-sperre hindrer at bord og dekorasjoner kan dras ut av rommets fire vegger.
+
+### 2. Lyntrask 60 FPS Dragging & Multi-Snap GLOW
+- **0ms Dragging-Latens:** CSS-transisjoner (`transition-all`) deaktiveres under aktiv flytting for å eliminere input-lag. Posisjoner oppdateres direkte på DOM-elementene uten å trigge React re-renders på hver musebevegelse.
+- **Multi-Snap Glow:** Både dratte bord og alle stasjonære bord som snappes sammen eller tangeres lyser nå opp i en umiskjennelig kraftig grønn snap-glow (`#10b981` + `shadow-[0_0_30px_rgba(16,185,129,1.0)]`).
+
+### 3. Dynamisk Nummerering med Lærer-Perspektiv ved 180° Flipp
+- **Relativ nummerering til Tavle:** Nummereringen tar hensyn til hvor tavla er plassert. Når læreren står ved tavla og ser utover klassen, er **Bord #1 alltid plassert i fremste rad på lærerens venstre side**, uavhengig av om rommet snus 180°.
+- **Større Nummerbadge:** Brikkestørrelsen økt til `w-6 h-6` med dyp grønn kant (`border-2 border-emerald-400 text-emerald-300 bg-slate-900 font-black`) for enkel avlesing.
+
+### 4. Stilrent Borddesign & Automatiske Makkergrupper
+- **Enkel Grå Ramme:** Fjernet doble borders rundt bord og elevplasser til fordel for en stilren enkel grå ramme (`border border-slate-700/70`).
+- **Auto-Makkergrupper for Presets:** Ved opprettelse av mønstre (f.eks. `2-2-2`, `2-3-2` osv.) blir alle par (2 bord) og klynger (3 bord) automatisk opprettet som Makkergrupper med unike fargede rammer.
+
+### 5. Venstre Side-Drawer & Stabile Knapper
+- **Venstre Side-Drawer:** Verktøypanelet flyttet til en animert **venstre-stilt side-drawer** (`left-4`), slik at det aldri dekker eller skygger for pulter på høyre side av canvaset.
+- **Stabile Toppbar-Knapper:** Knapper har fått fastlåste elementbredder (`min-w-[...]`) slik at klikk eller tekstendringer (`Viser soner` / `Skjuler soner`, `Lagret` / `Lagrer...`) ikke gir layout-shift eller knappe-jittering.
+- **Fjernet Zoom:** Zoom-kontroller fjernet fra topplinjen for et renere og mer fokusert grensesnitt.
+
+**Filer endret:**
+- `src/components/RoomEditor.jsx`
+- `src/components/SeatingChart.jsx`
+- `brain/.../walkthrough.md`
+
+---
+
 ## 2026-03-04 - Innstillinger: Tab-navigasjon, fargetemaer og nye informasjonssider
 
 **Kategori:** Feature / UX

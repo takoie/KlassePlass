@@ -4,6 +4,23 @@
    canvas-rotasjon.
    ============================================================ */
 
+/* ---- Gruppefarger som CSS-variabler ---- */
+:root {
+  --group-color-1: 27  96% 61%;   /* rød   */
+  --group-color-2: 50  85% 60%;   /* oransje */
+  --group-color-3: 73  80% 50%;   /* gul   */
+  --group-color-4: 142 71% 45%;   /* grønn */
+  --group-color-5: 221 83% 53%;   /* blå   */
+  --group-color-6: 262 74% 61%;   /* lilla */
+  --group-color-7: 330 81% 60%;   /* rosa  */
+  --group-color-8: 172 76% 41%;   /* teal  */
+
+  --part-color-lekse:       142 71% 45%;
+  --part-color-ingen-lekse: 27  96% 61%;
+  --part-color-svarte:      221 83% 53%;
+  --part-color-notert:      43  96% 56%;
+}
+
 /* ---- Seating canvas ---- */
 .seating-canvas {
   position: relative;
@@ -13,6 +30,42 @@
   border: 1px solid oklch(var(--b3));
   border-radius: 10px;
   flex-shrink: 0;
+}
+
+/* ---- Canvas bakgrunnstyper ---- */
+[data-canvas-bg="grid"] .seating-canvas,
+[data-canvas-bg="grid"] .room-canvas,
+[data-canvas-bg="grid"] .pres-canvas {
+  background-image:
+    linear-gradient(oklch(var(--bc) / 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(var(--bc) / 0.07) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-color: oklch(var(--b2));
+}
+[data-canvas-bg="dots"] .seating-canvas,
+[data-canvas-bg="dots"] .room-canvas,
+[data-canvas-bg="dots"] .pres-canvas {
+  background-image: radial-gradient(circle, oklch(var(--bc) / 0.18) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+  background-color: oklch(var(--b2));
+}
+[data-canvas-bg="lines"] .seating-canvas,
+[data-canvas-bg="lines"] .room-canvas,
+[data-canvas-bg="lines"] .pres-canvas {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 39px,
+    oklch(var(--bc) / 0.08) 39px,
+    oklch(var(--bc) / 0.08) 40px
+  );
+  background-color: oklch(var(--b2));
+}
+[data-canvas-bg="dark-solid"] .seating-canvas,
+[data-canvas-bg="dark-solid"] .room-canvas,
+[data-canvas-bg="dark-solid"] .pres-canvas {
+  background: oklch(18% 0.01 260);
+  border-color: oklch(25% 0.01 260);
 }
 
 /* ---- Tavle (front board) ---- */
@@ -38,10 +91,10 @@
 /* ---- Base desk ---- */
 .desk {
   position: absolute;
-  background: oklch(var(--b3));
-  border: 1px solid oklch(var(--b3) / 0.8);
+  background: oklch(var(--b2));
+  border: 1.5px solid oklch(var(--bc) / 0.18);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,8 +107,8 @@
 }
 .desk-interactive { cursor: pointer; }
 .desk-interactive:hover {
-  border-color: oklch(var(--p) / 0.7);
-  box-shadow: 0 0 0 2px oklch(var(--p) / 0.2), 0 2px 8px rgba(0,0,0,0.25);
+  border-color: oklch(var(--p) / 0.6);
+  box-shadow: 0 0 0 2px oklch(var(--p) / 0.15), 0 2px 8px rgba(0,0,0,0.15);
 }
 .desk-round3, .desk-round4, .desk-round6 { border-radius: 50%; }
 
@@ -67,18 +120,24 @@
   flex-direction: column;
   gap: 1px;
   min-width: 30px;
+  min-height: 20px;
   flex: 1;
+  padding: 2px;
+}
+.desk-slot-empty {
+  border: 1.5px dashed oklch(var(--bc) / 0.2);
+  border-radius: 4px;
 }
 .desk-slot-empty::after {
   content: '';
   display: block;
-  width: 20px; height: 2px;
-  background: oklch(var(--b3));
+  width: 16px; height: 2px;
+  background: oklch(var(--bc) / 0.25);
   border-radius: 1px;
 }
 .student-name {
-  font-size: 10.5px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   text-align: center;
   line-height: 1.2;
   max-width: 100%;
@@ -95,29 +154,41 @@
   opacity: 0.5;
 }
 
+/* ---- Gruppenummer-badge (fargeblind-sikker) ---- */
+.desk-group-number {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.75;
+  pointer-events: none;
+  line-height: 1;
+}
+
 /* ---- Drag states ---- */
 .desk.drag-source { opacity: 0.5; }
 .desk-slot.drag-over { background: oklch(var(--p) / 0.2); border-radius: 4px; }
 
 /* ---- Gruppefarger ---- */
-.desk-group-1 { border-color: #ef4444; background: rgba(239,68,68,0.15); }
-.desk-group-2 { border-color: #f97316; background: rgba(249,115,22,0.15); }
-.desk-group-3 { border-color: #eab308; background: rgba(234,179,8,0.15); }
-.desk-group-4 { border-color: #22c55e; background: rgba(34,197,94,0.15); }
-.desk-group-5 { border-color: #3b82f6; background: rgba(59,130,246,0.15); }
-.desk-group-6 { border-color: #8b5cf6; background: rgba(139,92,246,0.15); }
-.desk-group-7 { border-color: #ec4899; background: rgba(236,72,153,0.15); }
-.desk-group-8 { border-color: #14b8a6; background: rgba(20,184,166,0.15); }
+.desk-group-1 { border-color: oklch(var(--group-color-1)); border-width: 2px; background: oklch(var(--group-color-1) / 0.22); }
+.desk-group-2 { border-color: oklch(var(--group-color-2)); border-width: 2px; background: oklch(var(--group-color-2) / 0.22); }
+.desk-group-3 { border-color: oklch(var(--group-color-3)); border-width: 2px; background: oklch(var(--group-color-3) / 0.22); }
+.desk-group-4 { border-color: oklch(var(--group-color-4)); border-width: 2px; background: oklch(var(--group-color-4) / 0.22); }
+.desk-group-5 { border-color: oklch(var(--group-color-5)); border-width: 2px; background: oklch(var(--group-color-5) / 0.22); }
+.desk-group-6 { border-color: oklch(var(--group-color-6)); border-width: 2px; background: oklch(var(--group-color-6) / 0.22); }
+.desk-group-7 { border-color: oklch(var(--group-color-7)); border-width: 2px; background: oklch(var(--group-color-7) / 0.22); }
+.desk-group-8 { border-color: oklch(var(--group-color-8)); border-width: 2px; background: oklch(var(--group-color-8) / 0.22); }
 
 /* ---- Bordfarger ---- */
 .desk-color-default { }
-.desk-color-red    { background: rgba(239,68,68,0.18);  border-color: rgba(239,68,68,0.5); }
-.desk-color-green  { background: rgba(34,197,94,0.18);  border-color: rgba(34,197,94,0.5); }
-.desk-color-blue   { background: rgba(59,130,246,0.18); border-color: rgba(59,130,246,0.5); }
-.desk-color-yellow { background: rgba(234,179,8,0.18);  border-color: rgba(234,179,8,0.5); }
-.desk-color-purple { background: rgba(139,92,246,0.18); border-color: rgba(139,92,246,0.5); }
-.desk-color-orange { background: rgba(249,115,22,0.18); border-color: rgba(249,115,22,0.5); }
-.desk-color-pink   { background: rgba(236,72,153,0.18); border-color: rgba(236,72,153,0.5); }
+.desk-color-red    { background: oklch(var(--group-color-1) / 0.18); border-color: oklch(var(--group-color-1) / 0.5); }
+.desk-color-green  { background: oklch(var(--group-color-4) / 0.18); border-color: oklch(var(--group-color-4) / 0.5); }
+.desk-color-blue   { background: oklch(var(--group-color-5) / 0.18); border-color: oklch(var(--group-color-5) / 0.5); }
+.desk-color-yellow { background: oklch(var(--group-color-3) / 0.18); border-color: oklch(var(--group-color-3) / 0.5); }
+.desk-color-purple { background: oklch(var(--group-color-6) / 0.18); border-color: oklch(var(--group-color-6) / 0.5); }
+.desk-color-orange { background: oklch(var(--group-color-2) / 0.18); border-color: oklch(var(--group-color-2) / 0.5); }
+.desk-color-pink   { background: oklch(var(--group-color-7) / 0.18); border-color: oklch(var(--group-color-7) / 0.5); }
 
 /* ---- Student sidebar (seating editor) ---- */
 .student-sidebar {
@@ -129,16 +200,30 @@
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+.student-sidebar.sidebar-collapsed {
+  width: 36px;
+  min-width: 36px;
+}
+.student-sidebar.sidebar-collapsed .student-list,
+.student-sidebar.sidebar-collapsed .sidebar-header-label,
+.student-sidebar.sidebar-collapsed .badge-count,
+.student-sidebar.sidebar-collapsed .sidebar-action-btn:not(#btn-collapse-sidebar) {
+  display: none;
 }
 .sidebar-header {
-  padding: 10px 12px;
+  padding: 6px 8px;
   border-bottom: 1px solid oklch(var(--b3));
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2px;
   font-size: 13px;
   font-weight: 600;
+  flex-shrink: 0;
 }
+.sidebar-header-label { flex: 1; }
+.sidebar-action-btn { padding: 2px 4px !important; min-height: unset !important; }
 .student-list { overflow-y: auto; flex: 1; padding: 6px; }
 .student-chip {
   padding: 6px 10px;
@@ -169,7 +254,8 @@
 
 /* ---- Canvas 180° rotation ---- */
 .seating-canvas.canvas-rotated,
-.room-canvas.canvas-rotated {
+.room-canvas.canvas-rotated,
+.pres-canvas.canvas-rotated {
   transform: rotate(180deg);
   transform-origin: center center;
 }
@@ -177,16 +263,207 @@
 /* Counter-rotate all text inside a rotated canvas so it stays readable */
 .canvas-rotated .student-name,
 .canvas-rotated .desk-number,
+.canvas-rotated .desk-group-number,
 .canvas-rotated .desk-slot,
 .canvas-rotated .room-desk > span {
   transform: rotate(-180deg);
   display: inline-block;
 }
 
-/* Keep the TAVLE board label readable */
+/* Counter-rotate the front-board label so it stays readable when the canvas is rotated */
 .canvas-rotated .front-board {
   transform: translateX(-50%) rotate(-180deg);
 }
 
-/* Decoration icons and labels — se renderDecorations() i seating-editor.js for JS-håndtering */
+/* Decoration icons and labels handled by JS in renderDecorations() */
 .canvas-rotated .decoration { }
+
+/* Visuell markering av bord som bryter plasseringsregler */
+.desk-violation {
+  border-color: oklch(var(--er) / 0.85) !important;
+  box-shadow: 0 0 0 2px oklch(var(--er) / 0.3), 0 2px 8px rgba(0,0,0,0.25) !important;
+}
+
+/* ---- Gruppe-legende ---- */
+.group-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 16px;
+  background: oklch(var(--b2));
+  border-bottom: 1px solid oklch(var(--b3));
+  flex-shrink: 0;
+}
+.group-legend-item {
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 2px solid;
+}
+
+/* ---- Historikk-sidebar ---- */
+.history-sidebar {
+  width: 200px;
+  min-width: 200px;
+  border-left: 1px solid oklch(var(--b3));
+  background: oklch(var(--b2));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.history-entry {
+  padding: 8px 10px;
+  border-bottom: 1px solid oklch(var(--b3) / 0.5);
+}
+.history-entry-date {
+  font-size: 10px;
+  font-weight: 600;
+  color: oklch(var(--bc) / 0.5);
+  margin-bottom: 4px;
+}
+.history-entry-pairs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.history-pair {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: oklch(var(--b3));
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* ---- Toolbar dropdown ---- */
+.toolbar-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  background: oklch(var(--b1));
+  border: 1px solid oklch(var(--b3));
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  min-width: 180px;
+  padding: 4px;
+}
+.toolbar-dropdown-item {
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: oklch(var(--bc));
+}
+.toolbar-dropdown-item:hover {
+  background: oklch(var(--b2));
+}
+
+/* ---- Spin drum (roulette tape) ---- */
+.spin-drum { user-select: none; }
+.spin-list { margin: 0; padding: 0; list-style: none; }
+.spin-item {
+  transition: opacity 0.12s, transform 0.12s;
+  letter-spacing: -0.01em;
+  padding: 0 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Sticky desk context menu ---- */
+.desk-context-menu-sticky {
+  min-width: 220px;
+}
+.desk-ctx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 4px;
+}
+.desk-ctx-student-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  gap: 6px;
+  border-radius: 4px;
+  margin: 1px 4px;
+}
+.desk-ctx-student-row:hover { background: oklch(var(--b2)); }
+.desk-ctx-student-name {
+  font-size: 12px;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.desk-ctx-student-actions {
+  display: flex;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+/* ---- Regel-administrasjon modal ---- */
+.rules-manage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid oklch(var(--b3) / 0.5);
+  gap: 8px;
+}
+.rules-manage-row:last-child { border-bottom: none; }
+.rules-manage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rules-manage-type {
+  font-size: 10px;
+  font-weight: 600;
+  color: oklch(var(--bc) / 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.rules-manage-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.rules-manage-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ---- Deltakelseslogg badges ---- */
+.participation-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  pointer-events: none;
+  max-width: 60%;
+}
+
+.part-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.part-dot-lekse       { background: oklch(var(--part-color-lekse)); }
+.part-dot-ingen-lekse { background: oklch(var(--part-color-ingen-lekse)); }
+.part-dot-svarte      { background: oklch(var(--part-color-svarte)); }
+.part-dot-notert      { background: oklch(var(--part-color-notert)); }
