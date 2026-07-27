@@ -324,16 +324,17 @@ function registerHandlers(winRef) {
   ipcMain.handle('get-station-session', async (_, id) =>
     dbGet('SELECT * FROM station_sessions WHERE id=?', [id]));
 
-  ipcMain.handle('save-station-session', async (_, { id, name, classId, stations, groups, rotationPlan, minutesPerStation }) => {
+  ipcMain.handle('save-station-session', async (_, { id, name, classId, stations, groups, groupLeaders, rotationPlan, minutesPerStation }) => {
     const s = JSON.stringify(stations ?? []);
     const g = JSON.stringify(groups ?? []);
+    const gl = JSON.stringify(groupLeaders ?? []);
     const r = JSON.stringify(rotationPlan ?? []);
     if (id) return dbRun(
-      'UPDATE station_sessions SET name=?,stations=?,groups=?,rotation_plan=?,minutes_per_station=? WHERE id=?',
-      [name, s, g, r, minutesPerStation ?? 10, id]);
+      'UPDATE station_sessions SET name=?,stations=?,groups=?,group_leaders=?,rotation_plan=?,minutes_per_station=? WHERE id=?',
+      [name, s, g, gl, r, minutesPerStation ?? 10, id]);
     return dbRun(
-      'INSERT INTO station_sessions (name,class_id,stations,groups,rotation_plan,minutes_per_station) VALUES (?,?,?,?,?,?)',
-      [name, classId, s, g, r, minutesPerStation ?? 10]);
+      'INSERT INTO station_sessions (name,class_id,stations,groups,group_leaders,rotation_plan,minutes_per_station) VALUES (?,?,?,?,?,?,?)',
+      [name, classId, s, g, gl, r, minutesPerStation ?? 10]);
   });
 
   ipcMain.handle('delete-station-session', async (_, id) =>
