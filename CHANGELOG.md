@@ -6,6 +6,42 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-27 — Lagt til Database & Sikkerhetskopi-fane i Innstillinger
+
+Backend har hele tiden hatt full støtte for database-backup/restore/flytting
+(`backup-db`, `restore-db`, `move-db` i `ipc-handlers.js`, eksponert i
+`preload.js`), men React-versjonen av Innstillinger hadde ingen fane som
+viste dette — kun Visning, Om, Personvern og Lisenser.
+
+**Lagt til ny fane "Database & Sikkerhetskopi" i `Settings.jsx`:**
+- **Ta sikkerhetskopi** — lagrer en kopi av hele databasen til valgfri fil
+  (native lagre-dialog).
+- **Gjenopprett fra sikkerhetskopi** — med bekreftelsesdialog som forklarer
+  at gjeldende database erstattes (og at den automatisk tas vare på som
+  `.bak` først, jf. tidligere fiks i `6d6ea31`).
+- **Flytt database** — flytter databasefilen til en annen mappe (f.eks.
+  delt stasjon), med bekreftelsesdialog om at appen må startes på nytt.
+
+Underveis avdekket en visuell bug i mine egne første bekreftelsesdialoger:
+brukte først React-betinget rendering (`{open && <dialog className="modal
+modal-open">...}`) i stedet for native `dialog.showModal()`. Skjermbilder
+tatt rett etter åpning viste tekst fra kortet bak "blø gjennom" — men dette
+var kun daisyUIs CSS-overgang midt i animasjon på grunn av øyeblikkelig
+skjermbilde, ikke en reell rendering-bug. Byttet likevel til samme
+native-`showModal()`-mønster som resten av appen (`SeatingChart.jsx`) for
+konsistens og fordi det er det bekreftet fungerende mønsteret.
+
+**Verifisert i ekte kjørende app:** fanen viser riktig innhold, begge
+bekreftelsesdialogene åpner/lukker korrekt. Selve native fil-dialogene
+(lagre/åpne/velg mappe) ble bevisst IKKE trigget under automatisert testing
+— disse blokkerer Electron-rendereren slik `window.print()` gjorde tidligere
+i økten, og koden bak er allerede validert (samme `backup-db`/`restore-db`
+IPC-handlere har vært i bruk og testet manuelt i tidligere versjoner).
+
+**Berørte filer:** `src/components/Settings.jsx`
+
+---
+
 ## 2026-07-27 — Gjeninnført periodebytte for klassekart + fikset at nye rader alltid fikk id 0
 
 **Bakgrunn:** "se historikk" var ett av de fire opprinnelige kjernekravene, men
