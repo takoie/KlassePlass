@@ -6,6 +6,60 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-28 — Fungerende regelmotor + fem nye Fun modes i klassekartet
+
+**Regelmotoren for elevregler var reelt ikke-fungerende.** "Randomiser"
+(`handleRuleBasedFunSpin`) evaluerte kandidat-plasseringer mot
+`rule.type === 'separate'` med feltene `rule.student1`/`rule.student2` — et
+regeltype/felt-navn som ikke finnes i dagens datamodell (`ClassManager.jsx`
+lagrer `type`/`priority`/`studentIds`, med typene `avoid`, `pair`,
+`nearBoard`, `sitBack`, `sitMiddle`, `awayDoor`, `awayWindow`,
+`supportPair`). Enhver regel en lærer opprettet ble dermed stille ignorert.
+"Plasser alle" (`handleAutoFill`) sjekket ingen regler i det hele tatt.
+
+- Ny, rammeverk-fri modul `src/lib/seatingSolver.mjs` med
+  `sortSlotsByDeskOrder` (kronologisk pult-fylling — ingen elev isolert ved
+  et bord mens et tidligere bord står halvfullt), `scoreClassPlacement`
+  (matcher det faktiske regelskjemaet, straff skalert etter prioritet:
+  kritisk -500, viktig -150, ønske -30) og `findBestPlacement`
+  ("prøv 35 tilfeldige, behold beste"-søk). Testet med Nodes innebygde
+  testløper (`node --test`, 6 tester, `npm test`).
+- "Randomiser" og "Plasser alle" bruker nå denne motoren.
+
+**Fem nye animerte Fun modes** i verktøypanelets Fun mode-skuff, alle
+regel-bevisste (bruker samme `seatingSolver.mjs` til å beregne sluttresultatet
+før animasjonen starter):
+- **Roulette** — elever plasseres én og én med en "spinn og land"-animasjon.
+  "Stopp" hopper rett til det ferdigberegnede resultatet.
+- **Randombomb** — nedtelling 5→1 med tilfeldig flimring av alle seter,
+  avsluttes med 💥. Kan avbrytes, og gjenoppretter da plasseringen som var
+  før bomben startet.
+- **Musikkstoler** — rask (< 1 sek) full stokk uten nedtelling.
+- **Makkerbytte** — randomiserer kun elever ved pulter med en aktiv
+  makkergruppe-farge; ugrupperte pulter/elever er urørt.
+- **Trekk en elev (Spotlight)** — ren "hvem skal svare"-trekning blant
+  allerede plasserte elever; endrer aldri `placements`.
+
+Alle fem kjører som `setTimeout`-kjeder mot en delt, transient
+`funModeGhosts`-tilstand som overstyrer visningen av et sete uten å røre den
+ekte `placements`-tilstanden (og dermed uten å trigge autolagring) før
+resultatet er avgjort. Dra-og-slipp er deaktivert mens en fun mode kjører.
+
+**Verifisering:** `npx vite build` og `npm test` (6/6 PASS) kjørt på nytt
+etter hvert steg. Full interaktiv gjennomkjøring i den ekte Electron-appen
+(alle fem modes, regel-respekt, låste seter, avbryt-flyter) er **ikke**
+utført i denne økten — appen i dev-modus peker på den ekte
+brukerdatabasen (`app.getPath('userData')`), og det ble vurdert som
+uforsvarlig å kjøre automatisert klikk-gjennom mot ekte klassedata uten
+eksplisitt godkjenning. Anbefalt neste steg: manuell gjennomkjøring av
+test-listen i `docs/plans/2026-07-28-flere-fun-modes.md` (Task 9, Steg 5).
+
+**Berørte filer:** `src/lib/seatingSolver.mjs` (ny),
+`test/seatingSolver.test.mjs` (ny), `package.json` (nytt `test`-script),
+`src/components/SeatingChart.jsx`, `src/components/SeatingChart/Toolbar.jsx`
+
+---
+
 ## 2026-07-28 — Dra-og-slipp + gruppeleder/lås-meny i gruppearbeid
 
 **Dropdown for å flytte elever mellom grupper erstattet med dra-og-slipp**
