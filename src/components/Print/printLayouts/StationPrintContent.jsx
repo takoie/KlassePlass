@@ -1,6 +1,7 @@
 import React from 'react';
 
 export const STATION_CONTENT_WIDTH_PX = 1000;
+export const STATION_CONTENT_HEIGHT_PX = 600;
 
 export default function StationPrintContent({ stations, groups, groupLeaders, rotationPlan, students, settings }) {
   const findStudentName = (id) => students.find(s => s.id === id)?.name || id;

@@ -3,10 +3,12 @@ import PrintPage, { computePrintScale } from './PrintPage';
 import { usePrintSettings } from './usePrintSettings';
 import { buildPrintFilename } from './printFilename';
 import SeatingChartPrintContent, { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX } from './printLayouts/SeatingChartPrintContent';
+import StationPrintContent, { STATION_CONTENT_WIDTH_PX, STATION_CONTENT_HEIGHT_PX } from './printLayouts/StationPrintContent';
 
 export default function PrintPreviewModal({
+  contentType = 'seatingChart',
   chartName, className, chartComment, boardObj, desks, deskNumberMap, placements,
-  getStudentByIdOrName, groupColors, zoneMeta,
+  getStudentByIdOrName, groupColors, zoneMeta, stationProps,
   initialShowNumbers, initialShowZones, initialShowGroups,
   onClose,
 }) {
@@ -14,11 +16,19 @@ export default function PrintPreviewModal({
     usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups });
   const [exportState, setExportState] = useState({ status: 'idle' }); // idle | working | done | error
 
-  const previewScale = computePrintScale(CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX) * 0.6; // ekstra nedskalering for modal-visning
+  const isStation = contentType === 'station';
+  const contentWidthPx = isStation ? STATION_CONTENT_WIDTH_PX : CONTENT_WIDTH_PX;
+  const contentHeightPx = isStation ? STATION_CONTENT_HEIGHT_PX : CONTENT_HEIGHT_PX;
+
+  const previewScale = computePrintScale(contentWidthPx, contentHeightPx) * 0.6; // ekstra nedskalering for modal-visning
 
   const contentProps = {
     boardObj, desks, deskNumberMap, placements, getStudentByIdOrName, groupColors, zoneMeta, settings,
   };
+
+  const content = isStation
+    ? <StationPrintContent {...stationProps} settings={settings} />
+    : <SeatingChartPrintContent {...contentProps} />;
 
   const handlePrint = () => {
     window.print();
@@ -48,23 +58,27 @@ export default function PrintPreviewModal({
                 <span>Farger</span>
                 <input type="checkbox" className="toggle" checked={settings.showColors} onChange={(e) => setShowColors(e.target.checked)} />
               </label>
-              <label className="label cursor-pointer justify-between">
-                <span>Numre</span>
-                <input type="checkbox" className="toggle" checked={settings.showNumbers} onChange={(e) => setShowNumbers(e.target.checked)} />
-              </label>
+              {contentType !== 'station' && (
+                <label className="label cursor-pointer justify-between">
+                  <span>Numre</span>
+                  <input type="checkbox" className="toggle" checked={settings.showNumbers} onChange={(e) => setShowNumbers(e.target.checked)} />
+                </label>
+              )}
               <label className="label cursor-pointer justify-between">
                 <span>Makkergrupper</span>
                 <input type="checkbox" className="toggle" checked={settings.showGroups} onChange={(e) => setShowGroups(e.target.checked)} />
               </label>
-              <label className="label cursor-pointer justify-between">
-                <span>Soner</span>
-                <input type="checkbox" className="toggle" checked={settings.showZones} onChange={(e) => setShowZones(e.target.checked)} />
-              </label>
+              {contentType !== 'station' && (
+                <label className="label cursor-pointer justify-between">
+                  <span>Soner</span>
+                  <input type="checkbox" className="toggle" checked={settings.showZones} onChange={(e) => setShowZones(e.target.checked)} />
+                </label>
+              )}
             </div>
             <div className="flex-1 overflow-auto bg-slate-800 rounded-lg p-4 flex items-center justify-center">
               <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left' }}>
-                <PrintPage title={chartName} periodText={[className, chartComment].filter(Boolean).join(' · ')} contentWidthPx={CONTENT_WIDTH_PX} contentHeightPx={CONTENT_HEIGHT_PX}>
-                  <SeatingChartPrintContent {...contentProps} />
+                <PrintPage title={chartName} periodText={[className, chartComment].filter(Boolean).join(' · ')} contentWidthPx={contentWidthPx} contentHeightPx={contentHeightPx}>
+                  {content}
                 </PrintPage>
               </div>
             </div>
@@ -95,8 +109,8 @@ export default function PrintPreviewModal({
 
       {/* Faktisk print/PDF-mål — skjult utenfor @media print */}
       <div id="print-output">
-        <PrintPage title={chartName} periodText={[className, chartComment].filter(Boolean).join(' · ')} contentWidthPx={CONTENT_WIDTH_PX} contentHeightPx={CONTENT_HEIGHT_PX}>
-          <SeatingChartPrintContent {...contentProps} />
+        <PrintPage title={chartName} periodText={[className, chartComment].filter(Boolean).join(' · ')} contentWidthPx={contentWidthPx} contentHeightPx={contentHeightPx}>
+          {content}
         </PrintPage>
       </div>
     </>

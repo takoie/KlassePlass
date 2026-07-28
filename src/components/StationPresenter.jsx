@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PrintPreviewModal from './Print/PrintPreviewModal';
 
 const GROUP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16'];
 
@@ -10,6 +11,7 @@ export default function StationPresenter({ onBack, initialId }) {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [timeUp, setTimeUp] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => { load(); return () => clearInterval(timerRef.current); }, [initialId]);
@@ -98,6 +100,9 @@ export default function StationPresenter({ onBack, initialId }) {
           </button>
           <h1 className="text-lg font-bold text-white">{session.name}</h1>
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400">{session.className}</span>
+          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={() => setShowPrintPreview(true)}>
+            <i className="fa-solid fa-print"></i> Skriv ut / PDF
+          </button>
         </div>
         <span className="text-sm font-bold text-slate-300">Rotasjon {rotationIndex + 1} av {session.rotationPlan.length}</span>
       </div>
@@ -160,6 +165,26 @@ export default function StationPresenter({ onBack, initialId }) {
           Neste rotasjon <i className="fa-solid fa-forward-step"></i>
         </button>
       </div>
+
+      {showPrintPreview && (
+        <PrintPreviewModal
+          contentType="station"
+          chartName={session.name}
+          className={session.className}
+          chartComment=""
+          stationProps={{
+            stations: session.stations,
+            groups: session.groups,
+            groupLeaders: session.groupLeaders,
+            rotationPlan: session.rotationPlan,
+            students: Object.values(studentsById),
+          }}
+          initialShowNumbers={false}
+          initialShowZones={false}
+          initialShowGroups={true}
+          onClose={() => setShowPrintPreview(false)}
+        />
+      )}
     </div>
   );
 }
