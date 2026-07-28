@@ -18,6 +18,14 @@ export default function PrintPreviewModal({
   const [exportState, setExportState] = useState({ status: 'idle' }); // idle | working | done | error
   const dialogRef = useRef(null);
 
+  // Alltid siste onClose tilgjengelig for lytteren under, uten at selve
+  // åpne/lukk-effekten må kjøre på nytt hver gang onClose bytter identitet
+  // (SeatingChart.jsx sender inn en ny inline-funksjon ved hver egen re-render,
+  // noe som skjer ofte — uten dette rekker effekten under å lukke og gjenåpne
+  // dialogen i utide, synlig som at modalen blafrer opp og lukkes med en gang).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   // Ekte showModal() promoterer dialogen til nettleserens "top layer" — den rendres
   // da alltid over resten av appen uansett z-index/stacking-context i foreldre-treet.
   // Uten dette (kun open-attributtet) kan sidepanelet/verktøylinjen male over modalen
@@ -29,14 +37,14 @@ export default function PrintPreviewModal({
     // lukker dialogen selv i cleanup — ellers ville React StrictModes dobbeltkjøring av
     // effekter i dev (mount → cleanup → mount) trigget onClose og lukket modalen med en
     // gang den åpnes, siden cleanup sin dialog.close() også fyrer av 'close'-eventet.
-    const handleNativeClose = () => onClose?.();
+    const handleNativeClose = () => onCloseRef.current?.();
     dialog.addEventListener('close', handleNativeClose);
     dialog.showModal();
     return () => {
       dialog.removeEventListener('close', handleNativeClose);
       if (dialog.open) dialog.close();
     };
-  }, [onClose]);
+  }, []); // kjør kun ved faktisk mount/unmount, ikke ved onClose-identitetsendring
 
   const isStation = contentType === 'station';
   const contentWidthPx = isStation ? STATION_CONTENT_WIDTH_PX : CONTENT_WIDTH_PX;
