@@ -827,6 +827,62 @@ export default function SeatingChart({ onBack, initialId }) {
     endFunMode();
   };
 
+  const RANDOMBOMB_TICK_MS = 700;
+
+  const startRandombomb = () => {
+    if (activeFunMode || revealMode) return;
+    const seatSlots = buildOpenSeatSlots();
+    if (seatSlots.length === 0 || allStudents.length === 0) return;
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
+
+    const { placements: finalPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    funModeFinalRef.current = finalPlacements;
+    funModePreStateRef.current = { ...placements };
+    setActiveFunMode('randombomb');
+    runBombTick(targetSlots, allStudents, 5);
+  };
+
+  const runBombTick = (targetSlots, students, count) => {
+    setBombCountdown(count);
+
+    if (count <= 1) {
+      funModeTimerRef.current = setTimeout(() => {
+        setFunModeGhosts(null);
+        applyFunModeResult(funModeFinalRef.current);
+        setBombBoom(true);
+        funModeTimerRef.current = setTimeout(() => endFunMode(), 500);
+      }, RANDOMBOMB_TICK_MS);
+      return;
+    }
+
+    const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
+    const shuffledSlots = [...targetSlots].sort(() => Math.random() - 0.5);
+    const ghostMap = {};
+    shuffledSlots.forEach((slot, idx) => {
+      ghostMap[slot.slotKey] = idx < shuffledStudents.length ? shuffledStudents[idx].id : null;
+    });
+    setFunModeGhosts(ghostMap);
+
+    funModeTimerRef.current = setTimeout(() => runBombTick(targetSlots, students, count - 1), RANDOMBOMB_TICK_MS);
+  };
+
+  const cancelRandombomb = () => {
+    clearFunModeTimer();
+    if (funModePreStateRef.current) setPlacements(funModePreStateRef.current);
+    endFunMode();
+  };
+
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
   // læreren avsløre dem én og én i tilfeldig rekkefølge (foran klassen).
   const startReveal = () => {
@@ -1138,6 +1194,14 @@ export default function SeatingChart({ onBack, initialId }) {
 
         {/* 5. Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden relative bg-[#131620]" onMouseDown={startCanvasAction} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onClick={() => setContextMenu(null)}>
+          {activeFunMode === 'randombomb' && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
+              <div className={`text-[10rem] font-black drop-shadow-[0_0_30px_rgba(244,63,94,0.8)] transition-transform ${bombBoom ? 'text-emerald-400 scale-125' : 'text-rose-500 animate-bounce'}`}>
+                {bombBoom ? '💥' : bombCountdown}
+              </div>
+            </div>
+          )}
+
           {isProjectorMode && (
             <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onClick={() => setIsProjectorMode(false)}>
               Avslutt Prosjektorvisning
