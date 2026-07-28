@@ -52,6 +52,11 @@ contextBridge.exposeInMainWorld('api', {
   restoreDb:        ()       => ipcRenderer.invoke('restore-db'),
   moveDb:           ()       => ipcRenderer.invoke('move-db'),
 
+  // Print / PDF-eksport
+  exportPrintPdf:   (data)   => ipcRenderer.invoke('print:export-pdf', data),
+  openPath:         (path)   => ipcRenderer.invoke('print:open-path', path),
+  showInFolder:     (path)   => ipcRenderer.invoke('print:show-in-folder', path),
+
   // Auto-update
   onUpdateReady:    (cb)     => ipcRenderer.on('update-ready', (_, info) => cb(info)),
   restartApp:       ()       => ipcRenderer.send('restart-app'),
