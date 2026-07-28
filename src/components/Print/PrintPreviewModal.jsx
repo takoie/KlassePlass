@@ -30,19 +30,24 @@ export default function PrintPreviewModal({
   // da alltid over resten av appen uansett z-index/stacking-context i foreldre-treet.
   // Uten dette (kun open-attributtet) kan sidepanelet/verktøylinjen male over modalen
   // og stjele klikk som visuelt treffer bryterne.
+  //
+  // VIKTIG: dialog.close() kø-legger 'close'-eventet som en task i stedet for å fyre
+  // det synkront (jf. HTML-spesifikasjonen). React StrictMode kjører denne effekten
+  // mount → cleanup → mount i rask rekkefølge i dev — hvis cleanup kaller close(), når
+  // den kø-lagte 'close'-hendelsen først fram EFTER den andre (ekte) monteringen har
+  // lagt til sin egen listener, som da feilaktig mottar en gammel lukk-hendelse og
+  // lukker modalen med det samme den åpnes. Derfor kaller cleanup ALDRI close() — kun
+  // showModal() beskyttet av en open-sjekk (så et ubrukt gjenåpningsforsøk ikke kaster
+  // InvalidStateError), og selve lukkingen skjer utelukkende via ekte brukerhandling
+  // (Lukk-knappen eller ESC), som fyrer 'close' korrekt og trygt.
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
-    // Egen listener (i stedet for Reacts onClose-prop) slik at vi kan fjerne den før vi
-    // lukker dialogen selv i cleanup — ellers ville React StrictModes dobbeltkjøring av
-    // effekter i dev (mount → cleanup → mount) trigget onClose og lukket modalen med en
-    // gang den åpnes, siden cleanup sin dialog.close() også fyrer av 'close'-eventet.
     const handleNativeClose = () => onCloseRef.current?.();
     dialog.addEventListener('close', handleNativeClose);
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
     return () => {
       dialog.removeEventListener('close', handleNativeClose);
-      if (dialog.open) dialog.close();
     };
   }, []); // kjør kun ved faktisk mount/unmount, ikke ved onClose-identitetsendring
 
