@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups } from '../shared/groupRandomizer';
 
@@ -33,8 +33,17 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [groups, setGroups] = useState([[], []]);
   const [groupLeaders, setGroupLeaders] = useState([null, null]);
   const [saveState, setSaveState] = useState('idle');
+  const nameInputRefs = useRef({});
+  const [pendingFocusId, setPendingFocusId] = useState(null);
 
   useEffect(() => { loadInitial(); }, [initialId]);
+
+  useEffect(() => {
+    if (!pendingFocusId) return;
+    const el = nameInputRefs.current[pendingFocusId];
+    if (el) el.focus();
+    setPendingFocusId(null);
+  }, [stations, pendingFocusId]);
 
   const loadInitial = async () => {
     setLoading(true);
@@ -80,7 +89,11 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     await loadStudentsForClass(cid);
   };
 
-  const addStation = () => setStations(prev => [...prev, { id: newStationId(), name: '', isTeacher: false, note: '' }]);
+  const addStation = () => {
+    const st = { id: newStationId(), name: '', isTeacher: false, note: '' };
+    setStations(prev => [...prev, st]);
+    setPendingFocusId(st.id);
+  };
   const removeStation = (id) => setStations(prev => prev.length > 2 ? prev.filter(s => s.id !== id) : prev);
   const updateStation = (id, field, value) => setStations(prev => prev.map(s => {
     if (s.id !== id) return field === 'isTeacher' && value ? { ...s, isTeacher: false } : s;
@@ -218,9 +231,6 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
         <div className="bg-[#1a1e2b] border border-slate-800 rounded-2xl p-5">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-sm text-white">Stasjoner ({stations.length})</h3>
-            <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-1" onClick={addStation}>
-              <i className="fa-solid fa-plus"></i> Legg til stasjon
-            </button>
           </div>
           <div className="flex flex-col gap-2">
             {stations.map((s, idx) => (
@@ -228,6 +238,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
                 <span className="text-xs text-slate-500 font-bold w-5 pt-2 flex-shrink-0">{idx + 1}.</span>
                 <input
                   type="text"
+                  ref={(el) => { if (el) nameInputRefs.current[s.id] = el; else delete nameInputRefs.current[s.id]; }}
                   value={s.name}
                   onChange={(e) => updateStation(s.id, 'name', e.target.value)}
                   placeholder="Stasjonsnavn..."
@@ -249,6 +260,13 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
                 </button>
               </div>
             ))}
+            <button
+              type="button"
+              onClick={addStation}
+              className="py-2 rounded-lg border-2 border-dashed border-slate-700 text-slate-400 text-xs font-bold hover:border-orange-400 hover:text-orange-300 transition-colors flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-plus"></i> Ny stasjon
+            </button>
           </div>
         </div>
 
