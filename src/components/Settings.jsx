@@ -4,9 +4,11 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('visning');
   const [settings, setSettings] = useState({ boardPosition: 'top' });
   const [dbMessage, setDbMessage] = useState(null);
+  const [appVersion, setAppVersion] = useState(null);
 
   useEffect(() => {
     loadSettings();
+    window.api?.getVersion?.().then(setAppVersion).catch(() => {});
   }, []);
 
   const loadSettings = async () => {
@@ -182,6 +184,9 @@ export default function Settings() {
               <h1 className="text-4xl font-extrabold mb-2 text-white tracking-wider">
                 KLASSE<span className="text-[#f59e0b]">PLASS</span>
               </h1>
+              {appVersion && (
+                <p className="text-xs text-slate-500 font-mono mb-2">v{appVersion}</p>
+              )}
               <p className="text-sm text-slate-400 max-w-md mx-auto">Et enkelt, raskt og 100% lokalt verktøy for lærere — opprett klasser, design klasserom, sett sammen klassekart, fordel elever i grupper og kjør stasjonsundervisning.</p>
             </div>
 

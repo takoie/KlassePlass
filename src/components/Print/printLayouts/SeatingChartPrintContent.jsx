@@ -5,7 +5,7 @@ export const CONTENT_HEIGHT_PX = 700;
 
 export default function SeatingChartPrintContent({
   boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
-  groupColors, zoneMeta, settings,
+  groupColors, zoneMeta, groupOverrides, settings,
 }) {
   const { showNumbers, showZones, showGroups, showColors } = settings;
   return (
@@ -23,7 +23,7 @@ export default function SeatingChartPrintContent({
         const cap = d.capacity || 1;
         const deskW = cap * 100;
         const deskNumber = deskNumberMap[d.id] || '';
-        const gId = d.groupId;
+        const gId = (groupOverrides && groupOverrides[d.id]) || d.groupId;
         const groupColor = (gId && showGroups) ? groupColors[(gId - 1) % groupColors.length] : null;
         const activeZones = showZones ? (d.zones || []) : [];
         return (
@@ -38,17 +38,6 @@ export default function SeatingChartPrintContent({
             {showNumbers && (
               <span style={{ position: 'absolute', top: -14, left: -4, fontSize: 10, fontWeight: 700, color: '#555' }}>
                 {deskNumber}
-              </span>
-            )}
-            {showGroups && gId && (
-              <span
-                style={{
-                  position: 'absolute', top: -14, right: -2, fontSize: 8, fontWeight: 700,
-                  color: showColors ? '#fff' : '#111', background: showColors ? groupColor : 'transparent',
-                  border: showColors ? 'none' : '1px solid #374151', borderRadius: 4, padding: '1px 4px',
-                }}
-              >
-                {gId}
               </span>
             )}
             <div style={{ display: 'flex', width: '100%', height: '100%' }}>
@@ -69,12 +58,25 @@ export default function SeatingChartPrintContent({
               })}
             </div>
             {activeZones.length > 0 && (
-              <div style={{ position: 'absolute', bottom: -12, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 2 }}>
+              <div
+                style={{
+                  position: 'absolute', top: '100%', marginTop: 4, left: '50%', transform: 'translateX(-50%)',
+                  display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 2,
+                  width: Math.max(deskW, 90), zIndex: 5,
+                }}
+              >
                 {activeZones.map((zKey) => {
                   const zm = zoneMeta[zKey];
                   if (!zm) return null;
+                  const color = (showColors && zm.printColor) ? zm.printColor : '#555';
                   return (
-                    <span key={zKey} style={{ fontSize: 7, fontWeight: 700, padding: '1px 3px', border: '1px solid #999', borderRadius: 6, whiteSpace: 'nowrap' }}>
+                    <span
+                      key={zKey}
+                      style={{
+                        fontSize: 7, fontWeight: 700, padding: '1px 4px', borderRadius: 6, whiteSpace: 'nowrap',
+                        color, border: `1px solid ${color}`, background: '#fff',
+                      }}
+                    >
                       {zm.label}
                     </span>
                   );

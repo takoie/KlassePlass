@@ -538,6 +538,12 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
 
         const latest = classAssignments[0];
 
+        const handlePrint = (e) => {
+          e.stopPropagation();
+          localStorage.setItem('print_on_mount', 'true');
+          onEdit(latest.id);
+        };
+
         return (
           <Card
             key={cls.id}
@@ -550,6 +556,11 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
             icon="fa-solid fa-people-group"
             onClick={() => onEdit(latest.id)}
             onDelete={() => setDeleteTarget({ ...cls, isClassGroup: true, name: `Klasse ${cls.name}` })}
+            actions={
+              <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handlePrint} title="Skriv ut / PDF">
+                <i className="fa-solid fa-print text-xs"></i>
+              </button>
+            }
           />
         );
       })}

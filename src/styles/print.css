@@ -11,6 +11,11 @@
      utskrift/PDF-eksport oppå selve #print-output. */
   #modal_print_preview { display: none !important; }
   #print-output { display: block !important; }
+  /* Flersidig utskrift (f.eks. stasjonsplan med mange rotasjoner, eller
+     gruppearbeid med mange grupper): hver .print-page i #print-output skal
+     lande på sin egen fysiske side. */
+  #print-output .print-page { page-break-after: always; break-after: page; }
+  #print-output .print-page:last-child { page-break-after: auto; break-after: auto; }
 }
 
 #print-output {
@@ -80,7 +85,7 @@
   align-items: center;
   justify-content: center;
   background: white;
-  overflow: hidden;
+  overflow: visible;
   padding: 2px 3px;
   box-sizing: border-box;
 }

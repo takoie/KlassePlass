@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, PageLayout, ConfirmDeleteModal } from './OverviewViews';
 
-export default function StationOverview({ onEdit, onAdd }) {
+export default function StationOverview({ onEdit, onAdd, onPrint }) {
   const [sessions, setSessions] = useState([]);
   const [classes, setClasses] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -33,7 +33,7 @@ export default function StationOverview({ onEdit, onAdd }) {
   };
 
   return (
-    <PageLayout title="Stasjonsundervisning" icon="fa-solid fa-arrows-rotate" onAdd={onAdd}>
+    <PageLayout title="Stasjoner" icon="fa-solid fa-arrows-rotate" onAdd={onAdd}>
       {sessions.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen stasjonsøkter opprettet enda.</p> : null}
 
       {classes.map(cls => {
@@ -44,6 +44,12 @@ export default function StationOverview({ onEdit, onAdd }) {
         let stationCount = 0, groupCount = 0;
         try { stationCount = JSON.parse(latest.stations || '[]').length; } catch (e) {}
         try { groupCount = JSON.parse(latest.groups || '[]').length; } catch (e) {}
+
+        const handlePrint = (e) => {
+          e.stopPropagation();
+          localStorage.setItem('print_on_mount', 'true');
+          onPrint(latest.id);
+        };
 
         return (
           <Card
@@ -57,6 +63,11 @@ export default function StationOverview({ onEdit, onAdd }) {
             icon="fa-solid fa-arrows-rotate"
             onClick={() => onEdit(latest.id)}
             onDelete={() => setDeleteTarget({ ...cls, isClassGroup: true, name: `Klasse ${cls.name}` })}
+            actions={
+              <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handlePrint} title="Skriv ut / PDF">
+                <i className="fa-solid fa-print text-xs"></i>
+              </button>
+            }
           />
         );
       })}

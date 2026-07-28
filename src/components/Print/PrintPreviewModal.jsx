@@ -1,22 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import PrintPage, { computePrintScale } from './PrintPage';
+import PrintPage, { computePrintScale, getPageSizePx } from './PrintPage';
 import { usePrintSettings } from './usePrintSettings';
 import { buildPrintFilename } from './printFilename';
+import RoomViewport from './RoomViewport';
 import SeatingChartPrintContent, { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX } from './printLayouts/SeatingChartPrintContent';
-import StationPrintContent, { STATION_CONTENT_WIDTH_PX, estimateStationContentHeight } from './printLayouts/StationPrintContent';
+import StationPrintContent, { paginateStationRotations, getStationPageWidthPx, estimateStationPageHeight } from './printLayouts/StationPrintContent';
+import GroupPrintContent, { paginateGroups, GROUP_CONTENT_WIDTH_PX, estimateGroupsPageHeight } from './printLayouts/GroupPrintContent';
+
+const ROOM_ZOOM_MIN = 1;
+const ROOM_ZOOM_MAX = 2.5;
 
 export default function PrintPreviewModal({
   contentType = 'seatingChart',
   chartName, className, chartComment, boardObj, desks, deskNumberMap, placements,
-  getStudentByIdOrName, groupColors, zoneMeta, stationProps,
+  getStudentByIdOrName, groupColors, zoneMeta, groupOverrides, stationProps, groupWorkProps,
   initialShowNumbers, initialShowZones, initialShowGroups,
   onClose,
 }) {
-  const { settings, setShowNumbers, setShowZones, setShowGroups, setShowColors } =
+  const isStation = contentType === 'station';
+  const isGroupWork = contentType === 'groupWork';
+  const isSeatingChart = !isStation && !isGroupWork;
+
+  const { settings, setShowNumbers, setShowZones, setShowGroups, setShowColors, setGroupLayout } =
     usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups });
   const [exportState, setExportState] = useState({ status: 'idle' }); // idle | working | done | error
   const dialogRef = useRef(null);
+  const previewPaneRef = useRef(null);
+  const [previewPaneSize, setPreviewPaneSize] = useState(null);
+  // Kamera for selve innholdet (pulter/tabell): lar læreren zoome/panorere
+  // uavhengig av topptekst/bunntekst på arket, i stedet for å skalere hele siden.
+  const [roomZoom, setRoomZoom] = useState(1);
+  const [roomPan, setRoomPan] = useState({ x: 0, y: 0 });
+  const resetRoomView = () => { setRoomZoom(1); setRoomPan({ x: 0, y: 0 }); };
 
   // Alltid siste onClose tilgjengelig for lytteren under, uten at selve
   // åpne/lukk-effekten må kjøre på nytt hver gang onClose bytter identitet
@@ -51,19 +67,109 @@ export default function PrintPreviewModal({
     };
   }, []); // kjør kun ved faktisk mount/unmount, ikke ved onClose-identitetsendring
 
-  const isStation = contentType === 'station';
-  const contentWidthPx = isStation ? STATION_CONTENT_WIDTH_PX : CONTENT_WIDTH_PX;
-  const contentHeightPx = isStation ? estimateStationContentHeight(stationProps || {}) : CONTENT_HEIGHT_PX;
+  // Måler tilgjengelig plass i preview-ruten løpende, slik at previewen alltid
+  // fyller ruten mest mulig i stedet for å bruke en fast, vilkårlig nedskalering.
+  useEffect(() => {
+    const el = previewPaneRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      setPreviewPaneSize({ width, height });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
-  const previewScale = computePrintScale(contentWidthPx, contentHeightPx) * 0.6; // ekstra nedskalering for modal-visning
+  // Bygger listen over sider som faktisk skal skrives ut. Stasjonsplan
+  // paginerer rotasjoner i kolonner (for mange rotasjoner blir uleselig
+  // smalt), gruppearbeid paginerer grupper i rader (for mange/store grupper
+  // blir en uoversiktlig lang liste) — klassekart er alltid én side.
+  let pages;
+  if (isStation) {
+    const rotationPages = paginateStationRotations(stationProps?.rotationPlan || []);
+    pages = rotationPages.map((rp) => ({
+      contentWidthPx: getStationPageWidthPx(rp.rotations),
+      contentHeightPx: estimateStationPageHeight(stationProps || {}, rp.rotations),
+      node: (
+        <StationPrintContent
+          stations={stationProps.stations}
+          groups={stationProps.groups}
+          groupLeaders={stationProps.groupLeaders}
+          students={stationProps.students}
+          groupColors={stationProps.groupColors}
+          rotationsOnPage={rp.rotations}
+          startIndex={rp.startIndex}
+          settings={settings}
+        />
+      ),
+    }));
+  } else if (isGroupWork) {
+    const groupPages = paginateGroups(groupWorkProps?.groups || [], settings.groupLayout);
+    pages = groupPages.map((groupsOnPage) => ({
+      contentWidthPx: GROUP_CONTENT_WIDTH_PX,
+      contentHeightPx: estimateGroupsPageHeight(groupsOnPage, settings.groupLayout),
+      node: (
+        <GroupPrintContent
+          groupsOnPage={groupsOnPage}
+          studentsById={groupWorkProps.studentsById}
+          leaderIds={groupWorkProps.leaderIds}
+          groupColors={groupWorkProps.groupColors}
+          settings={settings}
+        />
+      ),
+    }));
+  } else {
+    pages = [{
+      contentWidthPx: CONTENT_WIDTH_PX,
+      contentHeightPx: CONTENT_HEIGHT_PX,
+      node: (
+        <SeatingChartPrintContent
+          boardObj={boardObj} desks={desks} deskNumberMap={deskNumberMap} placements={placements}
+          getStudentByIdOrName={getStudentByIdOrName} groupColors={groupColors} zoneMeta={zoneMeta}
+          groupOverrides={groupOverrides} settings={settings}
+        />
+      ),
+    }];
+  }
 
-  const contentProps = {
-    boardObj, desks, deskNumberMap, placements, getStudentByIdOrName, groupColors, zoneMeta, settings,
+  const pageSizePx = getPageSizePx();
+  const PANE_PADDING_PX = 32; // tilsvarer p-4 på begge sider av preview-ruten
+  const previewScale = previewPaneSize
+    ? Math.min(
+        (previewPaneSize.width - PANE_PADDING_PX) / pageSizePx.width,
+        (previewPaneSize.height - PANE_PADDING_PX) / pageSizePx.height,
+      )
+    : computePrintScale(pages[0].contentWidthPx, pages[0].contentHeightPx);
+
+  // Skjermpiksler i den interaktive previewen tilsvarer sidens contentWidthPx/Height
+  // nedskalert to ganger (modal-panelets tilpasning + PrintPage sin egen
+  // sideoppsett-skalering). Dra-avstanden må konverteres tilbake til denne
+  // koordinaten, ellers "løper" panoreringen fra musepekeren i takt med hvor
+  // nedskalert previewen er.
+  const wrapWithViewport = (page, interactive) => {
+    const dragScale = interactive ? previewScale * computePrintScale(page.contentWidthPx, page.contentHeightPx) : 1;
+    return (
+      <RoomViewport
+        width={page.contentWidthPx}
+        height={page.contentHeightPx}
+        zoom={roomZoom}
+        panX={roomPan.x}
+        panY={roomPan.y}
+        onPanChange={(x, y) => setRoomPan({ x, y })}
+        dragScale={dragScale}
+        interactive={interactive}
+      >
+        {page.node}
+      </RoomViewport>
+    );
   };
 
-  const content = isStation
-    ? <StationPrintContent {...stationProps} settings={settings} />
-    : <SeatingChartPrintContent {...contentProps} />;
+  const periodText = [className, chartComment].filter(Boolean).join(' · ');
+  const groupsToggleLabel = isSeatingChart ? 'Makkergrupper' : 'Ledere';
+  const titleText = isStation ? 'Skriv ut / Eksporter stasjonsplan'
+    : isGroupWork ? 'Skriv ut / Eksporter gruppeinndeling'
+    : 'Skriv ut / Eksporter klassekart';
+  const filenamePrefix = isStation ? 'Stasjonsplan' : isGroupWork ? 'Gruppeinndeling' : 'Klassekart';
 
   const handlePrint = () => {
     window.print();
@@ -71,7 +177,7 @@ export default function PrintPreviewModal({
 
   const handleExportPdf = async () => {
     setExportState({ status: 'working' });
-    const suggestedName = buildPrintFilename({ className, chartName, prefix: isStation ? 'Stasjonsplan' : 'Klassekart' });
+    const suggestedName = buildPrintFilename({ className, chartName, prefix: filenamePrefix });
     try {
       const result = await window.api.exportPrintPdf({ suggestedName });
       if (result.canceled) { setExportState({ status: 'idle' }); return; }
@@ -85,37 +191,93 @@ export default function PrintPreviewModal({
   return createPortal(
     <>
       <dialog id="modal_print_preview" ref={dialogRef} className="modal modal-open">
-        <div className="modal-box max-w-6xl max-h-[85vh] overflow-y-auto">
-          <h3 className="font-bold text-lg mb-4">{isStation ? 'Skriv ut / Eksporter stasjonsplan' : 'Skriv ut / Eksporter klassekart'}</h3>
-          <div className="flex gap-6">
-            <div className="w-48 flex flex-col gap-3">
-              <label className="label cursor-pointer justify-between">
+        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl w-[95vw] max-w-[95vw] h-[92vh] max-h-[92vh] overflow-y-auto flex flex-col">
+          <h3 className="font-bold text-lg mb-4">{titleText}</h3>
+          <div className="flex gap-4 flex-1 min-h-0">
+            <div className="w-44 flex-shrink-0 flex flex-col gap-2 bg-[#1a1e2b] border border-slate-800 rounded-xl p-3">
+              <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
                 <span>Farger</span>
-                <input type="checkbox" className="toggle" checked={settings.showColors} onChange={(e) => setShowColors(e.target.checked)} />
+                <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showColors} onChange={(e) => setShowColors(e.target.checked)} />
               </label>
-              {contentType !== 'station' && (
-                <label className="label cursor-pointer justify-between">
+              {isSeatingChart && (
+                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
                   <span>Numre</span>
-                  <input type="checkbox" className="toggle" checked={settings.showNumbers} onChange={(e) => setShowNumbers(e.target.checked)} />
+                  <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showNumbers} onChange={(e) => setShowNumbers(e.target.checked)} />
                 </label>
               )}
-              <label className="label cursor-pointer justify-between">
-                <span>Makkergrupper</span>
-                <input type="checkbox" className="toggle" checked={settings.showGroups} onChange={(e) => setShowGroups(e.target.checked)} />
+              <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
+                <span>{groupsToggleLabel}</span>
+                <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showGroups} onChange={(e) => setShowGroups(e.target.checked)} />
               </label>
-              {contentType !== 'station' && (
-                <label className="label cursor-pointer justify-between">
+              {isSeatingChart && (
+                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
                   <span>Soner</span>
-                  <input type="checkbox" className="toggle" checked={settings.showZones} onChange={(e) => setShowZones(e.target.checked)} />
+                  <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showZones} onChange={(e) => setShowZones(e.target.checked)} />
                 </label>
+              )}
+              {isGroupWork && (
+                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
+                  <span>Vannrett</span>
+                  <input
+                    type="checkbox" className="toggle toggle-sm toggle-primary"
+                    checked={settings.groupLayout === 'horizontal'}
+                    onChange={(e) => setGroupLayout(e.target.checked ? 'horizontal' : 'vertical')}
+                  />
+                </label>
+              )}
+              <div className="border-t border-slate-800 my-1"></div>
+              <div className="flex flex-col gap-1">
+                <span className="flex justify-between text-sm text-slate-300">
+                  <span>Zoom</span>
+                  <span className="text-slate-500">{Math.round(roomZoom * 100)}%</span>
+                </span>
+                <input
+                  type="range"
+                  className="range range-xs range-primary"
+                  min={ROOM_ZOOM_MIN}
+                  max={ROOM_ZOOM_MAX}
+                  step={0.05}
+                  value={roomZoom}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setRoomZoom(next);
+                    if (next <= 1) setRoomPan({ x: 0, y: 0 });
+                  }}
+                />
+                <p className="text-xs text-slate-500">
+                  {roomZoom > 1 ? 'Dra i forhåndsvisningen for å flytte utsnittet.' : 'Zoom inn for å kunne dra i utsnittet.'}
+                </p>
+                {(roomZoom !== 1 || roomPan.x !== 0 || roomPan.y !== 0) && (
+                  <button className="btn btn-ghost btn-xs self-start" onClick={resetRoomView}>Nullstill utsnitt</button>
+                )}
+              </div>
+              {pages.length > 1 && (
+                <>
+                  <div className="border-t border-slate-800 my-1"></div>
+                  <p className="text-xs text-slate-400">
+                    <i className="fa-solid fa-file-lines mr-1"></i>{pages.length} sider ved utskrift
+                  </p>
+                </>
               )}
             </div>
-            <div className="flex-1 overflow-auto bg-slate-800 rounded-lg p-4 flex items-center justify-center">
-              <div style={{ zoom: previewScale }}>
-                <PrintPage title={chartName} periodText={[className, chartComment].filter(Boolean).join(' · ')} contentWidthPx={contentWidthPx} contentHeightPx={contentHeightPx}>
-                  {content}
-                </PrintPage>
-              </div>
+            <div ref={previewPaneRef} className="flex-1 min-h-0 overflow-auto bg-slate-800 rounded-lg p-4 flex flex-col items-center gap-4">
+              {pages.map((page, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  {pages.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      {i > 0 && <div className="w-full border-t border-dashed border-slate-500"></div>}
+                      <span className="px-2 py-0.5 rounded-full bg-slate-700/80 border border-slate-600 text-[11px] font-bold text-slate-200 whitespace-nowrap">
+                        Side {i + 1} av {pages.length}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ zoom: previewScale }}>
+                    <PrintPage title={chartName} periodText={periodText} contentWidthPx={page.contentWidthPx} contentHeightPx={page.contentHeightPx}>
+                      {wrapWithViewport(page, true)}
+                    </PrintPage>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -144,9 +306,11 @@ export default function PrintPreviewModal({
 
       {/* Faktisk print/PDF-mål — skjult utenfor @media print */}
       <div id="print-output">
-        <PrintPage title={chartName} periodText={[className, chartComment].filter(Boolean).join(' · ')} contentWidthPx={contentWidthPx} contentHeightPx={contentHeightPx}>
-          {content}
-        </PrintPage>
+        {pages.map((page, i) => (
+          <PrintPage key={i} title={chartName} periodText={periodText} contentWidthPx={page.contentWidthPx} contentHeightPx={page.contentHeightPx}>
+            {wrapWithViewport(page, false)}
+          </PrintPage>
+        ))}
       </div>
     </>,
     document.body

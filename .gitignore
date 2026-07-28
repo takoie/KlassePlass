@@ -1,9 +1,3 @@
-# Python
-__pycache__/
-*.pyc
-*.db
-venv/
-
 # Worktrees
 .worktrees/
 
@@ -15,8 +9,6 @@ out/
 .DS_Store
 .env
 
-assets/ikonconvert.py
-assets/app-icon.png
-backend/app.py
-backend/requirements.txt
-Old Code/
+# div
+.claude/
+.agent/

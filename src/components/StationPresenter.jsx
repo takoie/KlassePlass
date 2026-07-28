@@ -16,6 +16,14 @@ export default function StationPresenter({ onBack, initialId }) {
 
   useEffect(() => { load(); return () => clearInterval(timerRef.current); }, [initialId]);
 
+  useEffect(() => {
+    if (loading || !session) return;
+    if (localStorage.getItem('print_on_mount') === 'true') {
+      localStorage.removeItem('print_on_mount');
+      setTimeout(() => setShowPrintPreview(true), 500);
+    }
+  }, [loading, session]);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -178,6 +186,7 @@ export default function StationPresenter({ onBack, initialId }) {
             groupLeaders: session.groupLeaders,
             rotationPlan: session.rotationPlan,
             students: Object.values(studentsById),
+            groupColors: GROUP_COLORS,
           }}
           initialShowNumbers={false}
           initialShowZones={false}

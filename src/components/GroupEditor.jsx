@@ -3,6 +3,7 @@ import { DndContext, useDraggable, useDroppable, DragOverlay, PointerSensor, use
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer';
 import StudentContextMenu from './GroupWork/StudentContextMenu';
+import PrintPreviewModal from './Print/PrintPreviewModal';
 
 const GROUP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16', '#06b6d4', '#d946ef'];
 
@@ -26,8 +27,17 @@ export default function GroupEditor({ onBack, initialId }) {
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const [regenerating, setRegenerating] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   useEffect(() => { loadAssignment(); }, [initialId]);
+
+  useEffect(() => {
+    if (loading || !assignmentId) return;
+    if (localStorage.getItem('print_on_mount') === 'true') {
+      localStorage.removeItem('print_on_mount');
+      setTimeout(() => setShowPrintPreview(true), 500);
+    }
+  }, [loading, assignmentId]);
 
   const loadAssignment = async () => {
     if (!initialId || initialId === 'new') { setLoading(false); return; }
@@ -226,6 +236,9 @@ export default function GroupEditor({ onBack, initialId }) {
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={handleRegenerate} disabled={regenerating}>
             <i className={`fa-solid fa-shuffle ${regenerating ? 'fa-spin' : ''}`}></i> Generer på nytt
           </button>
+          <button className="btn btn-sm btn-ghost text-slate-400 hover:text-white gap-2" onClick={() => setShowPrintPreview(true)}>
+            <i className="fa-solid fa-print"></i> Skriv ut / PDF
+          </button>
           <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={handleSave}>
             <i className="fa-solid fa-floppy-disk"></i> Lagre
           </button>
@@ -290,6 +303,25 @@ export default function GroupEditor({ onBack, initialId }) {
         toggleLock={toggleLock}
         setContextMenu={setContextMenu}
       />
+
+      {showPrintPreview && (
+        <PrintPreviewModal
+          contentType="groupWork"
+          chartName={name}
+          className={className}
+          chartComment=""
+          groupWorkProps={{
+            groups,
+            studentsById,
+            leaderIds,
+            groupColors: GROUP_COLORS,
+          }}
+          initialShowNumbers={false}
+          initialShowZones={false}
+          initialShowGroups={true}
+          onClose={() => setShowPrintPreview(false)}
+        />
+      )}
 
       <dialog id="modal_delete_group_assignment" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">

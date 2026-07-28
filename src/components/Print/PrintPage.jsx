@@ -20,6 +20,10 @@ export function computePrintScale(contentWidthPx, contentHeightPx) {
   return Math.min(1, area.width / contentWidthPx, area.height / contentHeightPx);
 }
 
+export function getPageSizePx() {
+  return { width: PAGE_MM.width * MM_TO_PX, height: PAGE_MM.height * MM_TO_PX };
+}
+
 export default function PrintPage({ title, periodText, contentWidthPx, contentHeightPx, children }) {
   const scale = computePrintScale(contentWidthPx, contentHeightPx);
   return (
@@ -35,7 +39,9 @@ export default function PrintPage({ title, periodText, contentWidthPx, contentHe
         {children}
       </div>
       <div className="print-page-footer">
-        <span className="print-logo">KlassePlass</span>
+        <span className="print-logo">
+          <span style={{ color: '#111' }}>Klasse</span><span style={{ color: '#f59e0b' }}>Plass</span>
+        </span>
       </div>
     </div>
   );
