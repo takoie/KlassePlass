@@ -883,6 +883,53 @@ export default function SeatingChart({ onBack, initialId }) {
     endFunMode();
   };
 
+  const FUN_FLASH_COUNT = 5;
+  const FUN_FLASH_MS = 120;
+
+  // Rask "alle stoler flimrer"-animasjon uten nedtelling — brukes av både Musikkstoler
+  // og Makkerbytte (som sender inn en begrenset targetSlots/students-delmengde).
+  const runFlashTick = (targetSlots, students, remaining) => {
+    if (remaining <= 0) {
+      setFunModeGhosts(null);
+      applyFunModeResult(funModeFinalRef.current);
+      endFunMode();
+      return;
+    }
+
+    const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
+    const shuffledSlots = [...targetSlots].sort(() => Math.random() - 0.5);
+    const ghostMap = {};
+    shuffledSlots.forEach((slot, idx) => {
+      ghostMap[slot.slotKey] = idx < shuffledStudents.length ? shuffledStudents[idx].id : null;
+    });
+    setFunModeGhosts(ghostMap);
+
+    funModeTimerRef.current = setTimeout(() => runFlashTick(targetSlots, students, remaining - 1), FUN_FLASH_MS);
+  };
+
+  const startMusikkstoler = () => {
+    if (activeFunMode || revealMode) return;
+    const seatSlots = buildOpenSeatSlots();
+    if (seatSlots.length === 0 || allStudents.length === 0) return;
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
+
+    const { placements: finalPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    funModeFinalRef.current = finalPlacements;
+    setActiveFunMode('musikkstoler');
+    runFlashTick(targetSlots, allStudents, FUN_FLASH_COUNT);
+  };
+
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
   // læreren avsløre dem én og én i tilfeldig rekkefølge (foran klassen).
   const startReveal = () => {
