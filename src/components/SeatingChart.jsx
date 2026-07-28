@@ -261,7 +261,16 @@ export default function SeatingChart({ onBack, initialId }) {
   }, []);
 
   useEffect(() => {
-    if (isInitialLoadRef.current) return;
+    // isInitialLoadRef hopper over NØYAKTIG én kjøring — den umiddelbart etter at et
+    // klassekart nettopp ble lastet (så vi ikke "lagrer" data vi selv nettopp leste inn).
+    // Nullstilles her, IKKE via en tidsbasert setTimeout — en fast frist (f.eks. 100ms)
+    // ville stille droppe autolagringen for enhver ekte brukerendring (f.eks. "plasser
+    // alle") som skjedde å skje innenfor akkurat det tidsvinduet, uten at noe senere
+    // endring noensinne trigget et nytt lagringsforsøk.
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
     if (!selectedClass || !selectedRoom) return;
 
     setSaveState('saving');
@@ -269,7 +278,7 @@ export default function SeatingChart({ onBack, initialId }) {
     saveTimeoutRef.current = setTimeout(() => {
       saveCurrentSeating();
     }, 1000);
-    
+
     return () => clearTimeout(saveTimeoutRef.current);
   }, [placements, lockedSeats, studentRoles, studentNotes, chartName, chartComment, selectedClass, selectedRoom, boardObj, groupOverrides]);
 
@@ -404,7 +413,6 @@ export default function SeatingChart({ onBack, initialId }) {
       setupNewChart(seating.class_id, seating.room_id, parsedPlacements, deskSnapshot);
     }
     setSaveState('saved');
-    setTimeout(() => isInitialLoadRef.current = false, 100);
   };
 
   const setupNewChart = (cId, rId, currentPlacements, deskSnapshot) => {
