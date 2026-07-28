@@ -3,7 +3,7 @@ import PrintPage, { computePrintScale } from './PrintPage';
 import { usePrintSettings } from './usePrintSettings';
 import { buildPrintFilename } from './printFilename';
 import SeatingChartPrintContent, { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX } from './printLayouts/SeatingChartPrintContent';
-import StationPrintContent, { STATION_CONTENT_WIDTH_PX, STATION_CONTENT_HEIGHT_PX } from './printLayouts/StationPrintContent';
+import StationPrintContent, { STATION_CONTENT_WIDTH_PX, estimateStationContentHeight } from './printLayouts/StationPrintContent';
 
 export default function PrintPreviewModal({
   contentType = 'seatingChart',
@@ -18,7 +18,7 @@ export default function PrintPreviewModal({
 
   const isStation = contentType === 'station';
   const contentWidthPx = isStation ? STATION_CONTENT_WIDTH_PX : CONTENT_WIDTH_PX;
-  const contentHeightPx = isStation ? STATION_CONTENT_HEIGHT_PX : CONTENT_HEIGHT_PX;
+  const contentHeightPx = isStation ? estimateStationContentHeight(stationProps || {}) : CONTENT_HEIGHT_PX;
 
   const previewScale = computePrintScale(contentWidthPx, contentHeightPx) * 0.6; // ekstra nedskalering for modal-visning
 
