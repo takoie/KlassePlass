@@ -282,7 +282,8 @@ function registerHandlers(winRef) {
         margins: { marginType: 'none' },
       });
       fs.writeFileSync(result.filePath, pdfBuffer);
-      saveSettings({ ...settings, lastPrintExportDir: path.dirname(result.filePath) });
+      const freshSettings = loadSettings();
+      saveSettings({ ...freshSettings, lastPrintExportDir: path.dirname(result.filePath) });
       return { success: true, filePath: result.filePath };
     } catch (e) {
       return { success: false, error: e.message };
