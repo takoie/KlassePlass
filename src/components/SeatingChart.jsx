@@ -87,10 +87,24 @@ export default function SeatingChart({ onBack, initialId }) {
   const [revealOrder, setRevealOrder] = useState([]);
   const [revealedSlots, setRevealedSlots] = useState(new Set());
 
+  // Delte fun modes (Roulette/Randombomb/Musikkstoler/Makkerbytte/Spotlight).
+  // Under en kjøring vises `funModeGhosts` OPPÅ de virkelige `placements` for de
+  // aktuelle setene — selve `placements` (og dermed autolagringen) røres ikke før
+  // resultatet er avgjort, bortsett fra Roulette som committer én elev om gangen
+  // (se Task 4).
+  const [activeFunMode, setActiveFunMode] = useState(null); // 'roulette' | 'randombomb' | 'musikkstoler' | 'makkerbytte' | 'spotlight' | null
+  const [funModeGhosts, setFunModeGhosts] = useState(null); // { [slotKey]: studentId | null } | null
+  const [bombCountdown, setBombCountdown] = useState(null);
+  const [bombBoom, setBombBoom] = useState(false);
+  const [spotlightSlotKey, setSpotlightSlotKey] = useState(null);
+
   // Drag state
   const [draggedStudent, setDraggedStudent] = useState(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const funModeTimerRef = useRef(null);
+  const funModeFinalRef = useRef(null); // beregnet sluttresultat for gjeldende kjøring
+  const funModePreStateRef = useRef(null); // placements før Randombomb startet (for avbrytelse)
 
   // Auto-save refs
   const saveTimeoutRef = useRef(null);
@@ -697,6 +711,50 @@ export default function SeatingChart({ onBack, initialId }) {
     setPlacements(topPlacements);
     const finalVals = Object.values(topPlacements);
     setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id)));
+  };
+
+  const clearFunModeTimer = () => {
+    if (funModeTimerRef.current) {
+      clearTimeout(funModeTimerRef.current);
+      funModeTimerRef.current = null;
+    }
+  };
+
+  // Rydder opp løpende animasjoner hvis komponenten forlates (naviger bort) midt i en
+  // fun mode-kjøring.
+  useEffect(() => () => clearFunModeTimer(), []);
+
+  // Setter det endelige, ekte resultatet og oppdaterer uplasserte-listen deretter.
+  const applyFunModeResult = (finalPlacements) => {
+    setPlacements(finalPlacements);
+    const finalVals = Object.values(finalPlacements);
+    setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id) && !finalVals.includes(s.name)));
+  };
+
+  // Felles avslutning: stopper timer, fjerner spøkelses-/nedtellings-visning. Rører
+  // ALDRI spotlightSlotKey — den gule uthevningen skal stå til neste trekning.
+  const endFunMode = () => {
+    clearFunModeTimer();
+    setFunModeGhosts(null);
+    setBombCountdown(null);
+    setBombBoom(false);
+    setActiveFunMode(null);
+    funModeFinalRef.current = null;
+    funModePreStateRef.current = null;
+  };
+
+  // Bygger listen av ikke-låste seteplasser for hele klasserommet — brukt av alle fem
+  // fun modes (Makkerbytte bruker en egen, filtrert variant, se Task 7).
+  const buildOpenSeatSlots = () => {
+    const seatSlots = [];
+    desks.forEach(d => {
+      const cap = d.capacity || 1;
+      for (let s = 0; s < cap; s++) {
+        const slotKey = `${d.id}_seat_${s}`;
+        if (!lockedSeats[slotKey]) seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
+      }
+    });
+    return seatSlots;
   };
 
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
