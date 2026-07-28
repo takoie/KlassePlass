@@ -27,15 +27,19 @@ export default function PrintPreviewModal({
   const handleExportPdf = async () => {
     setExportState({ status: 'working' });
     const suggestedName = buildPrintFilename({ className, chartName });
-    const result = await window.api.exportPrintPdf({ suggestedName });
-    if (result.canceled) { setExportState({ status: 'idle' }); return; }
-    if (!result.success) { setExportState({ status: 'error', message: result.error }); return; }
-    setExportState({ status: 'done', filePath: result.filePath });
+    try {
+      const result = await window.api.exportPrintPdf({ suggestedName });
+      if (result.canceled) { setExportState({ status: 'idle' }); return; }
+      if (!result.success) { setExportState({ status: 'error', message: result.error }); return; }
+      setExportState({ status: 'done', filePath: result.filePath });
+    } catch (e) {
+      setExportState({ status: 'error', message: e.message });
+    }
   };
 
   return (
     <>
-      <dialog id="modal_print_preview" className="modal" open onClose={onClose}>
+      <dialog id="modal_print_preview" className="modal modal-open" open onClose={onClose}>
         <div className="modal-box max-w-6xl">
           <h3 className="font-bold text-lg mb-4">Skriv ut / Eksporter klassekart</h3>
           <div className="flex gap-6">
