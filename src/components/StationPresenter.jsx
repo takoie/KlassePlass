@@ -20,9 +20,10 @@ export default function StationPresenter({ onBack, initialId }) {
       const s = await window.api.getStationSession(initialId);
       if (!s) { setLoading(false); return; }
 
-      let stations = [], groups = [], rotationPlan = [];
+      let stations = [], groups = [], groupLeaders = [], rotationPlan = [];
       try { stations = JSON.parse(s.stations || '[]'); } catch (e) {}
       try { groups = JSON.parse(s.groups || '[]'); } catch (e) {}
+      try { groupLeaders = JSON.parse(s.group_leaders || '[]'); } catch (e) {}
       try { rotationPlan = JSON.parse(s.rotation_plan || '[]'); } catch (e) {}
 
       const cls = await window.api.getClass(s.class_id);
@@ -33,7 +34,7 @@ export default function StationPresenter({ onBack, initialId }) {
         byId = Object.fromEntries(list.map(st => [st.id, st]));
       } catch (e) {}
 
-      setSession({ ...s, stations, groups, rotationPlan, className: cls?.name || '' });
+      setSession({ ...s, stations, groups, groupLeaders, rotationPlan, className: cls?.name || '' });
       setStudentsById(byId);
       setSecondsLeft((s.minutes_per_station || 10) * 60);
     } catch (e) {}
@@ -120,9 +121,15 @@ export default function StationPresenter({ onBack, initialId }) {
                   )}
                 </div>
                 <div className="bg-[#171a25] p-3 flex flex-col gap-1 min-h-[60px]">
-                  {studentIds.map(sid => (
-                    <span key={sid} className="text-sm text-slate-200">{studentsById[sid]?.name || sid}</span>
-                  ))}
+                  {studentIds.map(sid => {
+                    const isLeader = typeof groupIdx === 'number' && (session.groupLeaders || [])[groupIdx] === sid;
+                    return (
+                      <span key={sid} className="text-sm text-slate-200 flex items-center gap-1.5">
+                        {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
+                        {studentsById[sid]?.name || sid}
+                      </span>
+                    );
+                  })}
                   {station.note && (
                     <p className="text-xs text-slate-500 italic mt-2 border-t border-slate-800 pt-2">{station.note}</p>
                   )}
