@@ -6,6 +6,59 @@ Format per oppføring: dato, hva ble gjort, hvorfor (kun hvis ikke opplagt), ber
 
 ---
 
+## 2026-07-28 — Dra-og-slipp + gruppeleder/lås-meny i gruppearbeid
+
+**Dropdown for å flytte elever mellom grupper erstattet med dra-og-slipp**
+(`@dnd-kit/core`, samme bibliotek som allerede brukes i rom-editoren, men her i
+et enklere multi-container-mønster i stedet for fri plassering): hvert
+elevkort er nå selve drahåndtaket, hver gruppe er en slippsone som får en
+fuksia ring-highlight når et kort dras over den, og et flytende kort
+(`DragOverlay`) følger pekeren under drag.
+
+**Ny høyreklikk-meny på elevkort** (`StudentContextMenu.jsx`, modellert på det
+eksisterende mønsteret i `SeatingChart/DeskContextMenu.jsx`):
+- **Gjør til / fjern som gruppeleder** — ett-leder-per-gruppe: å utpeke en ny
+  leder fjerner automatisk stjernen fra andre elever i *samme gruppe*.
+- **Lås / lås opp elev** — ny `locked_ids`-kolonne (skjema v8) gjør at låste
+  elever blir stående der de er ved "Generer på nytt", mens resten
+  randomiseres. Låsing er bevisst kun en algoritme-bremsekloss, ikke en
+  UI-sperre: en låst elev kan fortsatt dras fritt manuelt.
+- Wiring av dette avdekket at `groupRandomizer.js` allerede hadde full støtte
+  for `lockedPlacements` i funksjonssignaturen — parameteren fantes ferdig
+  skrevet, men ingen UI hadde noensinne sendt den inn.
+
+**Ryddet bort ekte dødt kode underveis:** `src/styles/group-editor.css`
+(227 linjer) var en rest fra v1s vanilla-JS-implementasjon av nøyaktig denne
+modulen (`git log` viste `src/views/group-editor.js`, slettet i
+React-migreringen) — verken importert eller referert noe sted i dagens
+React-app. Slettet.
+
+**Verifisert end-to-end i ekte kjørende app** mot ekte data (klasse 1ST5,
+28 elever, 9 grupper): dro en elev mellom to grupper og bekreftet at
+elevtallet i begge gruppe-headere oppdaterte seg korrekt; høyreklikket en
+elev → "Gjør til gruppeleder" → stjerne vist; høyreklikket en annen elev →
+"Lås elev" → hengelås vist; trykket "Generer på nytt" flere ganger og
+bekreftet at den låste eleven ble stående mens resten ble omfordelt; lagret,
+navigerte bort og åpnet inndelingen på nytt — lås og lederstatus var fortsatt
+riktig; dro til slutt den fortsatt låste eleven manuelt til en tredje gruppe
+og bekreftet at det fungerte uhindret.
+
+**Sammenslåing med parallelt arbeid:** denne branchen ble utviklet samtidig
+med en annen økt som bygde stasjon-modulen videre
+(`feature/stasjon-ny-stasjon-dnd-leder`). Begge brancher la uavhengig av
+hverandre til en skjemamigrasjon kalt "v8" (`locked_ids` her,
+`group_leaders` på `station_sessions` der) — en reell mergekonflikt i
+`db/schema.js`, ikke en falsk positiv. Løst ved å beholde begge
+migrasjonene i rekkefølge og gi stasjon-migrasjonen nummer v9 i stedet
+(`CURRENT_VERSION` satt til 9). Bygg verifisert på nytt etter sammenslåingen.
+
+**Berørte filer:** `db/schema.js`, `src/ipc-handlers.js`,
+`src/components/GroupEditor.jsx` (ny `StudentCard`/`GroupPanel`-subkomponenter
+for dnd-kit), `src/components/GroupWork/StudentContextMenu.jsx` (ny fil)
+(slettet: `src/styles/group-editor.css`)
+
+---
+
 ## 2026-07-27 — Utvidet "Opprett nytt klassekart", presist innhold på klassekart-kortene
 
 **Ny-klassekart-modalen har nå alt brukeren trenger for å ta en informert
