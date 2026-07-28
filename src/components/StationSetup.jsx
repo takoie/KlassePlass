@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups } from '../shared/groupRandomizer';
+import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core';
 
 /** Enkel round-robin rotasjonsplan: steps[rotasjon][stasjon] = gruppeindeks. */
 function buildRotationPlan(numGroups, numStations) {
@@ -18,6 +19,38 @@ function buildRotationPlan(numGroups, numStations) {
 let idCounter = 0;
 const newStationId = () => `st-${Date.now()}-${idCounter++}`;
 
+function DroppableGroup({ groupIdx, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `station-group-${groupIdx}` });
+  return (
+    <div ref={setNodeRef} className={`bg-[#262b3a] rounded-xl p-2.5 transition-colors ${isOver ? 'ring-2 ring-orange-400' : ''}`}>
+      {children}
+    </div>
+  );
+}
+
+function DraggableStudent({ studentId, name, isLeader, onToggleLeader }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: studentId });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`flex items-center gap-1.5 bg-[#1a1e2b] rounded px-2 py-1 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}
+    >
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggleLeader(); }}
+        onPointerDown={(e) => e.stopPropagation()}
+        className="flex-shrink-0"
+        title={isLeader ? 'Fjern som gruppeleder' : 'Gjør til gruppeleder'}
+      >
+        <i className={`fa-solid fa-star text-[11px] ${isLeader ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400/70'}`}></i>
+      </button>
+      <span className="text-xs text-slate-200 truncate">{name}</span>
+    </div>
+  );
+}
+
 export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState(null);
@@ -32,6 +65,8 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [allStudents, setAllStudents] = useState([]);
   const [groups, setGroups] = useState([[], []]);
   const [groupLeaders, setGroupLeaders] = useState([null, null]);
+  const [activeDragId, setActiveDragId] = useState(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [saveState, setSaveState] = useState('idle');
   const nameInputRefs = useRef({});
   const [pendingFocusId, setPendingFocusId] = useState(null);
@@ -149,6 +184,17 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       next[groupIdx] = next[groupIdx] === studentId ? null : studentId;
       return next;
     });
+  };
+
+  const handleDragEnd = (event) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const toIdx = Number(String(over.id).replace('station-group-', ''));
+    if (Number.isNaN(toIdx)) return;
+    const fromIdx = groups.findIndex(g => g.includes(active.id));
+    if (fromIdx === -1) return;
+    moveStudent(active.id, fromIdx, toIdx);
   };
 
   const studentsById = Object.fromEntries(allStudents.map(s => [s.id, s]));
@@ -287,31 +333,43 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             </div>
           </div>
           {!classId && <p className="text-xs text-slate-500 italic">Velg en klasse for å fordele elever i grupper.</p>}
-          <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(200px, 1fr))` }}>
-            {groups.map((studentIds, idx) => (
-              <div key={idx} className="bg-[#262b3a] rounded-xl p-2.5">
-                <div className="text-xs font-bold text-slate-300 mb-1.5">Gruppe {idx + 1} ({studentIds.length})</div>
-                <div className="flex flex-col gap-1">
-                  {studentIds.map(sid => {
-                    const student = studentsById[sid];
-                    if (!student) return null;
-                    return (
-                      <div key={sid} className="flex items-center justify-between gap-1 bg-[#1a1e2b] rounded px-2 py-1">
-                        <span className="text-xs text-slate-200 truncate">{student.name}</span>
-                        <select
-                          className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-slate-300"
-                          value={idx}
-                          onChange={(e) => moveStudent(sid, idx, Number(e.target.value))}
-                        >
-                          {groups.map((_, gi) => <option key={gi} value={gi}>{gi + 1}</option>)}
-                        </select>
-                      </div>
-                    );
-                  })}
+          <DndContext
+            sensors={sensors}
+            onDragStart={(event) => setActiveDragId(event.active.id)}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveDragId(null)}
+          >
+            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(200px, 1fr))` }}>
+              {groups.map((studentIds, idx) => (
+                <DroppableGroup key={idx} groupIdx={idx}>
+                  <div className="text-xs font-bold text-slate-300 mb-1.5">Gruppe {idx + 1} ({studentIds.length})</div>
+                  <div className="flex flex-col gap-1">
+                    {studentIds.map(sid => {
+                      const student = studentsById[sid];
+                      if (!student) return null;
+                      return (
+                        <DraggableStudent
+                          key={sid}
+                          studentId={sid}
+                          name={student.name}
+                          isLeader={groupLeaders[idx] === sid}
+                          onToggleLeader={() => toggleLeader(idx, sid)}
+                        />
+                      );
+                    })}
+                  </div>
+                </DroppableGroup>
+              ))}
+            </div>
+            <DragOverlay>
+              {activeDragId ? (
+                <div className="flex items-center gap-1.5 bg-[#1a1e2b] border border-orange-400 rounded px-2 py-1 shadow-lg">
+                  <i className="fa-solid fa-star text-[11px] text-transparent"></i>
+                  <span className="text-xs text-slate-200">{studentsById[activeDragId]?.name}</span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         </div>
       </div>
     </div>
