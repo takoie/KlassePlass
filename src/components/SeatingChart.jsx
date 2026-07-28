@@ -757,6 +757,76 @@ export default function SeatingChart({ onBack, initialId }) {
     return seatSlots;
   };
 
+  const ROULETTE_HOP_DELAYS = [90, 100, 120, 150, 190, 250]; // ms per hopp, bremser ned
+  const ROULETTE_PAUSE_AFTER_LANDING = 150; // ms før neste elev starter
+
+  const startRoulette = () => {
+    if (activeFunMode || revealMode) return;
+    const seatSlots = buildOpenSeatSlots();
+    if (seatSlots.length === 0 || allStudents.length === 0) return;
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
+
+    const { placements: finalPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    const revealOrderIds = allStudents
+      .map(s => s.id)
+      .filter(id => Object.values(finalPlacements).includes(id))
+      .sort(() => Math.random() - 0.5);
+
+    funModeFinalRef.current = finalPlacements;
+    setActiveFunMode('roulette');
+    setPlacements(basePlacements);
+    runRouletteStep(revealOrderIds, finalPlacements, basePlacements, 0);
+  };
+
+  const runRouletteStep = (order, finalPlacements, committedPlacements, idx) => {
+    if (idx >= order.length) {
+      applyFunModeResult(finalPlacements);
+      endFunMode();
+      return;
+    }
+
+    const studentId = order[idx];
+    const finalSlotKey = Object.keys(finalPlacements).find(k => finalPlacements[k] === studentId);
+    const openSlots = Object.keys(finalPlacements).filter(k => !committedPlacements[k] && k !== finalSlotKey);
+    const hopPool = openSlots.length > 0 ? openSlots : [finalSlotKey];
+    const hopSlotKeys = ROULETTE_HOP_DELAYS.map(() => hopPool[Math.floor(Math.random() * hopPool.length)]);
+
+    const runHop = (hopIdx) => {
+      if (hopIdx >= hopSlotKeys.length) {
+        const updated = { ...committedPlacements, [finalSlotKey]: studentId };
+        setFunModeGhosts(null);
+        setPlacements(updated);
+        funModeTimerRef.current = setTimeout(
+          () => runRouletteStep(order, finalPlacements, updated, idx + 1),
+          ROULETTE_PAUSE_AFTER_LANDING
+        );
+        return;
+      }
+      setFunModeGhosts({ [hopSlotKeys[hopIdx]]: studentId });
+      funModeTimerRef.current = setTimeout(() => runHop(hopIdx + 1), ROULETTE_HOP_DELAYS[hopIdx]);
+    };
+
+    runHop(0);
+  };
+
+  const stopRoulette = () => {
+    if (!funModeFinalRef.current) return;
+    clearFunModeTimer();
+    applyFunModeResult(funModeFinalRef.current);
+    endFunMode();
+  };
+
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
   // læreren avsløre dem én og én i tilfeldig rekkefølge (foran klassen).
   const startReveal = () => {
@@ -1048,6 +1118,12 @@ export default function SeatingChart({ onBack, initialId }) {
             setIsProjectorMode={setIsProjectorMode}
             revealMode={revealMode} revealedCount={revealedSlots.size} revealTotal={revealOrder.length}
             startReveal={startReveal} revealNext={revealNext} revealAll={revealAll} endReveal={endReveal}
+            activeFunMode={activeFunMode}
+            startRoulette={startRoulette} stopRoulette={stopRoulette}
+            bombCountdown={bombCountdown} bombBoom={bombBoom} startRandombomb={startRandombomb} cancelRandombomb={cancelRandombomb}
+            startMusikkstoler={startMusikkstoler}
+            startMakkerbytte={startMakkerbytte}
+            spotlightSlotKey={spotlightSlotKey} startSpotlight={startSpotlight} dismissSpotlight={dismissSpotlight}
           />
         )}
 
@@ -1164,7 +1240,9 @@ export default function SeatingChart({ onBack, initialId }) {
                           <div className="flex gap-1 w-full flex-1 items-center justify-center">
                             {Array.from({ length: cap }).map((_, slotIdx) => {
                               const slotKey = `${d.id}_seat_${slotIdx}`;
-                              const studentVal = placements[slotKey];
+                              const ghostVal = funModeGhosts ? funModeGhosts[slotKey] : undefined;
+                              const isGhostSeat = ghostVal !== undefined;
+                              const studentVal = isGhostSeat ? ghostVal : placements[slotKey];
                               const studentObj = studentVal ? getStudentByIdOrName(studentVal) : null;
                               const isLocked = lockedSeats[slotKey];
                               const role = studentObj ? studentRoles[studentObj.id] : null;
@@ -1180,6 +1258,17 @@ export default function SeatingChart({ onBack, initialId }) {
 
                               if (isHoverTarget) {
                                 bgClass = 'border-2 border-emerald-400 bg-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.9)] scale-105 z-30 animate-pulse text-white font-extrabold';
+                              }
+
+                              if (isGhostSeat) {
+                                bgClass = studentObj
+                                  ? 'border-2 border-amber-400 bg-amber-500/25 shadow-[0_0_18px_rgba(251,191,36,0.7)] scale-[1.03] z-30 text-white font-extrabold animate-pulse'
+                                  : 'border-2 border-amber-400/40 bg-amber-500/5';
+                              }
+
+                              const isSpotlit = spotlightSlotKey === slotKey;
+                              if (isSpotlit) {
+                                bgClass = 'border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_25px_rgba(250,204,21,0.85)] scale-105 z-30 text-white font-extrabold';
                               }
 
                               return (
@@ -1214,7 +1303,7 @@ export default function SeatingChart({ onBack, initialId }) {
                                   ) : studentObj ? (
                                     <div
                                       className={`w-full h-full flex items-center justify-center gap-1 px-1 truncate ${activeGroupId !== null || revealMode ? '' : 'cursor-move'}`}
-                                      onMouseDown={(e) => { if (activeGroupId === null && !revealMode) startDrag(e, studentObj, slotKey); }}
+                                      onMouseDown={(e) => { if (activeGroupId === null && !revealMode && !activeFunMode) startDrag(e, studentObj, slotKey); }}
                                       onDoubleClick={() => openNoteModal(studentObj)}
                                     >
                                       {!hideSensitiveInfo && role && <span className="text-[10px]">{role}</span>}
