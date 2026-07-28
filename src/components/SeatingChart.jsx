@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import PrintOverlay from './SeatingChart/PrintOverlay';
+import PrintPreviewModal from './Print/PrintPreviewModal';
 import Modals from './SeatingChart/Modals';
 import DeskContextMenu from './SeatingChart/DeskContextMenu';
 import HeaderBar from './SeatingChart/HeaderBar';
@@ -62,6 +62,7 @@ export default function SeatingChart({ onBack, initialId }) {
   const [showZones, setShowZones] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [hideGroups, setHideGroups] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showStudentDrawer, setShowStudentDrawer] = useState(false);
   const [showPeriodsDrawer, setShowPeriodsDrawer] = useState(false);
   const [editingNoteStudent, setEditingNoteStudent] = useState(null);
@@ -829,7 +830,7 @@ export default function SeatingChart({ onBack, initialId }) {
   };
 
   const handlePrint = () => {
-    window.print();
+    setShowPrintPreview(true);
     if (new URLSearchParams(window.location.search).has('print_on_mount')) {
       window.history.replaceState(null, '', window.location.pathname);
     }
@@ -1293,16 +1294,24 @@ export default function SeatingChart({ onBack, initialId }) {
         GROUP_COLORS={GROUP_COLORS}
       />
 
-      <PrintOverlay
-        chartName={chartName}
-        className={classes.find(c => c.id === Number(selectedClass))?.name || ''}
-        chartComment={chartComment}
-        boardObj={boardObj}
-        desks={desks}
-        deskNumberMap={deskNumberMap}
-        placements={placements}
-        getStudentByIdOrName={getStudentByIdOrName}
-      />
+      {showPrintPreview && (
+        <PrintPreviewModal
+          chartName={chartName}
+          className={classes.find(c => c.id === Number(selectedClass))?.name || ''}
+          chartComment={chartComment}
+          boardObj={boardObj}
+          desks={desks}
+          deskNumberMap={deskNumberMap}
+          placements={placements}
+          getStudentByIdOrName={getStudentByIdOrName}
+          groupColors={GROUP_COLORS}
+          zoneMeta={zoneMeta}
+          initialShowNumbers={showNumbers}
+          initialShowZones={showZones}
+          initialShowGroups={!hideGroups}
+          onClose={() => setShowPrintPreview(false)}
+        />
+      )}
     </div>
   );
 }

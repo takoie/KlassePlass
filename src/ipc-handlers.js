@@ -3,7 +3,7 @@
  * Importerer db og settings fra db.js. Maks 300 linjer.
  */
 
-const { ipcMain, dialog, app } = require('electron');
+const { ipcMain, dialog, app, shell } = require('electron');
 const path    = require('path');
 const fs      = require('fs');
 const { getDb, getDbPathFn, loadSettings, saveSettings, saveDbToDisk } = require('./db.js');
@@ -262,6 +262,42 @@ function registerHandlers(winRef) {
     const cfgPath = path.join(app.getPath('userData'), 'db-location.json');
     fs.writeFileSync(cfgPath, JSON.stringify({ dbPath: newPath }));
     return { success: true, newPath, requiresRestart: true };
+  });
+
+  // ---- Print / PDF-eksport ----
+  ipcMain.handle('print:export-pdf', async (_, { suggestedName }) => {
+    const settings = loadSettings();
+    const defaultDir = settings.lastPrintExportDir || app.getPath('documents');
+    const result = await dialog.showSaveDialog(winRef.win, {
+      title: 'Eksporter til PDF',
+      defaultPath: path.join(defaultDir, suggestedName),
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (result.canceled) return { success: false, canceled: true };
+    try {
+      const pdfBuffer = await winRef.win.webContents.printToPDF({
+        landscape: true,
+        pageSize: 'A4',
+        printBackground: true,
+        margins: { marginType: 'none' },
+      });
+      fs.writeFileSync(result.filePath, pdfBuffer);
+      const freshSettings = loadSettings();
+      saveSettings({ ...freshSettings, lastPrintExportDir: path.dirname(result.filePath) });
+      return { success: true, filePath: result.filePath };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('print:open-path', async (_, filePath) => {
+    const err = await shell.openPath(filePath);
+    return { success: !err, error: err || null };
+  });
+
+  ipcMain.handle('print:show-in-folder', async (_, filePath) => {
+    shell.showItemInFolder(filePath);
+    return { success: true };
   });
 
   // ---- Dupliser klassekart (ny periode) ----
