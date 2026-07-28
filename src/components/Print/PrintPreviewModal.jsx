@@ -36,7 +36,7 @@ export default function PrintPreviewModal({
 
   const handleExportPdf = async () => {
     setExportState({ status: 'working' });
-    const suggestedName = buildPrintFilename({ className, chartName });
+    const suggestedName = buildPrintFilename({ className, chartName, prefix: isStation ? 'Stasjonsplan' : 'Klassekart' });
     try {
       const result = await window.api.exportPrintPdf({ suggestedName });
       if (result.canceled) { setExportState({ status: 'idle' }); return; }
@@ -51,7 +51,7 @@ export default function PrintPreviewModal({
     <>
       <dialog id="modal_print_preview" className="modal modal-open" open onClose={onClose}>
         <div className="modal-box max-w-6xl">
-          <h3 className="font-bold text-lg mb-4">Skriv ut / Eksporter klassekart</h3>
+          <h3 className="font-bold text-lg mb-4">{isStation ? 'Skriv ut / Eksporter stasjonsplan' : 'Skriv ut / Eksporter klassekart'}</h3>
           <div className="flex gap-6">
             <div className="w-48 flex flex-col gap-3">
               <label className="label cursor-pointer justify-between">

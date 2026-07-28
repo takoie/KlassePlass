@@ -269,7 +269,7 @@ function registerHandlers(winRef) {
     const settings = loadSettings();
     const defaultDir = settings.lastPrintExportDir || app.getPath('documents');
     const result = await dialog.showSaveDialog(winRef.win, {
-      title: 'Eksporter klassekart til PDF',
+      title: 'Eksporter til PDF',
       defaultPath: path.join(defaultDir, suggestedName),
       filters: [{ name: 'PDF', extensions: ['pdf'] }],
     });
