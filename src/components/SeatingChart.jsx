@@ -930,6 +930,53 @@ export default function SeatingChart({ onBack, initialId }) {
     runFlashTick(targetSlots, allStudents, FUN_FLASH_COUNT);
   };
 
+  const startMakkerbytte = () => {
+    if (activeFunMode || revealMode) return;
+
+    const groupedDesks = desks.filter(d => (groupOverrides[d.id] || d.groupId));
+    if (groupedDesks.length === 0) return;
+
+    let seatSlots = [];
+    groupedDesks.forEach(d => {
+      const cap = d.capacity || 1;
+      for (let s = 0; s < cap; s++) {
+        const slotKey = `${d.id}_seat_${s}`;
+        if (!lockedSeats[slotKey]) seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
+      }
+    });
+    if (seatSlots.length === 0) return;
+
+    // Elever som allerede sitter i en gruppe-pult, pluss uplasserte (kan trekkes inn
+    // hvis det er ledig plass i gruppene). Elever ved ugrupperte pulter røres ikke.
+    const groupedSeatKeys = new Set(seatSlots.map(s => s.slotKey));
+    const groupedStudents = Object.entries(placements)
+      .filter(([slotKey]) => groupedSeatKeys.has(slotKey))
+      .map(([, studentId]) => getStudentByIdOrName(studentId));
+    const candidateStudents = [...groupedStudents, ...unplacedStudents];
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, candidateStudents.length);
+
+    const { placements: groupResult } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: candidateStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    // Slå sammen med resten av klasserommet, som IKKE er del av denne kjøringen.
+    const finalPlacements = { ...placements };
+    seatSlots.forEach(slot => delete finalPlacements[slot.slotKey]);
+    Object.assign(finalPlacements, groupResult);
+
+    funModeFinalRef.current = finalPlacements;
+    setActiveFunMode('makkerbytte');
+    runFlashTick(targetSlots, candidateStudents, FUN_FLASH_COUNT);
+  };
+
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
   // læreren avsløre dem én og én i tilfeldig rekkefølge (foran klassen).
   const startReveal = () => {
