@@ -42,7 +42,9 @@ Erstatt `evaluatePlacementScore` med en ny, gjenbrukbar `scoreClassPlacement(can
     (når begge er plassert — uplasserte teller ikke som brudd).
   - `nearBoard`: brudd hvis noen av `studentIds` sitter ved en pult uten `front`-sone.
   - `sitBack`: brudd hvis pult mangler `back`-sone.
-  - `sitMiddle`: brudd hvis pult har `front`- eller `back`-sone.
+  - `sitMiddle`: brudd hvis pult IKKE har `center`-sone (soner er `window`/`door`/
+    `front`/`back`/`center`, tagges i `RoomEditor.jsx` — bekreftet at `center` finnes
+    som egen sone, ikke utledet fra fravær av front/back).
   - `awayDoor`: brudd hvis pult har `door`-sone.
   - `awayWindow`: brudd hvis pult har `window`-sone.
 
