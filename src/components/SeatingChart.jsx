@@ -5,6 +5,7 @@ import DeskContextMenu from './SeatingChart/DeskContextMenu';
 import HeaderBar from './SeatingChart/HeaderBar';
 import Toolbar from './SeatingChart/Toolbar';
 import StudentDrawer from './SeatingChart/StudentDrawer';
+import { sortSlotsByDeskOrder, findBestPlacement } from '../lib/seatingSolver.mjs';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -87,10 +88,24 @@ export default function SeatingChart({ onBack, initialId }) {
   const [revealOrder, setRevealOrder] = useState([]);
   const [revealedSlots, setRevealedSlots] = useState(new Set());
 
+  // Delte fun modes (Roulette/Randombomb/Musikkstoler/Makkerbytte/Spotlight).
+  // Under en kjøring vises `funModeGhosts` OPPÅ de virkelige `placements` for de
+  // aktuelle setene — selve `placements` (og dermed autolagringen) røres ikke før
+  // resultatet er avgjort, bortsett fra Roulette som committer én elev om gangen
+  // (se Task 4).
+  const [activeFunMode, setActiveFunMode] = useState(null); // 'roulette' | 'randombomb' | 'musikkstoler' | 'makkerbytte' | 'spotlight' | null
+  const [funModeGhosts, setFunModeGhosts] = useState(null); // { [slotKey]: studentId | null } | null
+  const [bombCountdown, setBombCountdown] = useState(null);
+  const [bombBoom, setBombBoom] = useState(false);
+  const [spotlightSlotKey, setSpotlightSlotKey] = useState(null);
+
   // Drag state
   const [draggedStudent, setDraggedStudent] = useState(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const funModeTimerRef = useRef(null);
+  const funModeFinalRef = useRef(null); // beregnet sluttresultat for gjeldende kjøring
+  const funModePreStateRef = useRef(null); // placements før Randombomb startet (for avbrytelse)
 
   // Auto-save refs
   const saveTimeoutRef = useRef(null);
@@ -642,45 +657,18 @@ export default function SeatingChart({ onBack, initialId }) {
       }
     });
 
-    let bestCandidate = { ...placements };
-    seatSlots.forEach(slot => delete bestCandidate[slot.slotKey]);
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
 
-    const shuffledStudents = [...availableStudents].sort(() => Math.random() - 0.5);
-    
-    // Sorter pulter etter bordnummer (logisk posisjon i rommet)
-    const isBoardAtTop = boardObj.y < 350;
-    const sortedDesks = [...desks].sort((a, b) => {
-      const yDiff = a.y - b.y;
-      if (isBoardAtTop) {
-        if (Math.abs(yDiff) > 35) return yDiff;
-        return a.x - b.x;
-      } else {
-        if (Math.abs(yDiff) > 35) return -yDiff;
-        return b.x - a.x;
-      }
-    });
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, availableStudents.length);
 
-    const deskNumberMap = {};
-    sortedDesks.forEach((d, idx) => {
-      deskNumberMap[d.id] = idx + 1;
-    });
-
-    const sortedSlots = [...seatSlots].sort((a, b) => {
-        const num1 = deskNumberMap[a.deskId] || 999;
-        const num2 = deskNumberMap[b.deskId] || 999;
-        if (num1 === num2) return a.slotIdx - b.slotIdx;
-        return num1 - num2;
-    });
-
-    // Velg de første N plassene som matcher antall elever
-    const targetSlots = sortedSlots.slice(0, shuffledStudents.length);
-    // Shuffle KUN disse plassene
-    const shuffledSlots = targetSlots.sort(() => Math.random() - 0.5);
-
-    shuffledStudents.forEach((st, idx) => {
-      if (idx < shuffledSlots.length) {
-        bestCandidate[shuffledSlots[idx].slotKey] = st.id;
-      }
+    const { placements: bestCandidate } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: availableStudents,
+      basePlacements,
+      classRules,
+      desks,
     });
 
     const finalPlacedVals = Object.values(bestCandidate);
@@ -690,8 +678,9 @@ export default function SeatingChart({ onBack, initialId }) {
     setUnplacedStudents(finalUnplaced);
   };
 
-  // Randomiserer elevplassering umiddelbart (ingen animasjon) — kjører 35
-  // tilfeldige forsøk internt og beholder det beste i tråd med reglene.
+  // Randomiserer elevplassering umiddelbart (ingen animasjon) — bruker den delte
+  // regelmotoren i src/lib/seatingSolver.mjs (samme motor som Roulette/Randombomb/
+  // Musikkstoler/Makkerbytte bruker for å beregne SITT sluttresultat).
   const handleRuleBasedFunSpin = () => {
     let seatSlots = [];
     desks.forEach(d => {
@@ -706,52 +695,316 @@ export default function SeatingChart({ onBack, initialId }) {
 
     if (seatSlots.length === 0 || allStudents.length === 0) return;
 
-    const availableStudents = [...allStudents];
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
 
-    // Evaluering av plasseringer i tråd med regler (separasjon, makker, soner)
-    const evaluatePlacementScore = (candidatePlacements) => {
-      let score = 100;
-      classRules.forEach(rule => {
-        if (!rule || !rule.type) return;
-        if (rule.type === 'separate' && rule.student1 && rule.student2) {
-          const s1Slot = Object.keys(candidatePlacements).find(k => candidatePlacements[k] === rule.student1);
-          const s2Slot = Object.keys(candidatePlacements).find(k => candidatePlacements[k] === rule.student2);
-          if (s1Slot && s2Slot) {
-            const desk1 = s1Slot.split('_seat_')[0];
-            const desk2 = s2Slot.split('_seat_')[0];
-            if (desk1 === desk2) score -= 150; // Straff for samme pult
-          }
-        }
-      });
-      return score;
-    };
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
 
-    let topScore = -99999;
-    let topPlacements = { ...placements };
-
-    for (let attempt = 0; attempt < 35; attempt++) {
-      let testPlacements = { ...placements };
-      seatSlots.forEach(slot => delete testPlacements[slot.slotKey]);
-
-      const shuffledStus = [...availableStudents].sort(() => Math.random() - 0.5);
-      const shuffledSlots = [...seatSlots].sort(() => Math.random() - 0.5);
-
-      shuffledStus.forEach((st, idx) => {
-        if (idx < shuffledSlots.length) {
-          testPlacements[shuffledSlots[idx].slotKey] = st.id;
-        }
-      });
-
-      const currentScore = evaluatePlacementScore(testPlacements);
-      if (currentScore > topScore) {
-        topScore = currentScore;
-        topPlacements = testPlacements;
-      }
-    }
+    const { placements: topPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
 
     setPlacements(topPlacements);
     const finalVals = Object.values(topPlacements);
     setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id)));
+  };
+
+  const clearFunModeTimer = () => {
+    if (funModeTimerRef.current) {
+      clearTimeout(funModeTimerRef.current);
+      funModeTimerRef.current = null;
+    }
+  };
+
+  // Rydder opp løpende animasjoner hvis komponenten forlates (naviger bort) midt i en
+  // fun mode-kjøring.
+  useEffect(() => () => clearFunModeTimer(), []);
+
+  // Setter det endelige, ekte resultatet og oppdaterer uplasserte-listen deretter.
+  const applyFunModeResult = (finalPlacements) => {
+    setPlacements(finalPlacements);
+    const finalVals = Object.values(finalPlacements);
+    setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id) && !finalVals.includes(s.name)));
+  };
+
+  // Felles avslutning: stopper timer, fjerner spøkelses-/nedtellings-visning. Rører
+  // ALDRI spotlightSlotKey — den gule uthevningen skal stå til neste trekning.
+  const endFunMode = () => {
+    clearFunModeTimer();
+    setFunModeGhosts(null);
+    setBombCountdown(null);
+    setBombBoom(false);
+    setActiveFunMode(null);
+    funModeFinalRef.current = null;
+    funModePreStateRef.current = null;
+  };
+
+  // Bygger listen av ikke-låste seteplasser for hele klasserommet — brukt av alle fem
+  // fun modes (Makkerbytte bruker en egen, filtrert variant, se Task 7).
+  const buildOpenSeatSlots = () => {
+    const seatSlots = [];
+    desks.forEach(d => {
+      const cap = d.capacity || 1;
+      for (let s = 0; s < cap; s++) {
+        const slotKey = `${d.id}_seat_${s}`;
+        if (!lockedSeats[slotKey]) seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
+      }
+    });
+    return seatSlots;
+  };
+
+  const ROULETTE_HOP_DELAYS = [90, 100, 120, 150, 190, 250]; // ms per hopp, bremser ned
+  const ROULETTE_PAUSE_AFTER_LANDING = 150; // ms før neste elev starter
+
+  const startRoulette = () => {
+    if (activeFunMode || revealMode) return;
+    const seatSlots = buildOpenSeatSlots();
+    if (seatSlots.length === 0 || allStudents.length === 0) return;
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
+
+    const { placements: finalPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    const revealOrderIds = allStudents
+      .map(s => s.id)
+      .filter(id => Object.values(finalPlacements).includes(id))
+      .sort(() => Math.random() - 0.5);
+
+    funModeFinalRef.current = finalPlacements;
+    setActiveFunMode('roulette');
+    setPlacements(basePlacements);
+    runRouletteStep(revealOrderIds, finalPlacements, basePlacements, 0);
+  };
+
+  const runRouletteStep = (order, finalPlacements, committedPlacements, idx) => {
+    if (idx >= order.length) {
+      applyFunModeResult(finalPlacements);
+      endFunMode();
+      return;
+    }
+
+    const studentId = order[idx];
+    const finalSlotKey = Object.keys(finalPlacements).find(k => finalPlacements[k] === studentId);
+    const openSlots = Object.keys(finalPlacements).filter(k => !committedPlacements[k] && k !== finalSlotKey);
+    const hopPool = openSlots.length > 0 ? openSlots : [finalSlotKey];
+    const hopSlotKeys = ROULETTE_HOP_DELAYS.map(() => hopPool[Math.floor(Math.random() * hopPool.length)]);
+
+    const runHop = (hopIdx) => {
+      if (hopIdx >= hopSlotKeys.length) {
+        const updated = { ...committedPlacements, [finalSlotKey]: studentId };
+        setFunModeGhosts(null);
+        setPlacements(updated);
+        funModeTimerRef.current = setTimeout(
+          () => runRouletteStep(order, finalPlacements, updated, idx + 1),
+          ROULETTE_PAUSE_AFTER_LANDING
+        );
+        return;
+      }
+      setFunModeGhosts({ [hopSlotKeys[hopIdx]]: studentId });
+      funModeTimerRef.current = setTimeout(() => runHop(hopIdx + 1), ROULETTE_HOP_DELAYS[hopIdx]);
+    };
+
+    runHop(0);
+  };
+
+  const stopRoulette = () => {
+    if (!funModeFinalRef.current) return;
+    clearFunModeTimer();
+    applyFunModeResult(funModeFinalRef.current);
+    endFunMode();
+  };
+
+  const RANDOMBOMB_TICK_MS = 700;
+
+  const startRandombomb = () => {
+    if (activeFunMode || revealMode) return;
+    const seatSlots = buildOpenSeatSlots();
+    if (seatSlots.length === 0 || allStudents.length === 0) return;
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
+
+    const { placements: finalPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    funModeFinalRef.current = finalPlacements;
+    funModePreStateRef.current = { ...placements };
+    setActiveFunMode('randombomb');
+    runBombTick(targetSlots, allStudents, 5);
+  };
+
+  const runBombTick = (targetSlots, students, count) => {
+    setBombCountdown(count);
+
+    if (count <= 1) {
+      funModeTimerRef.current = setTimeout(() => {
+        setFunModeGhosts(null);
+        applyFunModeResult(funModeFinalRef.current);
+        setBombBoom(true);
+        funModeTimerRef.current = setTimeout(() => endFunMode(), 500);
+      }, RANDOMBOMB_TICK_MS);
+      return;
+    }
+
+    const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
+    const shuffledSlots = [...targetSlots].sort(() => Math.random() - 0.5);
+    const ghostMap = {};
+    shuffledSlots.forEach((slot, idx) => {
+      ghostMap[slot.slotKey] = idx < shuffledStudents.length ? shuffledStudents[idx].id : null;
+    });
+    setFunModeGhosts(ghostMap);
+
+    funModeTimerRef.current = setTimeout(() => runBombTick(targetSlots, students, count - 1), RANDOMBOMB_TICK_MS);
+  };
+
+  const cancelRandombomb = () => {
+    clearFunModeTimer();
+    if (funModePreStateRef.current) setPlacements(funModePreStateRef.current);
+    endFunMode();
+  };
+
+  const FUN_FLASH_COUNT = 5;
+  const FUN_FLASH_MS = 120;
+
+  // Rask "alle stoler flimrer"-animasjon uten nedtelling — brukes av både Musikkstoler
+  // og Makkerbytte (som sender inn en begrenset targetSlots/students-delmengde).
+  const runFlashTick = (targetSlots, students, remaining) => {
+    if (remaining <= 0) {
+      setFunModeGhosts(null);
+      applyFunModeResult(funModeFinalRef.current);
+      endFunMode();
+      return;
+    }
+
+    const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
+    const shuffledSlots = [...targetSlots].sort(() => Math.random() - 0.5);
+    const ghostMap = {};
+    shuffledSlots.forEach((slot, idx) => {
+      ghostMap[slot.slotKey] = idx < shuffledStudents.length ? shuffledStudents[idx].id : null;
+    });
+    setFunModeGhosts(ghostMap);
+
+    funModeTimerRef.current = setTimeout(() => runFlashTick(targetSlots, students, remaining - 1), FUN_FLASH_MS);
+  };
+
+  const startMusikkstoler = () => {
+    if (activeFunMode || revealMode) return;
+    const seatSlots = buildOpenSeatSlots();
+    if (seatSlots.length === 0 || allStudents.length === 0) return;
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
+
+    const { placements: finalPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    funModeFinalRef.current = finalPlacements;
+    setActiveFunMode('musikkstoler');
+    runFlashTick(targetSlots, allStudents, FUN_FLASH_COUNT);
+  };
+
+  const startMakkerbytte = () => {
+    if (activeFunMode || revealMode) return;
+
+    const groupedDesks = desks.filter(d => (groupOverrides[d.id] || d.groupId));
+    if (groupedDesks.length === 0) return;
+
+    let seatSlots = [];
+    groupedDesks.forEach(d => {
+      const cap = d.capacity || 1;
+      for (let s = 0; s < cap; s++) {
+        const slotKey = `${d.id}_seat_${s}`;
+        if (!lockedSeats[slotKey]) seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
+      }
+    });
+    if (seatSlots.length === 0) return;
+
+    // Elever som allerede sitter i en gruppe-pult, pluss uplasserte (kan trekkes inn
+    // hvis det er ledig plass i gruppene). Elever ved ugrupperte pulter røres ikke.
+    const groupedSeatKeys = new Set(seatSlots.map(s => s.slotKey));
+    const groupedStudents = Object.entries(placements)
+      .filter(([slotKey]) => groupedSeatKeys.has(slotKey))
+      .map(([, studentId]) => getStudentByIdOrName(studentId));
+    const candidateStudents = [...groupedStudents, ...unplacedStudents];
+
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, candidateStudents.length);
+
+    const { placements: groupResult } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: candidateStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
+
+    // Slå sammen med resten av klasserommet, som IKKE er del av denne kjøringen.
+    const finalPlacements = { ...placements };
+    seatSlots.forEach(slot => delete finalPlacements[slot.slotKey]);
+    Object.assign(finalPlacements, groupResult);
+
+    funModeFinalRef.current = finalPlacements;
+    setActiveFunMode('makkerbytte');
+    runFlashTick(targetSlots, candidateStudents, FUN_FLASH_COUNT);
+  };
+
+  const SPOTLIGHT_HOP_DELAYS = [80, 90, 110, 140, 180, 230, 300];
+
+  const startSpotlight = () => {
+    if (activeFunMode || revealMode) return;
+    const occupiedSlotKeys = Object.keys(placements).filter(k => placements[k]);
+    if (occupiedSlotKeys.length === 0) return;
+
+    setActiveFunMode('spotlight');
+    setSpotlightSlotKey(null);
+    runSpotlightHop(occupiedSlotKeys, 0);
+  };
+
+  const runSpotlightHop = (occupiedSlotKeys, hopIdx) => {
+    if (hopIdx >= SPOTLIGHT_HOP_DELAYS.length) {
+      const finalPick = occupiedSlotKeys[Math.floor(Math.random() * occupiedSlotKeys.length)];
+      setSpotlightSlotKey(finalPick);
+      endFunMode();
+      return;
+    }
+    const hop = occupiedSlotKeys[Math.floor(Math.random() * occupiedSlotKeys.length)];
+    setSpotlightSlotKey(hop);
+    funModeTimerRef.current = setTimeout(() => runSpotlightHop(occupiedSlotKeys, hopIdx + 1), SPOTLIGHT_HOP_DELAYS[hopIdx]);
+  };
+
+  const dismissSpotlight = () => {
+    endFunMode();
+    setSpotlightSlotKey(null);
   };
 
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
@@ -1045,6 +1298,12 @@ export default function SeatingChart({ onBack, initialId }) {
             setIsProjectorMode={setIsProjectorMode}
             revealMode={revealMode} revealedCount={revealedSlots.size} revealTotal={revealOrder.length}
             startReveal={startReveal} revealNext={revealNext} revealAll={revealAll} endReveal={endReveal}
+            activeFunMode={activeFunMode}
+            startRoulette={startRoulette} stopRoulette={stopRoulette}
+            bombCountdown={bombCountdown} bombBoom={bombBoom} startRandombomb={startRandombomb} cancelRandombomb={cancelRandombomb}
+            startMusikkstoler={startMusikkstoler}
+            startMakkerbytte={startMakkerbytte}
+            spotlightSlotKey={spotlightSlotKey} startSpotlight={startSpotlight} dismissSpotlight={dismissSpotlight}
           />
         )}
 
@@ -1059,6 +1318,14 @@ export default function SeatingChart({ onBack, initialId }) {
 
         {/* 5. Main Canvas Area */}
         <div className="flex-1 flex flex-col overflow-hidden relative bg-[#131620]" onMouseDown={startCanvasAction} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onClick={() => setContextMenu(null)}>
+          {activeFunMode === 'randombomb' && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
+              <div className={`text-[10rem] font-black drop-shadow-[0_0_30px_rgba(244,63,94,0.8)] transition-transform ${bombBoom ? 'text-emerald-400 scale-125' : 'text-rose-500 animate-bounce'}`}>
+                {bombBoom ? '💥' : bombCountdown}
+              </div>
+            </div>
+          )}
+
           {isProjectorMode && (
             <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onClick={() => setIsProjectorMode(false)}>
               Avslutt Prosjektorvisning
@@ -1161,7 +1428,9 @@ export default function SeatingChart({ onBack, initialId }) {
                           <div className="flex gap-1 w-full flex-1 items-center justify-center">
                             {Array.from({ length: cap }).map((_, slotIdx) => {
                               const slotKey = `${d.id}_seat_${slotIdx}`;
-                              const studentVal = placements[slotKey];
+                              const ghostVal = funModeGhosts ? funModeGhosts[slotKey] : undefined;
+                              const isGhostSeat = ghostVal !== undefined;
+                              const studentVal = isGhostSeat ? ghostVal : placements[slotKey];
                               const studentObj = studentVal ? getStudentByIdOrName(studentVal) : null;
                               const isLocked = lockedSeats[slotKey];
                               const role = studentObj ? studentRoles[studentObj.id] : null;
@@ -1177,6 +1446,17 @@ export default function SeatingChart({ onBack, initialId }) {
 
                               if (isHoverTarget) {
                                 bgClass = 'border-2 border-emerald-400 bg-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.9)] scale-105 z-30 animate-pulse text-white font-extrabold';
+                              }
+
+                              if (isGhostSeat) {
+                                bgClass = studentObj
+                                  ? 'border-2 border-amber-400 bg-amber-500/25 shadow-[0_0_18px_rgba(251,191,36,0.7)] scale-[1.03] z-30 text-white font-extrabold animate-pulse'
+                                  : 'border-2 border-amber-400/40 bg-amber-500/5';
+                              }
+
+                              const isSpotlit = spotlightSlotKey === slotKey;
+                              if (isSpotlit) {
+                                bgClass = 'border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_25px_rgba(250,204,21,0.85)] scale-105 z-30 text-white font-extrabold';
                               }
 
                               return (
@@ -1211,7 +1491,7 @@ export default function SeatingChart({ onBack, initialId }) {
                                   ) : studentObj ? (
                                     <div
                                       className={`w-full h-full flex items-center justify-center gap-1 px-1 truncate ${activeGroupId !== null || revealMode ? '' : 'cursor-move'}`}
-                                      onMouseDown={(e) => { if (activeGroupId === null && !revealMode) startDrag(e, studentObj, slotKey); }}
+                                      onMouseDown={(e) => { if (activeGroupId === null && !revealMode && !activeFunMode) startDrag(e, studentObj, slotKey); }}
                                       onDoubleClick={() => openNoteModal(studentObj)}
                                     >
                                       {!hideSensitiveInfo && role && <span className="text-[10px]">{role}</span>}

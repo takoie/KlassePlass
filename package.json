@@ -9,7 +9,8 @@
     "vite": "vite",
     "dev": "concurrently \"vite\" \"wait-on http://localhost:3000 && electron .\"",
     "build": "vite build",
-    "dist": "vite build && electron-builder"
+    "dist": "vite build && electron-builder",
+    "test": "node --test"
   },
   "license": "ISC",
   "dependencies": {

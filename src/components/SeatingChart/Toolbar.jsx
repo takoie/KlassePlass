@@ -18,6 +18,12 @@ export default function Toolbar({
   hideSensitiveInfo, setHideSensitiveInfo,
   setIsProjectorMode,
   revealMode, revealedCount, revealTotal, startReveal, revealNext, revealAll, endReveal,
+  activeFunMode,
+  startRoulette, stopRoulette,
+  bombCountdown, bombBoom, startRandombomb, cancelRandombomb,
+  startMusikkstoler,
+  startMakkerbytte,
+  spotlightSlotKey, startSpotlight, dismissSpotlight,
 }) {
   return (
     <div className="w-64 bg-[#1a1e2b] flex flex-col z-10 flex-shrink-0 border-r border-slate-800 shadow-xl relative overflow-hidden">
@@ -77,28 +83,105 @@ export default function Toolbar({
             <i className="fa-solid fa-wand-magic-sparkles w-5 text-pink-400"></i> Fun Mode
           </button>
           {showFunDrawer && (
-            <div className="flex flex-col gap-2 pl-2 ml-1 border-l-2 border-pink-500/30">
-              <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
-                <i className="fa-solid fa-masks-theater text-cyan-400"></i> Gradvis avdekking
-              </p>
-              {!revealMode ? (
-                <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-2 font-bold" onClick={startReveal}>
-                  <i className="fa-solid fa-eye-slash"></i> Start avdekking
+            <div className="flex flex-col gap-3 pl-2 ml-1 border-l-2 border-pink-500/30">
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
+                  <i className="fa-solid fa-masks-theater text-cyan-400"></i> Gradvis avdekking
+                </p>
+                {!revealMode ? (
+                  <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-2 font-bold" onClick={startReveal} disabled={!!activeFunMode}>
+                    <i className="fa-solid fa-eye-slash"></i> Start avdekking
+                  </button>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-center text-cyan-300 font-semibold">{revealedCount} av {revealTotal} avslørt</p>
+                    <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-2 font-bold" onClick={revealNext} disabled={revealedCount >= revealTotal}>
+                      <i className="fa-solid fa-eye"></i> Avslør neste
+                    </button>
+                    <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={revealAll} disabled={revealedCount >= revealTotal}>
+                      Avslør alle
+                    </button>
+                    <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={endReveal}>
+                      <i className="fa-solid fa-xmark"></i> Avslutt avdekking
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="h-px bg-slate-800/40"></div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
+                  <i className="fa-solid fa-dice text-amber-400"></i> Roulette
+                </p>
+                {activeFunMode === 'roulette' ? (
+                  <button className="btn btn-xs bg-amber-600 hover:bg-amber-500 text-white gap-2 font-bold" onClick={stopRoulette}>
+                    <i className="fa-solid fa-stop"></i> Stopp
+                  </button>
+                ) : (
+                  <button className="btn btn-xs bg-amber-600 hover:bg-amber-500 text-white gap-2 font-bold" onClick={startRoulette} disabled={!!activeFunMode || revealMode}>
+                    <i className="fa-solid fa-play"></i> Start roulette
+                  </button>
+                )}
+              </div>
+
+              <div className="h-px bg-slate-800/40"></div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
+                  <i className="fa-solid fa-bomb text-rose-400"></i> Randombomb
+                </p>
+                {activeFunMode === 'randombomb' ? (
+                  <>
+                    <p className="text-[10px] text-center text-rose-300 font-semibold">{bombBoom ? 'BOOM!' : `Nedtelling: ${bombCountdown}`}</p>
+                    <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={cancelRandombomb} disabled={bombBoom}>
+                      <i className="fa-solid fa-xmark"></i> Avbryt
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn btn-xs bg-rose-600 hover:bg-rose-500 text-white gap-2 font-bold" onClick={startRandombomb} disabled={!!activeFunMode || revealMode}>
+                    <i className="fa-solid fa-play"></i> Start randombomb
+                  </button>
+                )}
+              </div>
+
+              <div className="h-px bg-slate-800/40"></div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
+                  <i className="fa-solid fa-music text-lime-400"></i> Musikkstoler
+                </p>
+                <button className="btn btn-xs bg-lime-600 hover:bg-lime-500 text-white gap-2 font-bold" onClick={startMusikkstoler} disabled={!!activeFunMode || revealMode}>
+                  <i className="fa-solid fa-shuffle"></i> Stokk raskt
                 </button>
-              ) : (
-                <>
-                  <p className="text-[10px] text-center text-cyan-300 font-semibold">{revealedCount} av {revealTotal} avslørt</p>
-                  <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-2 font-bold" onClick={revealNext} disabled={revealedCount >= revealTotal}>
-                    <i className="fa-solid fa-eye"></i> Avslør neste
+              </div>
+
+              <div className="h-px bg-slate-800/40"></div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
+                  <i className="fa-solid fa-people-group text-fuchsia-400"></i> Makkerbytte
+                </p>
+                <button className="btn btn-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-white gap-2 font-bold" onClick={startMakkerbytte} disabled={!!activeFunMode || revealMode} title="Bytter kun elever i pulter som har en makkergruppe-farge">
+                  <i className="fa-solid fa-shuffle"></i> Bytt om grupper
+                </button>
+              </div>
+
+              <div className="h-px bg-slate-800/40"></div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
+                  <i className="fa-solid fa-star text-yellow-400"></i> Trekk en elev
+                </p>
+                <button className="btn btn-xs bg-yellow-600 hover:bg-yellow-500 text-white gap-2 font-bold" onClick={startSpotlight} disabled={!!activeFunMode || revealMode}>
+                  <i className="fa-solid fa-wand-sparkles"></i> Trekk elev
+                </button>
+                {spotlightSlotKey && (
+                  <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={dismissSpotlight}>
+                    <i className="fa-solid fa-xmark"></i> Fjern uthevning
                   </button>
-                  <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={revealAll} disabled={revealedCount >= revealTotal}>
-                    Avslør alle
-                  </button>
-                  <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={endReveal}>
-                    <i className="fa-solid fa-xmark"></i> Avslutt avdekking
-                  </button>
-                </>
-              )}
+                )}
+              </div>
             </div>
           )}
 
