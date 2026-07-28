@@ -111,7 +111,7 @@ export default function PrintPreviewModal({
               )}
             </div>
             <div className="flex-1 overflow-auto bg-slate-800 rounded-lg p-4 flex items-center justify-center">
-              <div style={{ transform: `scale(${previewScale})`, transformOrigin: 'top left' }}>
+              <div style={{ zoom: previewScale }}>
                 <PrintPage title={chartName} periodText={[className, chartComment].filter(Boolean).join(' · ')} contentWidthPx={contentWidthPx} contentHeightPx={contentHeightPx}>
                   {content}
                 </PrintPage>

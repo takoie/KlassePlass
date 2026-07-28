@@ -5,6 +5,11 @@
 @media print {
   @page { size: A4 landscape; margin: 0; }
   #app-shell { display: none !important; }
+  /* #modal_print_preview er portalert til document.body (utenfor #app-shell) for at den
+     skal vises korrekt over resten av appen — den er derfor IKKE lenger en etterkommer
+     av #app-shell og må skjules eksplisitt her, ellers blir dialogboksen med i
+     utskrift/PDF-eksport oppå selve #print-output. */
+  #modal_print_preview { display: none !important; }
   #print-output { display: block !important; }
 }
 
@@ -38,7 +43,6 @@
 .print-page-content {
   position: relative;
   flex: 1;
-  transform-origin: top left;
   overflow: visible;
 }
 

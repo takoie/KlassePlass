@@ -30,7 +30,7 @@ export default function PrintPage({ title, periodText, contentWidthPx, contentHe
       </div>
       <div
         className="print-page-content"
-        style={{ width: contentWidthPx, height: contentHeightPx, transform: `scale(${scale})` }}
+        style={{ width: contentWidthPx, height: contentHeightPx, zoom: scale }}
       >
         {children}
       </div>
