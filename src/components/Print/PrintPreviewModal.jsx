@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import PrintPage, { computePrintScale } from './PrintPage';
 import { usePrintSettings } from './usePrintSettings';
 import { buildPrintFilename } from './printFilename';
@@ -15,6 +16,27 @@ export default function PrintPreviewModal({
   const { settings, setShowNumbers, setShowZones, setShowGroups, setShowColors } =
     usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups });
   const [exportState, setExportState] = useState({ status: 'idle' }); // idle | working | done | error
+  const dialogRef = useRef(null);
+
+  // Ekte showModal() promoterer dialogen til nettleserens "top layer" — den rendres
+  // da alltid over resten av appen uansett z-index/stacking-context i foreldre-treet.
+  // Uten dette (kun open-attributtet) kan sidepanelet/verktøylinjen male over modalen
+  // og stjele klikk som visuelt treffer bryterne.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    // Egen listener (i stedet for Reacts onClose-prop) slik at vi kan fjerne den før vi
+    // lukker dialogen selv i cleanup — ellers ville React StrictModes dobbeltkjøring av
+    // effekter i dev (mount → cleanup → mount) trigget onClose og lukket modalen med en
+    // gang den åpnes, siden cleanup sin dialog.close() også fyrer av 'close'-eventet.
+    const handleNativeClose = () => onClose?.();
+    dialog.addEventListener('close', handleNativeClose);
+    dialog.showModal();
+    return () => {
+      dialog.removeEventListener('close', handleNativeClose);
+      if (dialog.open) dialog.close();
+    };
+  }, [onClose]);
 
   const isStation = contentType === 'station';
   const contentWidthPx = isStation ? STATION_CONTENT_WIDTH_PX : CONTENT_WIDTH_PX;
@@ -47,10 +69,10 @@ export default function PrintPreviewModal({
     }
   };
 
-  return (
+  return createPortal(
     <>
-      <dialog id="modal_print_preview" className="modal modal-open" open onClose={onClose}>
-        <div className="modal-box max-w-6xl">
+      <dialog id="modal_print_preview" ref={dialogRef} className="modal modal-open">
+        <div className="modal-box max-w-6xl max-h-[85vh] overflow-y-auto">
           <h3 className="font-bold text-lg mb-4">{isStation ? 'Skriv ut / Eksporter stasjonsplan' : 'Skriv ut / Eksporter klassekart'}</h3>
           <div className="flex gap-6">
             <div className="w-48 flex flex-col gap-3">
@@ -113,6 +135,7 @@ export default function PrintPreviewModal({
           {content}
         </PrintPage>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
