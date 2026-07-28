@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { DndContext, useDraggable, useDroppable, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer';
+import StudentContextMenu from './GroupWork/StudentContextMenu';
 
 const GROUP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16', '#06b6d4', '#d946ef'];
 
@@ -14,6 +16,9 @@ export default function GroupEditor({ onBack, initialId }) {
   const [avoidLastN, setAvoidLastN] = useState(3);
   const [requireLeaders, setRequireLeaders] = useState(false);
   const [leaderIds, setLeaderIds] = useState([]);
+  const [lockedIds, setLockedIds] = useState([]);
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, studentId, groupIdx }
+  const [activeDragId, setActiveDragId] = useState(null);
   const [studentsById, setStudentsById] = useState({});
   const [allStudentIds, setAllStudentIds] = useState([]);
   const [constraints, setConstraints] = useState([]);
@@ -53,6 +58,7 @@ export default function GroupEditor({ onBack, initialId }) {
       setAvoidLastN(assignment.avoid_last_n ?? 3);
       setRequireLeaders(!!assignment.require_leaders);
       try { setLeaderIds(JSON.parse(assignment.leader_ids || '[]')); } catch (e) { setLeaderIds([]); }
+      try { setLockedIds(JSON.parse(assignment.locked_ids || '[]')); } catch (e) { setLockedIds([]); }
       setStudentsById(byId);
       setAllStudentIds(students.map(s => s.id));
       setConstraints(mappedConstraints);
@@ -74,12 +80,19 @@ export default function GroupEditor({ onBack, initialId }) {
           try { return JSON.parse(row.pairs); } catch (e) { return []; }
         });
       }
+      const lockedPlacements = lockedIds
+        .map(sid => {
+          const groupIndex = groups.findIndex(g => g.includes(sid));
+          return groupIndex === -1 ? null : { studentId: sid, groupIndex };
+        })
+        .filter(Boolean);
       const result = generateGroups({
         studentIds: allStudentIds,
         studentsById,
         numGroups: groups.length,
         constraints,
         useConstraints,
+        lockedPlacements,
         leaderIds,
         requireLeaders,
         recentPairs,
@@ -101,6 +114,43 @@ export default function GroupEditor({ onBack, initialId }) {
     setDirty(true);
   };
 
+  const toggleLock = (studentId) => {
+    setLockedIds(prev => prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]);
+    setDirty(true);
+  };
+
+  const setGroupLeader = (studentId, groupIdx) => {
+    setLeaderIds(prev => {
+      const others = new Set(groups[groupIdx].filter(id => id !== studentId));
+      return [...prev.filter(id => !others.has(id) && id !== studentId), studentId];
+    });
+    setDirty(true);
+  };
+
+  const removeGroupLeader = (studentId) => {
+    setLeaderIds(prev => prev.filter(id => id !== studentId));
+    setDirty(true);
+  };
+
+  const handleStudentContextMenu = (e, studentId, groupIdx) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, studentId, groupIdx });
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragStart = (event) => setActiveDragId(event.active.id);
+
+  const handleDragEnd = (event) => {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const toIdx = Number(String(over.id).slice('group-'.length));
+    const fromIdx = groups.findIndex(g => g.includes(active.id));
+    if (fromIdx === -1 || fromIdx === toIdx) return;
+    moveStudent(active.id, fromIdx, toIdx);
+  };
+
   const handleSave = async () => {
     if (!assignmentId) return;
     setSaveState('saving');
@@ -108,7 +158,7 @@ export default function GroupEditor({ onBack, initialId }) {
       const groupsPayload = groups.map((studentIds, i) => ({ groupNumber: i + 1, studentIds }));
       await window.api.saveGroupAssignment({
         id: assignmentId, name: name.trim() || 'Uten navn', classId,
-        sourceSeatingId: null, useConstraints, avoidLastN, requireLeaders, leaderIds,
+        sourceSeatingId: null, useConstraints, avoidLastN, requireLeaders, leaderIds, lockedIds,
         groups: groupsPayload,
       });
       const pairs = buildGroupPairs(groups, studentsById);
@@ -185,46 +235,61 @@ export default function GroupEditor({ onBack, initialId }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(220px, 1fr))` }}>
-          {groups.map((studentIds, idx) => {
-            const color = GROUP_COLORS[idx % GROUP_COLORS.length];
-            return (
-              <div key={idx} className="bg-[#1a1e2b] border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
-                <div className="px-4 py-2.5 flex items-center justify-between" style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
-                  <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
-                  <span className="text-xs text-slate-400">{studentIds.length} elever</span>
-                </div>
-                <div className="p-2 flex flex-col gap-1.5 flex-1">
-                  {studentIds.length === 0 && (
-                    <p className="text-xs text-slate-500 italic text-center py-3">Ingen elever</p>
-                  )}
-                  {studentIds.map(sid => {
-                    const student = studentsById[sid];
-                    if (!student) return null;
-                    const isLeader = leaderIds.includes(sid);
-                    return (
-                      <div key={sid} className="flex items-center justify-between gap-2 bg-[#262b3a] rounded-lg px-2.5 py-1.5">
-                        <span className="text-sm text-slate-200 truncate flex items-center gap-1.5">
-                          {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
-                          {student.name}
-                        </span>
-                        <select
-                          className="select select-bordered select-xs bg-[#1a1e2b] border-slate-700 text-slate-300"
-                          value={idx}
-                          onChange={(e) => moveStudent(sid, idx, Number(e.target.value))}
-                        >
-                          {groups.map((_, gi) => <option key={gi} value={gi}>Gruppe {gi + 1}</option>)}
-                        </select>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(220px, 1fr))` }}>
+            {groups.map((studentIds, idx) => {
+              const color = GROUP_COLORS[idx % GROUP_COLORS.length];
+              return (
+                <GroupPanel key={idx} idx={idx} color={color}>
+                  <div className="px-4 py-2.5 flex items-center justify-between" style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
+                    <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
+                    <span className="text-xs text-slate-400">{studentIds.length} elever</span>
+                  </div>
+                  <div className="p-2 flex flex-col gap-1.5 flex-1">
+                    {studentIds.length === 0 && (
+                      <p className="text-xs text-slate-500 italic text-center py-3">Ingen elever</p>
+                    )}
+                    {studentIds.map(sid => {
+                      const student = studentsById[sid];
+                      if (!student) return null;
+                      return (
+                        <StudentCard
+                          key={sid}
+                          sid={sid}
+                          student={student}
+                          isLeader={leaderIds.includes(sid)}
+                          isLocked={lockedIds.includes(sid)}
+                          onContextMenu={(e) => handleStudentContextMenu(e, sid, idx)}
+                        />
+                      );
+                    })}
+                  </div>
+                </GroupPanel>
+              );
+            })}
+          </div>
         </div>
-      </div>
+        <DragOverlay>
+          {activeDragId ? (
+            <div className="bg-[#262b3a] rounded-lg px-2.5 py-1.5 shadow-2xl border border-fuchsia-400 text-sm text-slate-100 flex items-center gap-1.5">
+              {leaderIds.includes(activeDragId) && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
+              {studentsById[activeDragId]?.name}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      <StudentContextMenu
+        contextMenu={contextMenu}
+        studentsById={studentsById}
+        leaderIds={leaderIds}
+        lockedIds={lockedIds}
+        setGroupLeader={setGroupLeader}
+        removeGroupLeader={removeGroupLeader}
+        toggleLock={toggleLock}
+        setContextMenu={setContextMenu}
+      />
 
       <dialog id="modal_delete_group_assignment" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
@@ -240,6 +305,38 @@ export default function GroupEditor({ onBack, initialId }) {
           </div>
         </div>
       </dialog>
+    </div>
+  );
+}
+
+function StudentCard({ sid, student, isLeader, isLocked, onContextMenu }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: sid });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      onContextMenu={onContextMenu}
+      className="flex items-center justify-between gap-2 bg-[#262b3a] rounded-lg px-2.5 py-1.5 cursor-grab select-none touch-none"
+      style={{ opacity: isDragging ? 0.4 : 1 }}
+    >
+      <span className="text-sm text-slate-200 truncate flex items-center gap-1.5">
+        {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
+        {student.name}
+      </span>
+      {isLocked && <i className="fa-solid fa-lock text-red-400 text-[10px]" title="Låst"></i>}
+    </div>
+  );
+}
+
+function GroupPanel({ idx, color, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `group-${idx}` });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`bg-[#1a1e2b] border rounded-2xl overflow-hidden flex flex-col transition-colors ${isOver ? 'border-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'border-slate-800'}`}
+    >
+      {children}
     </div>
   );
 }

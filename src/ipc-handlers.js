@@ -157,17 +157,18 @@ function registerHandlers(winRef) {
   ipcMain.handle('get-group-assignment', async (_, id) =>
     dbGet('SELECT * FROM group_assignments WHERE id=?', [id]));
 
-  ipcMain.handle('save-group-assignment', async (_, { id, name, classId, sourceSeatingId, useConstraints, avoidLastN, requireLeaders, leaderIds, groups }) => {
+  ipcMain.handle('save-group-assignment', async (_, { id, name, classId, sourceSeatingId, useConstraints, avoidLastN, requireLeaders, leaderIds, lockedIds, groups }) => {
     const lids = JSON.stringify(leaderIds ?? []);
+    const lockIds = JSON.stringify(lockedIds ?? []);
     let assignmentId = id;
     if (id) {
-      await dbRun('UPDATE group_assignments SET name=?,use_constraints=?,avoid_last_n=?,require_leaders=?,leader_ids=? WHERE id=?',
-        [name, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, id]);
+      await dbRun('UPDATE group_assignments SET name=?,use_constraints=?,avoid_last_n=?,require_leaders=?,leader_ids=?,locked_ids=? WHERE id=?',
+        [name, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, lockIds, id]);
       await dbRun('DELETE FROM group_assignment_groups WHERE assignment_id=?', [id]);
     } else {
       const r = await dbRun(
-        'INSERT INTO group_assignments (name,class_id,source_seating_id,use_constraints,avoid_last_n,require_leaders,leader_ids) VALUES (?,?,?,?,?,?,?)',
-        [name, classId, sourceSeatingId ?? null, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids]);
+        'INSERT INTO group_assignments (name,class_id,source_seating_id,use_constraints,avoid_last_n,require_leaders,leader_ids,locked_ids) VALUES (?,?,?,?,?,?,?,?)',
+        [name, classId, sourceSeatingId ?? null, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, lockIds]);
       assignmentId = r.lastID;
     }
     for (const g of groups ?? []) {
