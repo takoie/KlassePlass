@@ -3,23 +3,56 @@
  */
 
 @media print {
-  @page { size: landscape; margin: 10mm; }
+  @page { size: A4 landscape; margin: 0; }
   body > #app-shell { display: none !important; }
-  #print-overlay { display: block !important; }
-  .print-close-btn,
-  .print-action-bar { display: none !important; }
+  #print-output { display: block !important; }
 }
 
-#print-overlay {
+#print-output {
   display: none;
   position: fixed;
   inset: 0;
   background: white;
-  color: black;
   z-index: 9999;
-  padding: 20px;
+}
+
+.print-page {
+  width: 297mm;
+  height: 210mm;
+  padding: 10mm;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  color: black;
+  background: white;
   font-family: 'Inter', sans-serif;
-  overflow: auto;
+}
+
+.print-page-header {
+  border-bottom: 2px solid #333;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.print-page-content {
+  position: relative;
+  flex: 1;
+  transform-origin: top left;
+  overflow: visible;
+}
+
+.print-page-footer {
+  flex-shrink: 0;
+  text-align: right;
+  padding-top: 4px;
+}
+
+.print-logo {
+  font-size: 9px;
+  color: #9ca3af;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
 .print-action-bar {
@@ -116,24 +149,6 @@
 
 .print-desk-empty {
   opacity: 0.25;
-}
-
-/* ---- Stasjonsplan-utskrift ---- */
-@media print {
-  #station-print-overlay { display: block !important; }
-  body > #app-shell { display: none !important; }
-}
-
-#station-print-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: white;
-  color: black;
-  z-index: 9999;
-  padding: 24px 28px;
-  font-family: 'Inter', sans-serif;
-  overflow: auto;
 }
 
 .station-print-header {
