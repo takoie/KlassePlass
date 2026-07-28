@@ -5,6 +5,7 @@ import DeskContextMenu from './SeatingChart/DeskContextMenu';
 import HeaderBar from './SeatingChart/HeaderBar';
 import Toolbar from './SeatingChart/Toolbar';
 import StudentDrawer from './SeatingChart/StudentDrawer';
+import { sortSlotsByDeskOrder, findBestPlacement } from '../lib/seatingSolver.mjs';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -641,45 +642,18 @@ export default function SeatingChart({ onBack, initialId }) {
       }
     });
 
-    let bestCandidate = { ...placements };
-    seatSlots.forEach(slot => delete bestCandidate[slot.slotKey]);
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
 
-    const shuffledStudents = [...availableStudents].sort(() => Math.random() - 0.5);
-    
-    // Sorter pulter etter bordnummer (logisk posisjon i rommet)
-    const isBoardAtTop = boardObj.y < 350;
-    const sortedDesks = [...desks].sort((a, b) => {
-      const yDiff = a.y - b.y;
-      if (isBoardAtTop) {
-        if (Math.abs(yDiff) > 35) return yDiff;
-        return a.x - b.x;
-      } else {
-        if (Math.abs(yDiff) > 35) return -yDiff;
-        return b.x - a.x;
-      }
-    });
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, availableStudents.length);
 
-    const deskNumberMap = {};
-    sortedDesks.forEach((d, idx) => {
-      deskNumberMap[d.id] = idx + 1;
-    });
-
-    const sortedSlots = [...seatSlots].sort((a, b) => {
-        const num1 = deskNumberMap[a.deskId] || 999;
-        const num2 = deskNumberMap[b.deskId] || 999;
-        if (num1 === num2) return a.slotIdx - b.slotIdx;
-        return num1 - num2;
-    });
-
-    // Velg de første N plassene som matcher antall elever
-    const targetSlots = sortedSlots.slice(0, shuffledStudents.length);
-    // Shuffle KUN disse plassene
-    const shuffledSlots = targetSlots.sort(() => Math.random() - 0.5);
-
-    shuffledStudents.forEach((st, idx) => {
-      if (idx < shuffledSlots.length) {
-        bestCandidate[shuffledSlots[idx].slotKey] = st.id;
-      }
+    const { placements: bestCandidate } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: availableStudents,
+      basePlacements,
+      classRules,
+      desks,
     });
 
     const finalPlacedVals = Object.values(bestCandidate);
@@ -689,8 +663,9 @@ export default function SeatingChart({ onBack, initialId }) {
     setUnplacedStudents(finalUnplaced);
   };
 
-  // Randomiserer elevplassering umiddelbart (ingen animasjon) — kjører 35
-  // tilfeldige forsøk internt og beholder det beste i tråd med reglene.
+  // Randomiserer elevplassering umiddelbart (ingen animasjon) — bruker den delte
+  // regelmotoren i src/lib/seatingSolver.mjs (samme motor som Roulette/Randombomb/
+  // Musikkstoler/Makkerbytte bruker for å beregne SITT sluttresultat).
   const handleRuleBasedFunSpin = () => {
     let seatSlots = [];
     desks.forEach(d => {
@@ -705,48 +680,19 @@ export default function SeatingChart({ onBack, initialId }) {
 
     if (seatSlots.length === 0 || allStudents.length === 0) return;
 
-    const availableStudents = [...allStudents];
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
 
-    // Evaluering av plasseringer i tråd med regler (separasjon, makker, soner)
-    const evaluatePlacementScore = (candidatePlacements) => {
-      let score = 100;
-      classRules.forEach(rule => {
-        if (!rule || !rule.type) return;
-        if (rule.type === 'separate' && rule.student1 && rule.student2) {
-          const s1Slot = Object.keys(candidatePlacements).find(k => candidatePlacements[k] === rule.student1);
-          const s2Slot = Object.keys(candidatePlacements).find(k => candidatePlacements[k] === rule.student2);
-          if (s1Slot && s2Slot) {
-            const desk1 = s1Slot.split('_seat_')[0];
-            const desk2 = s2Slot.split('_seat_')[0];
-            if (desk1 === desk2) score -= 150; // Straff for samme pult
-          }
-        }
-      });
-      return score;
-    };
+    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
+    const targetSlots = sortedSlots.slice(0, allStudents.length);
 
-    let topScore = -99999;
-    let topPlacements = { ...placements };
-
-    for (let attempt = 0; attempt < 35; attempt++) {
-      let testPlacements = { ...placements };
-      seatSlots.forEach(slot => delete testPlacements[slot.slotKey]);
-
-      const shuffledStus = [...availableStudents].sort(() => Math.random() - 0.5);
-      const shuffledSlots = [...seatSlots].sort(() => Math.random() - 0.5);
-
-      shuffledStus.forEach((st, idx) => {
-        if (idx < shuffledSlots.length) {
-          testPlacements[shuffledSlots[idx].slotKey] = st.id;
-        }
-      });
-
-      const currentScore = evaluatePlacementScore(testPlacements);
-      if (currentScore > topScore) {
-        topScore = currentScore;
-        topPlacements = testPlacements;
-      }
-    }
+    const { placements: topPlacements } = findBestPlacement({
+      seatSlots: targetSlots,
+      students: allStudents,
+      basePlacements,
+      classRules,
+      desks,
+    });
 
     setPlacements(topPlacements);
     const finalVals = Object.values(topPlacements);
