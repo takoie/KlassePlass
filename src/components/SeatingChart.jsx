@@ -195,7 +195,7 @@ export default function SeatingChart({ onBack, initialId }) {
   // deskSnapshot (om satt): bordoppsettet slik det var da klassekartet sist ble lagret.
   // Rommets layout_data leses live og kan ha blitt regenerert (nye bord-IDer) siden den
   // gang — uten snapshot ville lagrede elevplasseringer da peke på bord som ikke finnes
-  // lenger og se ut som om alle elevene forsvant. Se "Hent fra rom"-knappen for bevisst sync.
+  // lenger og se ut som om alle elevene forsvant. Se "Oppdater romplan"-knappen for bevisst sync.
   const setupNewChartLocal = (cls, rm, currentPlacements, deskSnapshot) => {
     if (deskSnapshot && Array.isArray(deskSnapshot.desks) && deskSnapshot.desks.length) {
       setDesks(deskSnapshot.desks.map(d => ({
@@ -634,6 +634,35 @@ export default function SeatingChart({ onBack, initialId }) {
     document.getElementById('modal_sync_room')?.close();
   };
 
+  // Sorterer seteplasser etter bordnummer (logisk posisjon i rommet, fra tavlen og utover)
+  // slik at "de første N plassene" alltid betyr "de N plassene nærmest start på et fullt bord
+  // først" — ingen elev havner alene ved et bord mens et tidligere bord står halvfullt.
+  const sortSlotsByDeskOrder = (slots) => {
+    const isBoardAtTop = boardObj.y < 350;
+    const sortedDesks = [...desks].sort((a, b) => {
+      const yDiff = a.y - b.y;
+      if (isBoardAtTop) {
+        if (Math.abs(yDiff) > 35) return yDiff;
+        return a.x - b.x;
+      } else {
+        if (Math.abs(yDiff) > 35) return -yDiff;
+        return b.x - a.x;
+      }
+    });
+
+    const deskNumberMap = {};
+    sortedDesks.forEach((d, idx) => {
+      deskNumberMap[d.id] = idx + 1;
+    });
+
+    return [...slots].sort((a, b) => {
+      const num1 = deskNumberMap[a.deskId] || 999;
+      const num2 = deskNumberMap[b.deskId] || 999;
+      if (num1 === num2) return a.slotIdx - b.slotIdx;
+      return num1 - num2;
+    });
+  };
+
   const handleAutoFill = () => {
     let seatSlots = [];
     desks.forEach(d => {
@@ -1047,13 +1076,6 @@ export default function SeatingChart({ onBack, initialId }) {
     });
   };
 
-  const toggleRole = (studentId, roleIcon) => {
-    setStudentRoles(prev => ({
-      ...prev,
-      [studentId]: prev[studentId] === roleIcon ? null : roleIcon
-    }));
-  };
-
   const openNoteModal = (studentObj) => {
     setEditingNoteStudent(studentObj);
     setNoteInputValue(studentNotes[studentObj.id] || '');
@@ -1312,7 +1334,6 @@ export default function SeatingChart({ onBack, initialId }) {
           <StudentDrawer
             showStudentDrawer={showStudentDrawer} setShowStudentDrawer={setShowStudentDrawer}
             unplacedStudents={unplacedStudents} startDrag={startDrag}
-            studentRoles={studentRoles} toggleRole={toggleRole}
           />
         )}
 
@@ -1328,7 +1349,7 @@ export default function SeatingChart({ onBack, initialId }) {
 
           {isProjectorMode && (
             <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onClick={() => setIsProjectorMode(false)}>
-              Avslutt Prosjektorvisning
+              Avslutt prosjektorvisning
             </button>
           )}
 

@@ -16,7 +16,7 @@ export default function DeskContextMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-slate-400">Makkergrupper</li>
-      <li><a onClick={() => { createGroupForSelected(); setContextMenu(null); }}><i className="fa-solid fa-object-group text-amber-400"></i> Lag Makkergruppe</a></li>
+      <li><a onClick={() => { createGroupForSelected(); setContextMenu(null); }}><i className="fa-solid fa-object-group text-amber-400"></i> Lag makkergruppe</a></li>
       <li><a onClick={() => { clearGroupForSelected(); setContextMenu(null); }}><i className="fa-solid fa-object-ungroup text-slate-400"></i> Fjern fra gruppe</a></li>
       <div className="divider my-0 h-1"></div>
       <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-slate-400">Plasser per bord</li>

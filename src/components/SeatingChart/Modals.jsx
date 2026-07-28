@@ -54,7 +54,7 @@ export default function Modals({
             <i className="fa-solid fa-pen text-slate-400"></i> Rediger ukeangivelse
           </h3>
           <div className="py-4">
-            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Periode (f.eks Uke 1-4)</label>
+            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Periode (f.eks uke 1-4)</label>
             <input
               type="text"
               className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
@@ -115,7 +115,7 @@ export default function Modals({
             <form method="dialog">
               <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
             </form>
-            <button className="btn btn-warning" onClick={syncFromRoom}>Ja, hent fra rom</button>
+            <button className="btn btn-warning" onClick={syncFromRoom}>Ja, oppdater</button>
           </div>
         </div>
       </dialog>

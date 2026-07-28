@@ -26,7 +26,7 @@ export default function Modals({
             autoFocus
           />
 
-          <label className="text-xs font-bold uppercase opacity-50 text-slate-400 block mb-2">Velg oppsett (Preset)</label>
+          <label className="text-xs font-bold uppercase opacity-50 text-slate-400 block mb-2">Velg oppsett (preset)</label>
           <div className="grid grid-cols-2 gap-2 mb-4">
             {presetsList.map(p => (
               <div

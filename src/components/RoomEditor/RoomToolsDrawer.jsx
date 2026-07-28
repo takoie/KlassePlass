@@ -34,7 +34,7 @@ export default function RoomToolsDrawer({
       {/* Visning & Kontroll (Collapse) */}
       <details className="collapse collapse-arrow bg-[#262b3a] border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
         <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
-          <i className="fa-solid fa-eye text-[#34d399] mr-1.5"></i> Visning & Kontroll
+          <i className="fa-solid fa-eye text-[#34d399] mr-1.5"></i> Visning & kontroll
         </summary>
         <div className="collapse-content flex flex-col gap-2 pb-3">
           <button 

@@ -76,11 +76,11 @@ export default function Toolbar({
           )}
 
           <button className={`btn btn-sm justify-start ${hideGroups ? 'btn-neutral bg-amber-900/30 text-amber-400 border-amber-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => setHideGroups(!hideGroups)}>
-            <i className={`fa-solid ${hideGroups ? 'fa-eye-slash' : 'fa-eye'} w-5 ${hideGroups ? 'text-amber-400' : 'text-slate-400'}`}></i> {hideGroups ? 'Vis Makkergrupper' : 'Skjul Makkergrupper'}
+            <i className={`fa-solid ${hideGroups ? 'fa-eye-slash' : 'fa-eye'} w-5 ${hideGroups ? 'text-amber-400' : 'text-slate-400'}`}></i> {hideGroups ? 'Vis makkergrupper' : 'Skjul makkergrupper'}
           </button>
 
           <button className={`btn btn-sm justify-start ${showFunDrawer ? 'btn-neutral bg-pink-900/30 text-pink-400 border-pink-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowFunDrawer(!showFunDrawer); setShowStudentDrawer(false); setShowGroupDrawer(false); }}>
-            <i className="fa-solid fa-wand-magic-sparkles w-5 text-pink-400"></i> Fun Mode
+            <i className="fa-solid fa-wand-magic-sparkles w-5 text-pink-400"></i> Fun mode
           </button>
           {showFunDrawer && (
             <div className="flex flex-col gap-3 pl-2 ml-1 border-l-2 border-pink-500/30">
@@ -195,7 +195,7 @@ export default function Toolbar({
             <i className="fa-solid fa-print w-5 text-indigo-400"></i> Skriv ut / PDF
           </button>
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => document.getElementById('modal_sync_room').showModal()} title="Hent siste bordoppsett fra rom-editoren">
-            <i className="fa-solid fa-arrows-rotate w-5 text-orange-400"></i> Hent fra rom
+            <i className="fa-solid fa-arrows-rotate w-5 text-orange-400"></i> Oppdater romplan
           </button>
         </div>
 
@@ -205,6 +205,10 @@ export default function Toolbar({
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Visning</div>
           <button className={`btn btn-sm ${showHistory ? 'btn-neutral bg-slate-700 text-amber-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setShowHistory(!showHistory)}>
             <i className="fa-solid fa-clock-rotate-left w-5"></i> {showHistory ? 'Skjul historikk' : 'Vis historikk'}
+            <i
+              className="fa-solid fa-circle-info w-4 ml-auto opacity-60 hover:opacity-100"
+              title={'Fargen viser hvor nylig elevparet satt sammen sist:\nRød = forrige klassekart\nOransje = 2 kart siden\nGul = 3 kart siden\nLime = 4 kart siden\nGrønn = 5 kart siden\nJo rødere, jo nyere satt de sammen.'}
+            ></i>
           </button>
           <button className={`btn btn-sm ${showNumbers ? 'btn-neutral bg-slate-700 text-emerald-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setShowNumbers(!showNumbers)}>
             <i className="fa-solid fa-hashtag w-5"></i> {showNumbers ? 'Skjul numre' : 'Vis numre'}

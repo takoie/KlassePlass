@@ -68,46 +68,46 @@ export default function Settings() {
   return (
     <div className="flex h-full bg-[#1e2230] text-slate-100">
       {/* Sidebar for settings tabs */}
-      <div className="w-56 bg-[#171a25] border-r border-slate-800 p-4">
+      <div className="w-64 bg-[#171a25] border-r border-slate-800 p-4 flex-shrink-0">
         <h2 className="text-xl font-bold mb-6 px-2 flex items-center gap-2 text-white">
           <i className="fa-solid fa-gear text-emerald-400"></i> Innstillinger
         </h2>
-        
+
         <div className="flex flex-col gap-1.5">
-          <button 
+          <button
             className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'visning' ? 'active' : ''}`}
             onClick={() => setActiveTab('visning')}
           >
-            <i className="fa-solid fa-display text-xs"></i>
-            <span>Visning & Generelt</span>
+            <i className="fa-solid fa-display text-xs flex-shrink-0"></i>
+            <span className="truncate min-w-0 flex-1 text-left">Visning & generelt</span>
           </button>
           <button
             className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'database' ? 'active' : ''}`}
             onClick={() => setActiveTab('database')}
           >
-            <i className="fa-solid fa-database text-xs"></i>
-            <span>Database & Sikkerhetskopi</span>
+            <i className="fa-solid fa-database text-xs flex-shrink-0"></i>
+            <span className="truncate min-w-0 flex-1 text-left">Database & sikkerhetskopi</span>
           </button>
           <button
             className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'om' ? 'active' : ''}`}
             onClick={() => setActiveTab('om')}
           >
-            <i className="fa-solid fa-circle-info text-xs"></i>
-            <span>Om KlassePlass</span>
+            <i className="fa-solid fa-circle-info text-xs flex-shrink-0"></i>
+            <span className="truncate min-w-0 flex-1 text-left">Om KlassePlass</span>
           </button>
-          <button 
+          <button
             className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'personvern' ? 'active' : ''}`}
             onClick={() => setActiveTab('personvern')}
           >
-            <i className="fa-solid fa-shield-halved text-xs"></i>
-            <span>Personvern & GDPR</span>
+            <i className="fa-solid fa-shield-halved text-xs flex-shrink-0"></i>
+            <span className="truncate min-w-0 flex-1 text-left">Personvern & GDPR</span>
           </button>
-          <button 
+          <button
             className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'lisenser' ? 'active' : ''}`}
             onClick={() => setActiveTab('lisenser')}
           >
-            <i className="fa-solid fa-scale-balanced text-xs"></i>
-            <span>Lisenser</span>
+            <i className="fa-solid fa-scale-balanced text-xs flex-shrink-0"></i>
+            <span className="truncate min-w-0 flex-1 text-left">Lisenser</span>
           </button>
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function Settings() {
       <div className="flex-1 p-8 overflow-y-auto">
         {activeTab === 'visning' && (
           <div className="max-w-2xl">
-            <h3 className="text-xl font-bold mb-6 text-white">Visning & Generelt</h3>
+            <h3 className="text-xl font-bold mb-6 text-white">Visning & generelt</h3>
             
             <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-slate-200 mb-1">Standard tavleplassering</h4>
@@ -138,7 +138,7 @@ export default function Settings() {
 
         {activeTab === 'database' && (
           <div className="max-w-2xl">
-            <h3 className="text-xl font-bold mb-6 text-white">Database & Sikkerhetskopi</h3>
+            <h3 className="text-xl font-bold mb-6 text-white">Database & sikkerhetskopi</h3>
 
             {dbMessage && (
               <div className={`rounded-2xl p-4 mb-6 text-xs font-semibold border ${
@@ -187,8 +187,9 @@ export default function Settings() {
 
             <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6">
               <h4 className="font-bold text-sm text-slate-200 mb-2">Utvikler & informasjon</h4>
-              <p className="text-xs text-slate-400 mb-2">Utviklet med fokus på brukervennlighet og personvern for lærere.</p>
-              <a href="https://stian.taknes.no" className="text-xs text-emerald-400 hover:underline font-bold" target="_blank" rel="noreferrer">stian.taknes.no</a>
+              <p className="text-xs text-slate-400">
+                Utviklet av Stian Taknæs - <a href="mailto:stian@taknes.no" className="text-emerald-400 hover:underline font-bold">stian@taknes.no</a>
+              </p>
             </div>
           </div>
         )}

@@ -203,11 +203,11 @@ export default function ClassManager({ onBack, initialId }) {
   const ruleOptions = [
     { type: 'avoid', label: '⛔ Skal IKKE sitte sammen (2 til 5 elever)', icon: 'fa-solid fa-shield-halved text-red-400' },
     { type: 'pair', label: '💚 God makkermatch (2 elever)', icon: 'fa-solid fa-heart text-emerald-400' },
-    { type: 'nearBoard', label: '📍 Må sitte nær tavlen (Fremste rad)', icon: 'fa-solid fa-location-dot text-amber-400' },
-    { type: 'sitBack', label: '🔙 Må sitte bakerst (Bakre rad)', icon: 'fa-solid fa-arrow-down text-purple-400' },
-    { type: 'sitMiddle', label: '↔️ Må sitte i midten (Midterste rad)', icon: 'fa-solid fa-align-center text-cyan-400' },
-    { type: 'awayDoor', label: '🚪 Skjermet for dør-støy (Unngå dør)', icon: 'fa-solid fa-door-open text-blue-400' },
-    { type: 'awayWindow', label: '🪟 Skjermet fra vindu (Unngå vindu)', icon: 'fa-solid fa-sun text-yellow-400' },
+    { type: 'nearBoard', label: '📍 Må sitte nær tavlen (fremste rad)', icon: 'fa-solid fa-location-dot text-amber-400' },
+    { type: 'sitBack', label: '🔙 Må sitte bakerst (bakre rad)', icon: 'fa-solid fa-arrow-down text-purple-400' },
+    { type: 'sitMiddle', label: '↔️ Må sitte i midten (midterste rad)', icon: 'fa-solid fa-align-center text-cyan-400' },
+    { type: 'awayDoor', label: '🚪 Skjermet for dør-støy (unngå dør)', icon: 'fa-solid fa-door-open text-blue-400' },
+    { type: 'awayWindow', label: '🪟 Skjermet fra vindu (unngå vindu)', icon: 'fa-solid fa-sun text-yellow-400' },
     { type: 'supportPair', label: '🎓 Faglig støttemakker (2 elever)', icon: 'fa-solid fa-graduation-cap text-indigo-400' }
   ];
 
@@ -364,7 +364,7 @@ export default function ClassManager({ onBack, initialId }) {
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Viktighetsgrad (Prioritet)</label>
+                      <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Viktighetsgrad (prioritet)</label>
                       <select className="select select-xs select-bordered bg-[#262b3a] border-slate-700 text-white font-bold w-full" value={rulePriority} onChange={e => setRulePriority(e.target.value)}>
                         <option value="critical">🔴 Kritisk (Må oppfylles)</option>
                         <option value="important">🟡 Viktig (Bør oppfylles)</option>

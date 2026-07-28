@@ -113,7 +113,7 @@ export const ClassesOverview = ({ onEdit, onAdd }) => {
   };
 
   return (
-    <PageLayout title="Mine Klasser" icon="fa-solid fa-users" onAdd={onAdd}>
+    <PageLayout title="Mine klasser" icon="fa-solid fa-users" onAdd={onAdd}>
       {classes.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klasser opprettet enda.</p> : null}
       {classes.map(cls => {
         let count = 0;
@@ -128,7 +128,7 @@ export const ClassesOverview = ({ onEdit, onAdd }) => {
             badgeText="KLASSE"
             badgeColor="bg-emerald-950/60 text-emerald-400 border-emerald-500/30"
             infoList={[
-              { icon: 'fa-solid fa-user-graduate', text: `${count} Elever registrert` }
+              { icon: 'fa-solid fa-user-graduate', text: `${count} elever registrert` }
             ]}
             icon="fa-solid fa-users"
             onClick={() => onEdit(cls.id)}
@@ -168,7 +168,7 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
   };
 
   return (
-    <PageLayout title="Mine Rom" icon="fa-solid fa-school" onAdd={onAdd}>
+    <PageLayout title="Mine rom" icon="fa-solid fa-school" onAdd={onAdd}>
       {rooms.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen rom opprettet enda.</p> : null}
       {rooms.map(rm => {
         let deskCount = 0;
@@ -180,7 +180,7 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
             badgeText="ROM-OPPSETT"
             badgeColor="bg-purple-950/60 text-purple-400 border-purple-500/30"
             infoList={[
-              { icon: 'fa-solid fa-chair', text: `${deskCount} Bord-plasser` }
+              { icon: 'fa-solid fa-chair', text: `${deskCount} plasser` }
             ]}
             icon="fa-solid fa-school"
             onClick={() => onEdit(rm.id)}
@@ -307,7 +307,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   } catch(e){}
 
   return (
-    <PageLayout title="Mine Klassekart" icon="fa-solid fa-map-location-dot" onAdd={handleOpenCreate}>
+    <PageLayout title="Mine klassekart" icon="fa-solid fa-map-location-dot" onAdd={handleOpenCreate}>
       {seatings.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klassekart opprettet enda.</p> : null}
       
       {classes.map(cls => {
@@ -484,7 +484,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
               <button className="btn btn-ghost text-slate-400 hover:text-slate-100">Avbryt</button>
             </form>
             <button className="btn btn-primary font-bold px-8 shadow-lg shadow-emerald-900/50" onClick={handleCreate} disabled={!selectedClass || !selectedRoom}>
-              Opprett & Rediger <i className="fa-solid fa-arrow-right ml-1"></i>
+              Opprett & rediger <i className="fa-solid fa-arrow-right ml-1"></i>
             </button>
           </div>
         </div>

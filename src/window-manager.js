@@ -62,7 +62,7 @@ function registerPresentationHandler() {
     winRef.presentationWin = new BrowserWindow({
       width: 1280,
       height: 800,
-      title: 'KlassePlass Presentasjon',
+      title: 'KlassePlass presentasjon',
       frame: false,
       transparent: false,
       backgroundColor: '#16181d',
