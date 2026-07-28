@@ -977,6 +977,35 @@ export default function SeatingChart({ onBack, initialId }) {
     runFlashTick(targetSlots, candidateStudents, FUN_FLASH_COUNT);
   };
 
+  const SPOTLIGHT_HOP_DELAYS = [80, 90, 110, 140, 180, 230, 300];
+
+  const startSpotlight = () => {
+    if (activeFunMode || revealMode) return;
+    const occupiedSlotKeys = Object.keys(placements).filter(k => placements[k]);
+    if (occupiedSlotKeys.length === 0) return;
+
+    setActiveFunMode('spotlight');
+    setSpotlightSlotKey(null);
+    runSpotlightHop(occupiedSlotKeys, 0);
+  };
+
+  const runSpotlightHop = (occupiedSlotKeys, hopIdx) => {
+    if (hopIdx >= SPOTLIGHT_HOP_DELAYS.length) {
+      const finalPick = occupiedSlotKeys[Math.floor(Math.random() * occupiedSlotKeys.length)];
+      setSpotlightSlotKey(finalPick);
+      endFunMode();
+      return;
+    }
+    const hop = occupiedSlotKeys[Math.floor(Math.random() * occupiedSlotKeys.length)];
+    setSpotlightSlotKey(hop);
+    funModeTimerRef.current = setTimeout(() => runSpotlightHop(occupiedSlotKeys, hopIdx + 1), SPOTLIGHT_HOP_DELAYS[hopIdx]);
+  };
+
+  const dismissSpotlight = () => {
+    endFunMode();
+    setSpotlightSlotKey(null);
+  };
+
   // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
   // læreren avsløre dem én og én i tilfeldig rekkefølge (foran klassen).
   const startReveal = () => {
