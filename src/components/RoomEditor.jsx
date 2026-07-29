@@ -8,7 +8,7 @@ import WindowItem from './RoomEditor/WindowItem';
 import HeaderBar from './RoomEditor/HeaderBar';
 import DeskContextMenu from './RoomEditor/DeskContextMenu';
 import Modals from './RoomEditor/Modals';
-import { computeBoundedDelta } from './RoomEditor/geometry';
+import { computeBoundedDelta, findOverlappingDeskIds } from './RoomEditor/geometry';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -51,6 +51,7 @@ export default function RoomEditor({ onBack, initialId }) {
   const desksRef = useRef(desks);
   const selectedDesksRef = useRef(selectedDesks);
   const isDraggingRef = useRef(false);
+  const preOverlappingIdsRef = useRef([]);
   const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => { desksRef.current = desks; }, [desks]);
@@ -521,7 +522,9 @@ export default function RoomEditor({ onBack, initialId }) {
     if (movingDesksObjs.length === 0) return transform;
     const stationary = desksRef.current.filter(d => !desksToMoveIds.includes(d.id));
 
-    const result = getBoundedDelta(movingDesksObjs, rawDx, rawDy, stationary);
+    const result = getBoundedDelta(movingDesksObjs, rawDx, rawDy, stationary, {
+      ignoreOverlapIds: preOverlappingIdsRef.current
+    });
 
     // Direct DOM guide lines (60fps performance without React re-render loops)
     const xGuide = document.getElementById('guide-line-x');
@@ -583,10 +586,18 @@ export default function RoomEditor({ onBack, initialId }) {
     isDraggingRef.current = true;
     const { active } = event;
     if (!active || active.data.current?.type !== 'desk') return;
-    
+
     const isPartOftMultiSelection = selectedDesksRef.current.includes(active.id);
     const desksToMove = isPartOftMultiSelection ? selectedDesksRef.current : [active.id];
-    
+
+    const movingDesks = desksRef.current.filter(d => desksToMove.includes(d.id));
+    const stationary = desksRef.current.filter(d => !desksToMove.includes(d.id));
+    const overlapping = new Set();
+    movingDesks.forEach(md => {
+      findOverlappingDeskIds(md, stationary).forEach(id => overlapping.add(id));
+    });
+    preOverlappingIdsRef.current = [...overlapping];
+
     desksToMove.forEach(id => {
        const el = document.getElementById(`desk-item-${id}`);
        if (el) el.style.zIndex = '100';
@@ -648,7 +659,9 @@ export default function RoomEditor({ onBack, initialId }) {
       if (!draggedDesk) return;
       const stationary = desks.filter(d => !desksToMove.includes(d.id));
       const movingDesks = desks.filter(d => desksToMove.includes(d.id));
-      const result = getBoundedDelta(movingDesks, delta.x / scale, delta.y / scale, stationary);
+      const result = getBoundedDelta(movingDesks, delta.x / scale, delta.y / scale, stationary, {
+        ignoreOverlapIds: preOverlappingIdsRef.current
+      });
 
       setDesks(prev => prev.map(d => {
         if (desksToMove.includes(d.id)) {
