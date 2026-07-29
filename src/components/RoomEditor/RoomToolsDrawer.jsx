@@ -14,7 +14,7 @@ export default function RoomToolsDrawer({
   generateStructure,
   addDoor,
   addWindow,
-  addSingleDesk,
+  addDesk,
   clearDesks,
   showNumbers,
   setShowNumbers,
@@ -98,9 +98,13 @@ export default function RoomToolsDrawer({
           <i className="fa-solid fa-chair text-amber-400 mr-1.5"></i> Legg til bord
         </summary>
         <div className="collapse-content flex flex-col gap-2 pb-3">
-          <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-bold w-full" onClick={addSingleDesk}>
-            <i className="fa-solid fa-plus"></i> Legg til enkeltbord
-          </button>
+          <span className="text-[10px] font-bold uppercase text-slate-400 px-1">Antall plasser</span>
+          <div className="grid grid-cols-4 gap-1">
+            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(1)}>1</button>
+            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(2)}>2</button>
+            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(3)}>3</button>
+            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(4)}>4</button>
+          </div>
         </div>
       </details>
 

@@ -346,49 +346,11 @@ export default function RoomEditor({ onBack, initialId }) {
     })));
   };
 
-  const addSingleDesk = () => {
-    const cw = 1100;
-    const ch = 700;
-    const deskW = 100;
-    const deskH = 60;
-
-    const isOccupied = (testPos) => {
-      return desks.some(d => {
-        const dW = (d.capacity || 1) * 100;
-        return (
-          testPos.x < d.x + dW &&
-          testPos.x + deskW > d.x &&
-          testPos.y < d.y + 60 &&
-          testPos.y + deskH > d.y
-        );
-      });
-    };
-
-    let candidate = null;
-    for (let y = 90; y <= ch - deskH - 20; y += 80) {
-      for (let x = 20; x <= cw - deskW - 20; x += 115) {
-        if (!isOccupied({ x, y })) {
-          candidate = { x, y };
-          break;
-        }
-      }
-      if (candidate) break;
-    }
-
-    if (!candidate) {
-      candidate = { x: 50, y: 90 };
-    }
-
+  const addDesk = (capacity = 1) => {
+    const spot = findFreeSpot({ capacity, existingDesks: desks });
     setDesks(prev => [
       ...prev,
-      {
-        id: Date.now().toString(),
-        x: candidate.x,
-        y: candidate.y,
-        capacity: 1,
-        zones: [],
-        groupId: null
-      }
+      { id: Date.now().toString(), x: spot.x, y: spot.y, capacity, zones: [], groupId: null }
     ]);
   };
 
@@ -887,7 +849,7 @@ export default function RoomEditor({ onBack, initialId }) {
                 generateStructure={generateStructure}
                 addDoor={addDoor}
                 addWindow={addWindow}
-                addSingleDesk={addSingleDesk}
+                addDesk={addDesk}
                 clearDesks={clearDesks}
               />
             </div>
