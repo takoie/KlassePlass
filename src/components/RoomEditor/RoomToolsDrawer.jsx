@@ -29,6 +29,9 @@ export default function RoomToolsDrawer({
         <span className="text-sm font-extrabold uppercase tracking-wider text-emerald-400">
           <i className="fa-solid fa-toolbox"></i> Verktøy
         </span>
+        <button className="btn btn-ghost btn-xs btn-square hover:bg-slate-800 text-slate-400" onClick={() => setShowToolsDrawer(false)}>
+          <i className="fa-solid fa-xmark"></i>
+        </button>
       </div>
 
       {/* Visning & Kontroll (Collapse) */}

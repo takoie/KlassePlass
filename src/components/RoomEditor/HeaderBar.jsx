@@ -1,7 +1,7 @@
 import React from 'react';
 
 /** Toppbar: rom-valg, nytt rom-knapp, lagre-status og slett-knapp. */
-export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoom, handleOpenNewModal, saveState }) {
+export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoom, handleOpenNewModal, saveState, showToolsDrawer, setShowToolsDrawer }) {
   return (
     <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
       <div className="flex items-center gap-2 flex-wrap">
@@ -10,6 +10,13 @@ export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoo
             <i className="fa-solid fa-arrow-left"></i> Tilbake
           </button>
         )}
+        <button
+          className={`btn btn-xs gap-1.5 font-bold ${showToolsDrawer ? 'btn-outline border-slate-600 text-slate-400' : 'btn-warning text-slate-950'}`}
+          onClick={() => setShowToolsDrawer(!showToolsDrawer)}
+          title={showToolsDrawer ? 'Skjul verktøy' : 'Vis verktøy'}
+        >
+          <i className="fa-solid fa-toolbox"></i> Meny
+        </button>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Rom:</span>
           <select
