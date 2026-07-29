@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function Layout({ currentView, setCurrentView, children }) {
+export default function Layout({ currentView, setCurrentView, onOpenOnboarding, children }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -70,9 +70,16 @@ export default function Layout({ currentView, setCurrentView, children }) {
           })}
         </div>
 
-        {/* Nederst i Sidemenyen - Kun Innstillinger */}
-        <div className="pt-3 border-t border-slate-800/80 mt-auto">
-          <button 
+        {/* Nederst i Sidemenyen - Veiledning og Innstillinger */}
+        <div className="pt-3 border-t border-slate-800/80 mt-auto flex flex-col gap-2">
+          <button
+            className="overblikk-nav-btn"
+            onClick={onOpenOnboarding}
+          >
+            <i className="fa-solid fa-compass text-sm flex-shrink-0 text-slate-400"></i>
+            <span className="leading-none">Veiledning</span>
+          </button>
+          <button
             className={`overblikk-nav-btn ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
           >

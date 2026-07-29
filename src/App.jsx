@@ -9,17 +9,20 @@ import StationOverview from './components/StationOverview';
 import StationSetup from './components/StationSetup';
 import StationPresenter from './components/StationPresenter';
 import UpdateBanner from './components/UpdateBanner';
+import OnboardingGuide from './components/OnboardingGuide';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
 
 function App() {
   const [currentView, setCurrentView] = useState('classes-overview');
   const [editId, setEditId] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Bruk lagret tema fra første render - index.html har "klasseplass" som
   // statisk fallback for aller første maling, før innstillingene er hentet.
   useEffect(() => {
     window.api?.getSettings?.().then((s) => {
       if (s?.theme) document.documentElement.setAttribute('data-theme', s.theme);
+      if (!s?.onboardingCompleted) setShowOnboarding(true);
     }).catch(() => {});
   }, []);
 
@@ -31,6 +34,11 @@ function App() {
   const handleAdd = (view) => {
     setEditId('new');
     setCurrentView(view);
+  };
+
+  const handleCloseOnboarding = () => {
+    setShowOnboarding(false);
+    window.api?.saveSettings?.({ onboardingCompleted: true }).catch(() => {});
   };
 
   const renderView = () => {
@@ -53,10 +61,15 @@ function App() {
 
   return (
     <div id="app-shell" className="h-full w-full">
-      <Layout currentView={currentView} setCurrentView={(v) => { setEditId(null); setCurrentView(v); }}>
+      <Layout
+        currentView={currentView}
+        setCurrentView={(v) => { setEditId(null); setCurrentView(v); }}
+        onOpenOnboarding={() => setShowOnboarding(true)}
+      >
         {renderView()}
       </Layout>
       <UpdateBanner />
+      {showOnboarding && <OnboardingGuide onClose={handleCloseOnboarding} />}
     </div>
   );
 }
