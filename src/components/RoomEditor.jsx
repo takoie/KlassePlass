@@ -8,7 +8,7 @@ import WindowItem from './RoomEditor/WindowItem';
 import HeaderBar from './RoomEditor/HeaderBar';
 import DeskContextMenu from './RoomEditor/DeskContextMenu';
 import Modals from './RoomEditor/Modals';
-import { computeBoundedDelta, findOverlappingDeskIds } from './RoomEditor/geometry';
+import { computeBoundedDelta, findOverlappingDeskIds, findFreeGroupOffset, findFreeSpot } from './RoomEditor/geometry';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -784,14 +784,38 @@ export default function RoomEditor({ onBack, initialId }) {
     setContextMenu(null);
   };
 
+  // Plasserer en batch med nye bord (dupliser eller lim inn) uten å overlappe
+  // eksisterende bord. Prøver først å beholde hele gruppens formasjon ved å
+  // flytte alle sammen til samme ledige offset; faller tilbake til å plassere
+  // hvert bord for seg (kan bryte formasjonen) kun i svært tette rom.
+  const placeDeskBatch = (sourceDesks, startDx, startDy) => {
+    const groupOffset = findFreeGroupOffset({ desks: sourceDesks, existingDesks: desks, startDx, startDy });
+
+    if (groupOffset) {
+      return sourceDesks.map(d => ({
+        ...d,
+        id: Date.now() + Math.random().toString(),
+        x: d.x + groupOffset.dx,
+        y: d.y + groupOffset.dy
+      }));
+    }
+
+    const placed = [];
+    sourceDesks.forEach(d => {
+      const spot = findFreeSpot({
+        capacity: d.capacity || 1,
+        existingDesks: [...desks, ...placed],
+        anchor: { x: d.x + startDx, y: d.y + startDy }
+      });
+      placed.push({ ...d, id: Date.now() + Math.random().toString(), x: spot.x, y: spot.y });
+    });
+    return placed;
+  };
+
   const handleDuplicateSelected = () => {
     const toDuplicate = desks.filter(d => selectedDesks.includes(d.id));
-    const newDesks = toDuplicate.map(d => ({
-      ...d,
-      id: Date.now() + Math.random().toString(),
-      x: Math.min(1100 - 100, d.x + 20),
-      y: Math.min(700 - 60, d.y + 20)
-    }));
+    if (toDuplicate.length === 0) return;
+    const newDesks = placeDeskBatch(toDuplicate, 20, 20);
     setDesks([...desks, ...newDesks]);
     setSelectedDesks(newDesks.map(d => d.id));
     setContextMenu(null);
