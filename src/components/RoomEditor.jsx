@@ -53,6 +53,8 @@ export default function RoomEditor({ onBack, initialId }) {
   const isDraggingRef = useRef(false);
   const preOverlappingIdsRef = useRef([]);
   const altKeyRef = useRef(false);
+  const clipboardRef = useRef(null);
+  const lastMousePosRef = useRef(null);
   const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => { desksRef.current = desks; }, [desks]);
@@ -649,11 +651,14 @@ export default function RoomEditor({ onBack, initialId }) {
   };
 
   const handleMouseMoveCanvas = (e) => {
-    if (!selectionBox || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const currentX = (e.clientX - rect.left) / scale;
     const currentY = (e.clientY - rect.top) / scale;
-    
+    lastMousePosRef.current = { x: currentX, y: currentY };
+
+    if (!selectionBox) return;
+
     setSelectionBox(prev => ({
       ...prev,
       currentX,
@@ -680,6 +685,23 @@ export default function RoomEditor({ onBack, initialId }) {
   };
 
   const handleKeyDown = (e) => {
+    const isTextInput = ['INPUT', 'TEXTAREA'].includes(e.target.tagName) || e.target.isContentEditable;
+    if (isTextInput) return;
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      if (selectedDesks.length > 0) {
+        clipboardRef.current = desks.filter(d => selectedDesks.includes(d.id)).map(d => ({ ...d }));
+      }
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      if (clipboardRef.current?.length) {
+        pasteClipboard();
+      }
+      return;
+    }
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (selectedDesks.length > 0) {
         setDesks(desks.filter(d => !selectedDesks.includes(d.id)));
@@ -781,6 +803,26 @@ export default function RoomEditor({ onBack, initialId }) {
     setDesks([...desks, ...newDesks]);
     setSelectedDesks(newDesks.map(d => d.id));
     setContextMenu(null);
+  };
+
+  const pasteClipboard = () => {
+    const clip = clipboardRef.current;
+    if (!clip || clip.length === 0) return;
+
+    const minX = Math.min(...clip.map(d => d.x));
+    const minY = Math.min(...clip.map(d => d.y));
+    const maxX = Math.max(...clip.map(d => d.x + (d.capacity || 1) * 100));
+    const maxY = Math.max(...clip.map(d => d.y + 60));
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
+
+    const target = lastMousePosRef.current || { x: 550, y: 350 };
+    const startDx = Math.round(target.x - bboxCenterX);
+    const startDy = Math.round(target.y - bboxCenterY);
+
+    const pasted = placeDeskBatch(clip, startDx, startDy).map(d => ({ ...d, groupId: null }));
+    setDesks(prev => [...prev, ...pasted]);
+    setSelectedDesks(pasted.map(d => d.id));
   };
 
   const isBoardAtTop = (boardObj?.y || 25) < 350;
