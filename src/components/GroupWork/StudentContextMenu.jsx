@@ -17,16 +17,16 @@ export default function StudentContextMenu({
     <>
       <div className="fixed inset-0 z-[9998]" onClick={() => setContextMenu(null)}></div>
       <div
-        className="fixed z-[9999] bg-[#1a1e2b] border border-slate-700 shadow-2xl rounded-xl w-56 overflow-hidden flex flex-col"
+        className="fixed z-[9999] bg-base-200 border border-slate-700 shadow-2xl rounded-xl w-56 overflow-hidden flex flex-col"
         style={{ left: x, top: y }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-3 py-2 bg-[#202534] border-b border-slate-700 text-xs font-bold text-slate-300 truncate">
+        <div className="px-3 py-2 bg-base-100 border-b border-slate-700 text-xs font-bold text-slate-300 truncate">
           {student.name}
         </div>
 
         <button
-          className="px-4 py-2.5 text-left text-sm hover:bg-[#262b3a] text-slate-200 flex items-center gap-2 transition-colors"
+          className="px-4 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2 transition-colors"
           onClick={() => {
             if (isLeader) removeGroupLeader(studentId);
             else setGroupLeader(studentId, groupIdx);
@@ -38,7 +38,7 @@ export default function StudentContextMenu({
         </button>
 
         <button
-          className="px-4 py-2.5 text-left text-sm hover:bg-[#262b3a] text-slate-200 flex items-center gap-2 transition-colors border-t border-slate-700/50"
+          className="px-4 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2 transition-colors border-t border-slate-700/50"
           onClick={() => {
             toggleLock(studentId);
             setContextMenu(null);

@@ -68,9 +68,9 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex h-full bg-[#1e2230] text-slate-100">
+    <div className="flex h-full module-content-bg text-slate-100">
       {/* Sidebar for settings tabs */}
-      <div className="w-64 bg-[#171a25] border-r border-slate-800 p-4 flex-shrink-0">
+      <div className="w-64 bg-surface-raised border-r border-slate-800 p-4 flex-shrink-0">
         <h2 className="text-xl font-bold mb-6 px-2 flex items-center gap-2 text-white">
           <i className="fa-solid fa-gear text-emerald-400"></i> Innstillinger
         </h2>
@@ -120,13 +120,13 @@ export default function Settings() {
           <div className="max-w-2xl">
             <h3 className="text-xl font-bold mb-6 text-white">Visning & generelt</h3>
             
-            <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-slate-200 mb-1">Standard tavleplassering</h4>
               <p className="text-xs text-slate-400 mb-4">Velg om tavlen skal ligge øverst eller nederst i klasserommet som standard.</p>
               
               <div className="form-control max-w-xs">
                 <select 
-                  className="select select-bordered bg-[#1a1e2b] border-slate-700 text-slate-200 focus:border-emerald-500"
+                  className="select select-bordered bg-base-200 border-slate-700 text-slate-200 focus:border-emerald-500"
                   value={settings.boardPosition || 'top'}
                   onChange={(e) => handleSaveSetting('boardPosition', e.target.value)}
                 >
@@ -152,7 +152,7 @@ export default function Settings() {
               </div>
             )}
 
-            <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-slate-200 mb-1">Ta sikkerhetskopi</h4>
               <p className="text-xs text-slate-400 mb-4">Lagre en kopi av hele databasen (alle klasser, rom og klassekart) som en fil du selv velger.</p>
               <button className="btn btn-sm bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30 gap-2" onClick={handleBackup}>
@@ -160,7 +160,7 @@ export default function Settings() {
               </button>
             </div>
 
-            <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-slate-200 mb-1">Gjenopprett fra sikkerhetskopi</h4>
               <p className="text-xs text-slate-400 mb-4">Erstatter hele den nåværende databasen med innholdet i en valgt sikkerhetskopi-fil. Den nåværende databasen tas automatisk vare på som <code>.bak</code> først.</p>
               <button className="btn btn-sm btn-outline border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-2" onClick={() => document.getElementById('modal_restore_db')?.showModal()}>
@@ -168,7 +168,7 @@ export default function Settings() {
               </button>
             </div>
 
-            <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-slate-200 mb-1">Flytt database</h4>
               <p className="text-xs text-slate-400 mb-4">Flytt databasefilen til en annen mappe (f.eks. en delt nettverksstasjon eller skylagringsmappe). Appen må startes på nytt etterpå.</p>
               <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={() => document.getElementById('modal_move_db')?.showModal()}>
@@ -180,7 +180,7 @@ export default function Settings() {
 
         {activeTab === 'om' && (
           <div className="max-w-2xl">
-            <div className="text-center py-10 bg-[#262b3a] border border-slate-700/60 rounded-2xl mb-6 shadow-xl">
+            <div className="text-center py-10 bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6 shadow-xl">
               <h1 className="text-4xl font-extrabold mb-2 text-white tracking-wider">
                 KLASSE<span className="text-[#f59e0b]">PLASS</span>
               </h1>
@@ -190,7 +190,7 @@ export default function Settings() {
               <p className="text-sm text-slate-400 max-w-md mx-auto">Et enkelt, raskt og 100% lokalt verktøy for lærere — opprett klasser, design klasserom, sett sammen klassekart, fordel elever i grupper og kjør stasjonsundervisning.</p>
             </div>
 
-            <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-slate-200 mb-2">Utvikler & informasjon</h4>
               <p className="text-xs text-slate-400">
                 Utviklet av Stian Taknæs - <a href="mailto:stian@taknes.no" className="text-emerald-400 hover:underline font-bold">stian@taknes.no</a>
@@ -204,14 +204,14 @@ export default function Settings() {
             <h3 className="text-xl font-bold mb-6 text-white">Personvern og GDPR</h3>
             <div className="bg-amber-950/40 border border-amber-500/40 text-amber-200 rounded-2xl p-6 mb-6">
               <h4 className="font-bold mb-2 flex items-center gap-2 text-amber-300">
-                <i className="fa-solid fa-[#f59e0b] fa-shield-halved"></i> 100% lokal datatrygghet
+                <i className="fa-solid fa-shield-halved text-amber-400"></i> 100% lokal datatrygghet
               </h4>
               <p className="text-xs leading-relaxed">
                 All data i KlassePlass lagres utelukkende lokalt på din egen PC (SQLite-database). Ingen elevnavn eller annen data sendes til skytjenester eller eksterne servere.
               </p>
             </div>
             
-            <div className="bg-[#262b3a] border border-slate-700/60 rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-slate-200 mb-3">Retningslinjer for skolen</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Behandling av personopplysninger skjer i henhold til skolens interne personvernrutiner og UDIRs retningslinjer for digitale verktøy i skolen.
@@ -223,7 +223,7 @@ export default function Settings() {
         {activeTab === 'lisenser' && (
           <div className="max-w-2xl">
             <h3 className="text-xl font-bold mb-6 text-white">Tredjepartsbiblioteker & Lisenser</h3>
-            <div className="overflow-x-auto bg-[#262b3a] border border-slate-700/60 rounded-2xl">
+            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl">
               <table className="table w-full text-xs text-slate-300">
                 <thead>
                   <tr className="border-b border-slate-700/80 text-slate-400">
@@ -249,7 +249,7 @@ export default function Settings() {
       </div>
 
       <dialog id="modal_restore_db" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
           <h3 className="font-bold text-lg text-amber-400 flex items-center gap-2">
             <i className="fa-solid fa-triangle-exclamation"></i> Gjenopprett database?
           </h3>
@@ -268,7 +268,7 @@ export default function Settings() {
       </dialog>
 
       <dialog id="modal_move_db" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
           <h3 className="font-bold text-lg text-slate-100 flex items-center gap-2">
             <i className="fa-solid fa-folder-tree text-slate-400"></i> Flytt database?
           </h3>

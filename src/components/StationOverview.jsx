@@ -54,9 +54,10 @@ export default function StationOverview({ onEdit, onAdd, onPrint }) {
         return (
           <Card
             key={cls.id}
-            title={cls.name}
+            title={latest.name}
+            badgeText={cls.name}
+            badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
             infoList={[
-              { icon: 'fa-solid fa-arrows-rotate', text: `Siste: ${latest.name}` },
               { icon: 'fa-solid fa-signs-post', text: `${stationCount} stasjoner · ${groupCount} grupper` },
               { icon: 'fa-solid fa-layer-group', text: `Historikk: ${classSessions.length} økter` }
             ]}

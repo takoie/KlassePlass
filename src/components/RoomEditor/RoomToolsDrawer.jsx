@@ -32,7 +32,7 @@ export default function RoomToolsDrawer({
       </div>
 
       {/* Visning & Kontroll (Collapse) */}
-      <details className="collapse collapse-arrow bg-[#262b3a] border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
+      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
         <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
           <i className="fa-solid fa-eye text-[#34d399] mr-1.5"></i> Visning & kontroll
         </summary>
@@ -64,7 +64,7 @@ export default function RoomToolsDrawer({
       </details>
 
       {/* Oppsett & Generering (Collapse) */}
-      <details className="collapse collapse-arrow bg-[#262b3a] border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
+      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
         <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
           <i className="fa-solid fa-table-cells text-cyan-400 mr-1.5"></i> Autogenerering
         </summary>
@@ -72,7 +72,7 @@ export default function RoomToolsDrawer({
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-extrabold uppercase text-slate-300 px-1">Mønster</label>
-              <select className="select select-xs select-bordered bg-[#1a1e2b] border-slate-600 text-white font-bold" value={genStructure} onChange={e => setGenStructure(e.target.value)}>
+              <select className="select select-xs select-bordered bg-base-200 border-slate-600 text-white font-bold" value={genStructure} onChange={e => setGenStructure(e.target.value)}>
                 <option value="2-2">2 - 2</option>
                 <option value="2-2-2">2 - 2 - 2</option>
                 <option value="2-3-2">2 - 3 - 2</option>
@@ -85,7 +85,7 @@ export default function RoomToolsDrawer({
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-extrabold uppercase text-slate-300 px-1">Rader</label>
-              <input type="number" className="input input-xs input-bordered bg-[#1a1e2b] border-slate-600 text-white font-bold text-center" value={genRows} onChange={e => setGenRows(Number(e.target.value))} min="1" max="10" />
+              <input type="number" className="input input-xs input-bordered bg-base-200 border-slate-600 text-white font-bold text-center" value={genRows} onChange={e => setGenRows(Number(e.target.value))} min="1" max="10" />
             </div>
           </div>
           <button className="btn btn-xs btn-primary font-extrabold w-full" onClick={generateStructure}>Generer bord-struktur</button>
@@ -93,7 +93,7 @@ export default function RoomToolsDrawer({
       </details>
 
       {/* Legg til Bord (Collapse) */}
-      <details className="collapse collapse-arrow bg-[#262b3a] border border-slate-700 shadow-inner rounded-xl overflow-visible">
+      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible">
         <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
           <i className="fa-solid fa-chair text-amber-400 mr-1.5"></i> Legg til bord
         </summary>
@@ -109,7 +109,7 @@ export default function RoomToolsDrawer({
       </details>
 
       {/* Valgte Bord (Collapse) - Kun åpen hvis bord er valgt */}
-      <details className="collapse collapse-arrow bg-[#262b3a] border border-slate-700 shadow-inner rounded-xl overflow-visible" open={selectedDesksCount > 0}>
+      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open={selectedDesksCount > 0}>
         <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
           <i className="fa-solid fa-pen-to-square text-fuchsia-400 mr-1.5"></i> Rediger valgte ({selectedDesksCount})
         </summary>

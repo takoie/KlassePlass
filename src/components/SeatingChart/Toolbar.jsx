@@ -1,7 +1,19 @@
 import React from 'react';
 
+/** Info-ikon med egen hover-boks (stilt som appens modaler), i stedet for nettleserens native title-tooltip. */
+function InfoTip({ text }) {
+  return (
+    <span className="relative inline-flex group/tip ml-auto">
+      <i className="fa-solid fa-circle-info w-4 text-slate-400 opacity-60 group-hover/tip:opacity-100"></i>
+      <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 rounded-lg bg-surface-raised border border-slate-700 shadow-xl text-[11px] leading-relaxed text-slate-300 text-left normal-case font-normal tracking-normal whitespace-pre-line opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-opacity z-50 pointer-events-none">
+        {text}
+      </div>
+    </span>
+  );
+}
+
 /**
- * Venstre verktøypanel: handling/visning/administrasjon-knapper.
+ * Venstre verktøypanel: administrer/visning-knapper.
  * Makkergrupper og Fun Mode utvider seg inline i panelet i stedet for å åpne
  * egne skuffer — det holder selve klasseromsvisningen i konstant bredde.
  */
@@ -11,7 +23,7 @@ export default function Toolbar({
   showGroupDrawer, setShowGroupDrawer, activeGroupId, setActiveGroupId, GROUP_COLORS,
   showFunDrawer, setShowFunDrawer,
   hideGroups, setHideGroups,
-  handleRuleBasedFunSpin, handleAutoFill, flipRoom, handlePrint,
+  handleRuleBasedFunSpin, handleAutoFill, flipRoom,
   showHistory, setShowHistory,
   showNumbers, setShowNumbers,
   showZones, setShowZones,
@@ -26,8 +38,8 @@ export default function Toolbar({
   spotlightSlotKey, startSpotlight, dismissSpotlight,
 }) {
   return (
-    <div className="w-64 bg-[#1a1e2b] flex flex-col z-10 flex-shrink-0 border-r border-slate-800 shadow-xl relative overflow-hidden">
-      <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-[#1a1e2b]">
+    <div className="w-64 bg-base-200 flex flex-col z-10 flex-shrink-0 border-r border-slate-800 shadow-xl relative overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-base-200">
         <h3 className="font-extrabold text-sm text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
           <i className="fa-solid fa-toolbox"></i> Verktøy
         </h3>
@@ -35,7 +47,7 @@ export default function Toolbar({
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-3">
         <div className="flex flex-col gap-2">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Handling</div>
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Administrer</div>
           <button className="btn btn-sm btn-primary justify-start border-none bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30" onClick={() => { setShowStudentDrawer(!showStudentDrawer); setShowGroupDrawer(false); setShowFunDrawer(false); }}>
             <i className="fa-solid fa-users w-5"></i> Elever {unplacedStudents.length > 0 && <span className="badge badge-sm badge-error font-bold ml-auto">{unplacedStudents.length}</span>}
           </button>
@@ -74,10 +86,6 @@ export default function Toolbar({
               )}
             </div>
           )}
-
-          <button className={`btn btn-sm justify-start ${hideGroups ? 'btn-neutral bg-amber-900/30 text-amber-400 border-amber-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => setHideGroups(!hideGroups)}>
-            <i className={`fa-solid ${hideGroups ? 'fa-eye-slash' : 'fa-eye'} w-5 ${hideGroups ? 'text-amber-400' : 'text-slate-400'}`}></i> {hideGroups ? 'Vis makkergrupper' : 'Skjul makkergrupper'}
-          </button>
 
           <button className={`btn btn-sm justify-start ${showFunDrawer ? 'btn-neutral bg-pink-900/30 text-pink-400 border-pink-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => { setShowFunDrawer(!showFunDrawer); setShowStudentDrawer(false); setShowGroupDrawer(false); }}>
             <i className="fa-solid fa-wand-magic-sparkles w-5 text-pink-400"></i> Fun mode
@@ -188,14 +196,9 @@ export default function Toolbar({
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handleRuleBasedFunSpin}>
             <i className="fa-solid fa-shuffle w-5 text-amber-400"></i> Randomiser
           </button>
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={flipRoom}>
-            <i className="fa-solid fa-rotate w-5 text-cyan-400"></i> Snu klasserommet
-          </button>
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={handlePrint}>
-            <i className="fa-solid fa-print w-5 text-indigo-400"></i> Skriv ut / PDF
-          </button>
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => document.getElementById('modal_sync_room').showModal()} title="Hent siste bordoppsett fra rom-editoren">
+          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => document.getElementById('modal_sync_room').showModal()}>
             <i className="fa-solid fa-arrows-rotate w-5 text-orange-400"></i> Oppdater romplan
+            <InfoTip text={'Klassekartet bruker et fastfrosset øyeblikksbilde av bordoppsettet.\n\nHar du gjort endringer i rommet (flyttet, lagt til eller fjernet bord) i Rom-editoren, må du trykke her for å hente inn det nye oppsettet.'} />
           </button>
         </div>
 
@@ -203,12 +206,15 @@ export default function Toolbar({
 
         <div className="flex flex-col gap-2">
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Visning</div>
+          <button className={`btn btn-sm justify-start ${hideGroups ? 'btn-neutral bg-amber-900/30 text-amber-400 border-amber-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => setHideGroups(!hideGroups)}>
+            <i className={`fa-solid ${hideGroups ? 'fa-eye-slash' : 'fa-eye'} w-5 ${hideGroups ? 'text-amber-400' : 'text-slate-400'}`}></i> {hideGroups ? 'Vis makkergrupper' : 'Skjul makkergrupper'}
+          </button>
+          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={flipRoom}>
+            <i className="fa-solid fa-rotate w-5 text-cyan-400"></i> Snu klasserommet
+          </button>
           <button className={`btn btn-sm ${showHistory ? 'btn-neutral bg-slate-700 text-amber-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setShowHistory(!showHistory)}>
             <i className="fa-solid fa-clock-rotate-left w-5"></i> {showHistory ? 'Skjul historikk' : 'Vis historikk'}
-            <i
-              className="fa-solid fa-circle-info w-4 ml-auto opacity-60 hover:opacity-100"
-              title={'Fargen viser hvor nylig elevparet satt sammen sist:\nRød = forrige klassekart\nOransje = 2 kart siden\nGul = 3 kart siden\nLime = 4 kart siden\nGrønn = 5 kart siden\nJo rødere, jo nyere satt de sammen.'}
-            ></i>
+            <InfoTip text={'Fargen viser hvor nylig elevparet satt sammen sist:\nRød = forrige klassekart\nOransje = 2 kart siden\nGul = 3 kart siden\nLime = 4 kart siden\nGrønn = 5 kart siden'} />
           </button>
           <button className={`btn btn-sm ${showNumbers ? 'btn-neutral bg-slate-700 text-emerald-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setShowNumbers(!showNumbers)}>
             <i className="fa-solid fa-hashtag w-5"></i> {showNumbers ? 'Skjul numre' : 'Vis numre'}
@@ -221,15 +227,6 @@ export default function Toolbar({
           </button>
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => setIsProjectorMode(true)}>
             <i className="fa-solid fa-expand w-5 text-fuchsia-400"></i> Prosjektor
-          </button>
-        </div>
-
-        <div className="h-px bg-slate-800/50 w-full my-1"></div>
-
-        <div className="flex flex-col gap-2">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Administrasjon</div>
-          <button className="btn btn-sm btn-outline border-red-500/20 text-red-400 justify-start hover:bg-red-500/10" onClick={() => document.getElementById('modal_delete_seating').showModal()}>
-            <i className="fa-solid fa-trash w-5"></i> Slett klassekart
           </button>
         </div>
       </div>

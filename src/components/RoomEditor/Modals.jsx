@@ -9,7 +9,7 @@ export default function Modals({
   return (
     <>
       <dialog id="modal_create_new_room" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
           <h3 className="font-bold text-lg flex items-center gap-2 text-white">
             <i className="fa-solid fa-wand-magic-sparkles text-[#f59e0b]"></i> Opprett nytt klasserom
           </h3>
@@ -22,7 +22,7 @@ export default function Modals({
             onChange={(e) => setNewRoomModalName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmCreateNew(); }}
             placeholder="f.eks. Rom 204..."
-            className="input input-bordered w-full mb-4 bg-[#262b3a] border-slate-700 text-white"
+            className="input input-bordered w-full mb-4 bg-surface-field border-slate-700 text-white"
             autoFocus
           />
 
@@ -31,7 +31,7 @@ export default function Modals({
             {presetsList.map(p => (
               <div
                 key={p.id}
-                className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col gap-1 ${selectedPreset === p.id ? 'border-[#34d399] bg-[#34d399]/10 shadow' : 'border-slate-800 bg-[#262b3a] hover:bg-slate-800'}`}
+                className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col gap-1 ${selectedPreset === p.id ? 'border-[#34d399] bg-[#34d399]/10 shadow' : 'border-slate-800 bg-surface-field hover:bg-slate-800'}`}
                 onClick={(e) => {
                   e.preventDefault();
                   setSelectedPreset(p.id);
@@ -58,7 +58,7 @@ export default function Modals({
 
       {selectedRoom && (
         <dialog id={`modal_delete_room_${selectedRoom.id}`} className="modal modal-bottom sm:modal-middle">
-          <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+          <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
             <h3 className="font-bold text-lg text-red-400">Slett rom?</h3>
             <p className="py-4 text-sm text-slate-300">Er du helt sikker på at du vil slette <strong>{selectedRoom.name}</strong>?</p>
             <div className="modal-action">

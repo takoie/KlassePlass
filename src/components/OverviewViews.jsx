@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import CreateGroupModal from './GroupWork/CreateGroupModal';
 
 export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
-  <div 
-    className="bg-[#262b3a] border border-slate-700/70 rounded-2xl p-5 flex flex-col justify-between cursor-pointer hover:border-slate-500 hover:shadow-[0_8px_25px_rgba(0,0,0,0.4)] transition-all group duration-200 relative overflow-hidden"
+  <div
+    className="bg-base-100/50 backdrop-blur-md border border-white/10 rounded-2xl p-5 flex flex-col justify-between cursor-pointer hover:border-emerald-400/30 hover:bg-base-100/70 hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all group duration-200 relative overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
     onClick={onClick}
   >
     <div className="flex items-start gap-3 mb-4">
-      <div className="w-10 h-10 rounded-xl bg-blue-950/80 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-all flex-shrink-0 mt-0.5">
+      <div className="w-10 h-10 rounded-xl bg-blue-500/10 backdrop-blur-sm border border-blue-400/20 flex items-center justify-center text-blue-300 group-hover:scale-105 transition-all flex-shrink-0 mt-0.5">
         <i className={`${icon} text-base`}></i>
       </div>
       <div className="flex-1 overflow-hidden">
@@ -23,7 +23,7 @@ export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-em
       </div>
     </div>
 
-    <div className="flex justify-between items-end pt-3 border-t border-slate-800/80 text-xs text-slate-300">
+    <div className="flex justify-between items-end pt-3 border-t border-white/10 text-xs text-slate-300">
       <div className="flex flex-col gap-1">
         {infoList.map((info, i) => (
           <div key={i} className="flex items-center gap-1.5 text-xs">
@@ -36,15 +36,15 @@ export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-em
       <div className="flex items-center gap-2">
         {actions}
         {onDelete && (
-          <button 
-            className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-red-950/60 hover:text-red-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+          <button
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-500/15 hover:text-red-400 text-slate-400 border border-white/10 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             title="Slett"
           >
             <i className="fa-solid fa-trash text-xs"></i>
           </button>
         )}
-        <div className="w-8 h-8 rounded-full bg-[#1b1e28] text-slate-300 group-hover:bg-[#34d399] group-hover:text-slate-950 flex items-center justify-center transition-all shadow">
+        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-slate-300 group-hover:bg-[#34d399] group-hover:border-transparent group-hover:text-slate-950 flex items-center justify-center transition-all shadow">
           <i className="fa-solid fa-arrow-right text-xs"></i>
         </div>
       </div>
@@ -56,7 +56,7 @@ export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCance
   if (!isOpen) return null;
   return (
     <dialog className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+      <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
         <h3 className="font-bold text-lg text-red-400 flex items-center gap-2">
           <i className="fa-solid fa-triangle-exclamation"></i> Slett {title}?
         </h3>
@@ -74,7 +74,7 @@ export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCance
 };
 
 export const PageLayout = ({ title, icon, onAdd, children }) => (
-  <div className="h-full flex flex-col p-8 bg-[#1e2230] overflow-y-auto">
+  <div className="h-full flex flex-col p-8 module-content-bg overflow-y-auto">
     <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
       <div className="flex items-center gap-3">
         <i className={`${icon} text-2xl text-[#34d399]`}></i>
@@ -380,11 +380,10 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
         return (
           <Card
             key={cls.id}
-            title={cls.name}
-            badgeText={`${classSeatings.length} ${classSeatings.length === 1 ? 'PERIODE' : 'PERIODER'}`}
+            title={latestChart.name}
+            badgeText={cls.name}
             badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
             infoList={[
-              { icon: 'fa-solid fa-signature', text: latestChart.name },
               { icon: 'fa-solid fa-calendar-week', text: latestChart.comment || 'Ingen periode angitt' },
               { icon: 'fa-solid fa-school', text: roomName },
               { icon: 'fa-solid fa-users', text: `${studentCount} elever` }
@@ -412,7 +411,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       />
 
       <dialog id="modal_create_seating" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
           <h3 className="font-bold text-lg text-emerald-400 mb-6 flex items-center gap-2">
             <i className="fa-solid fa-map-location-dot"></i> Opprett nytt klassekart
           </h3>
@@ -422,7 +421,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
               <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på klassekartet</label>
               <input
                 type="text"
-                className="input input-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500"
+                className="input input-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500"
                 value={chartName}
                 onChange={e => { setChartName(e.target.value); setNameEdited(true); }}
                 autoFocus
@@ -432,7 +431,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasse</label>
-                <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
+                <select className="select select-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
                   {classes.length === 0 && <option value="" disabled>Ingen klasser funnet</option>}
                   {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -445,7 +444,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
 
               <div>
                 <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasserom</label>
-                <select className="select select-bordered w-full bg-[#262b3a] border-slate-600 focus:border-emerald-500" value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)}>
+                <select className="select select-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500" value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)}>
                   {rooms.length === 0 && <option value="" disabled>Ingen rom funnet</option>}
                   {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
@@ -463,14 +462,14 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                 <span className="text-xs text-slate-400">Uke</span>
                 <input
                   type="number" min="1" max="52"
-                  className="input input-bordered w-20 bg-[#262b3a] border-slate-600 focus:border-emerald-500 text-center"
+                  className="input input-bordered w-20 bg-surface-field border-slate-600 focus:border-emerald-500 text-center"
                   value={startWeek}
                   onChange={e => setStartWeek(e.target.value)}
                 />
                 <span className="text-xs text-slate-400">i</span>
                 <input
                   type="number" min="1" max="52"
-                  className="input input-bordered w-20 bg-[#262b3a] border-slate-600 focus:border-emerald-500 text-center"
+                  className="input input-bordered w-20 bg-surface-field border-slate-600 focus:border-emerald-500 text-center"
                   value={periodWeeks}
                   onChange={e => setPeriodWeeks(e.target.value)}
                 />
@@ -547,9 +546,10 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
         return (
           <Card
             key={cls.id}
-            title={cls.name}
+            title={latest.name}
+            badgeText={cls.name}
+            badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
             infoList={[
-              { icon: 'fa-solid fa-people-group', text: `Siste: ${latest.name}` },
               { icon: 'fa-solid fa-object-group', text: `${latest.group_count} grupper` },
               { icon: 'fa-solid fa-layer-group', text: `Historikk: ${classAssignments.length} inndelinger` }
             ]}

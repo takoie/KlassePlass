@@ -212,9 +212,9 @@ export default function ClassManager({ onBack, initialId }) {
   ];
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#202534] overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
       {/* Topp-bar */}
-      <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
+      <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           {onBack && (
             <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
@@ -224,7 +224,7 @@ export default function ClassManager({ onBack, initialId }) {
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Klasse:</span>
             <select 
-              className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold min-w-40"
+              className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold min-w-40"
               value={selectedClass?.id || ''}
               onChange={(e) => {
                 const found = classes.find(c => c.id === Number(e.target.value));
@@ -260,7 +260,7 @@ export default function ClassManager({ onBack, initialId }) {
                 type="text" 
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
-                className="input input-ghost text-3xl font-extrabold w-full bg-transparent border-b-2 border-transparent hover:border-slate-700 focus:bg-[#1a1e2b] focus:border-[#34d399] px-2 transition-all rounded-none h-14 text-center text-white"
+                className="input input-ghost text-3xl font-extrabold w-full bg-transparent border-b-2 border-transparent hover:border-slate-700 focus:bg-base-200 focus:border-[#34d399] px-2 transition-all rounded-none h-14 text-center text-white"
                 placeholder="Klassenavn..."
               />
               <div className="mt-1 flex items-center justify-center gap-1.5 text-xs font-semibold">
@@ -278,7 +278,7 @@ export default function ClassManager({ onBack, initialId }) {
             
             {/* Faner */}
             <div className="w-full mb-4 flex justify-center">
-              <div className="bg-[#1a1e2b] border border-slate-800 p-1 rounded-xl flex gap-1">
+              <div className="bg-base-200 border border-slate-800 p-1 rounded-xl flex gap-1">
                 <button 
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'students' ? 'bg-[#34d399] text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
                   onClick={() => setActiveTab('students')}
@@ -302,7 +302,7 @@ export default function ClassManager({ onBack, initialId }) {
                     type="text" 
                     value={newStudentName}
                     onChange={(e) => setNewStudentName(e.target.value)}
-                    className="input input-bordered input-sm flex-1 bg-[#1a1e2b] border-slate-700 text-white placeholder-slate-500" 
+                    className="input input-bordered input-sm flex-1 bg-base-200 border-slate-700 text-white placeholder-slate-500" 
                     placeholder="Skriv inn elevens navn..."
                     autoFocus
                   />
@@ -319,7 +319,7 @@ export default function ClassManager({ onBack, initialId }) {
                   </button>
                 </form>
 
-                <div className="bg-[#1a1e2b] rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+                <div className="bg-base-200 rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-2 flex flex-col gap-1">
                   {students.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center h-full">
                       <i className="fa-solid fa-users text-4xl mb-2 opacity-30"></i>
@@ -327,14 +327,14 @@ export default function ClassManager({ onBack, initialId }) {
                     </div>
                   ) : (
                     students.map((student, idx) => (
-                      <div key={student.id} className="flex justify-between items-center p-2 hover:bg-[#262b3a] rounded-xl group transition-colors">
+                      <div key={student.id} className="flex justify-between items-center p-2 hover:bg-surface-field rounded-xl group transition-colors">
                         <div className="flex items-center gap-3 flex-1">
                           <span className="badge badge-sm font-mono opacity-50 w-6 border-none bg-slate-800 text-slate-300">{idx + 1}</span>
                           <input 
                             type="text" 
                             value={student.name}
                             onChange={(e) => updateStudent(student.id, e.target.value)}
-                            className="input input-sm input-ghost flex-1 font-medium bg-transparent px-1 text-white focus:bg-[#1a1e2b] focus:outline-none"
+                            className="input input-sm input-ghost flex-1 font-medium bg-transparent px-1 text-white focus:bg-base-200 focus:outline-none"
                           />
                         </div>
                         <button 
@@ -354,18 +354,18 @@ export default function ClassManager({ onBack, initialId }) {
             {/* Fane 2: Elev-regler og tilrettelegging */}
             {activeTab === 'rules' && (
               <div className="flex-1 overflow-hidden flex flex-col w-full">
-                <form onSubmit={handleAddRule} className="bg-[#1a1e2b] p-4 rounded-2xl border border-slate-800 mb-4 flex flex-col gap-3">
+                <form onSubmit={handleAddRule} className="bg-base-200 p-4 rounded-2xl border border-slate-800 mb-4 flex flex-col gap-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div>
                       <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Regel-type</label>
-                      <select className="select select-xs select-bordered bg-[#262b3a] border-slate-700 text-white font-bold w-full" value={ruleType} onChange={e => { setRuleType(e.target.value); setSelectedRuleStudentIds([]); }}>
+                      <select className="select select-xs select-bordered bg-surface-field border-slate-700 text-white font-bold w-full" value={ruleType} onChange={e => { setRuleType(e.target.value); setSelectedRuleStudentIds([]); }}>
                         {ruleOptions.map(opt => <option key={opt.type} value={opt.type}>{opt.label}</option>)}
                       </select>
                     </div>
 
                     <div>
                       <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Viktighetsgrad (prioritet)</label>
-                      <select className="select select-xs select-bordered bg-[#262b3a] border-slate-700 text-white font-bold w-full" value={rulePriority} onChange={e => setRulePriority(e.target.value)}>
+                      <select className="select select-xs select-bordered bg-surface-field border-slate-700 text-white font-bold w-full" value={rulePriority} onChange={e => setRulePriority(e.target.value)}>
                         <option value="critical">🔴 Kritisk (Må oppfylles)</option>
                         <option value="important">🟡 Viktig (Bør oppfylles)</option>
                         <option value="wish">🟢 Ønske (Om det går)</option>
@@ -375,7 +375,7 @@ export default function ClassManager({ onBack, initialId }) {
 
                   <div className="text-xs opacity-60 text-slate-400">Velg elev(er) for denne regelen (du kan kombinere flere regler for samme elev):</div>
                   
-                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-[#262b3a] rounded-xl border border-slate-800">
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-surface-field rounded-xl border border-slate-800">
                     {students.map((s) => {
                       const isSelected = selectedRuleStudentIds.includes(s.id);
                       return (
@@ -396,7 +396,7 @@ export default function ClassManager({ onBack, initialId }) {
                   </button>
                 </form>
 
-                <div className="bg-[#1a1e2b] rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+                <div className="bg-base-200 rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-3 flex flex-col gap-2">
                   {rules.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center h-full">
                       <i className="fa-solid fa-shield-halved text-4xl mb-2 opacity-30"></i>
@@ -407,12 +407,12 @@ export default function ClassManager({ onBack, initialId }) {
                       const optionMeta = ruleOptions.find(o => o.type === r.type);
                       const ruleStudentNames = (r.studentIds || []).map(id => students.find(s => s.id === id)?.name || id);
                       
-                      let prioBadge = <span className="badge badge-error badge-xs font-bold">🔴 Kritisk</span>;
-                      if (r.priority === 'important') prioBadge = <span className="badge badge-warning badge-xs font-bold">🟡 Viktig</span>;
-                      if (r.priority === 'wish') prioBadge = <span className="badge badge-success badge-xs font-bold">🟢 Ønske</span>;
+                      let prioBadge = <span className="badge badge-error badge-xs font-bold gap-1"><i className="fa-solid fa-circle-exclamation"></i> Kritisk</span>;
+                      if (r.priority === 'important') prioBadge = <span className="badge badge-warning badge-xs font-bold gap-1"><i className="fa-solid fa-triangle-exclamation"></i> Viktig</span>;
+                      if (r.priority === 'wish') prioBadge = <span className="badge badge-success badge-xs font-bold gap-1"><i className="fa-solid fa-circle-check"></i> Ønske</span>;
 
                       return (
-                        <div key={r.id} className="p-3 bg-[#262b3a] rounded-xl border border-slate-800 flex justify-between items-center">
+                        <div key={r.id} className="p-3 bg-surface-field rounded-xl border border-slate-800 flex justify-between items-center">
                           <div className="flex items-center gap-3 flex-wrap">
                             {prioBadge}
                             <span className="badge badge-neutral gap-1.5 text-xs bg-slate-800 text-slate-200 border-slate-700">
@@ -446,13 +446,13 @@ export default function ClassManager({ onBack, initialId }) {
       
       {/* Masseimport modal */}
       <dialog id="modal_import_students" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
             <i className="fa-solid fa-file-import text-indigo-400"></i> Masseimport av elever
           </h3>
           <p className="text-xs text-slate-400 mb-2">Lim inn navn fra Excel, Word eller CSV. Skill med linjeskift eller komma.</p>
           <textarea 
-            className="textarea textarea-bordered w-full h-48 bg-[#262b3a] border-slate-700 font-mono text-sm text-white" 
+            className="textarea textarea-bordered w-full h-48 bg-surface-field border-slate-700 font-mono text-sm text-white" 
             placeholder="Kari Nordmann&#10;Ola Nordmann&#10;Per P..."
             value={importData}
             onChange={(e) => setImportData(e.target.value)}
@@ -469,7 +469,7 @@ export default function ClassManager({ onBack, initialId }) {
       {/* Slette-modal */}
       {selectedClass && (
         <dialog id={`modal_delete_${selectedClass.id}`} className="modal modal-bottom sm:modal-middle">
-          <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+          <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
             <h3 className="font-bold text-lg text-red-400">Slett klasse?</h3>
             <p className="py-4 text-sm text-slate-300">Er du helt sikker på at du vil slette <strong>{selectedClass.name}</strong>?</p>
             <div className="modal-action">

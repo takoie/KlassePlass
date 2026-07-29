@@ -191,10 +191,10 @@ export default function PrintPreviewModal({
   return createPortal(
     <>
       <dialog id="modal_print_preview" ref={dialogRef} className="modal modal-open">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl w-[95vw] max-w-[95vw] h-[92vh] max-h-[92vh] overflow-y-auto flex flex-col">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl w-[95vw] max-w-[95vw] h-[92vh] max-h-[92vh] overflow-y-auto flex flex-col">
           <h3 className="font-bold text-lg mb-4">{titleText}</h3>
           <div className="flex gap-4 flex-1 min-h-0">
-            <div className="w-44 flex-shrink-0 flex flex-col gap-2 bg-[#1a1e2b] border border-slate-800 rounded-xl p-3">
+            <div className="w-44 flex-shrink-0 flex flex-col gap-2 bg-base-200 border border-slate-800 rounded-xl p-3">
               <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
                 <span>Farger</span>
                 <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showColors} onChange={(e) => setShowColors(e.target.checked)} />

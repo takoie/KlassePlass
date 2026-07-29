@@ -205,8 +205,8 @@ export default function GroupEditor({ onBack, initialId }) {
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#202534] overflow-hidden">
-      <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
+    <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
+      <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
           <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1 flex-shrink-0" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake
@@ -215,7 +215,7 @@ export default function GroupEditor({ onBack, initialId }) {
             type="text"
             value={name}
             onChange={(e) => { setName(e.target.value); setDirty(true); }}
-            className="input input-ghost text-sm font-bold bg-[#262b3a] border border-slate-700 focus:border-fuchsia-400 px-3 h-8 rounded text-white w-40"
+            className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-fuchsia-400 px-3 h-8 rounded text-white w-40"
           />
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400 flex-shrink-0">{className}</span>
         </div>
@@ -285,7 +285,7 @@ export default function GroupEditor({ onBack, initialId }) {
         </div>
         <DragOverlay>
           {activeDragId ? (
-            <div className="bg-[#262b3a] rounded-lg px-2.5 py-1.5 shadow-2xl border border-fuchsia-400 text-sm text-slate-100 flex items-center gap-1.5">
+            <div className="bg-surface-field rounded-lg px-2.5 py-1.5 shadow-2xl border border-fuchsia-400 text-sm text-slate-100 flex items-center gap-1.5">
               {leaderIds.includes(activeDragId) && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
               {studentsById[activeDragId]?.name}
             </div>
@@ -324,7 +324,7 @@ export default function GroupEditor({ onBack, initialId }) {
       )}
 
       <dialog id="modal_delete_group_assignment" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
           <h3 className="font-bold text-lg text-red-400 flex items-center gap-2">
             <i className="fa-solid fa-triangle-exclamation"></i> Slett gruppeinndeling?
           </h3>
@@ -349,7 +349,7 @@ function StudentCard({ sid, student, isLeader, isLocked, onContextMenu }) {
       {...listeners}
       {...attributes}
       onContextMenu={onContextMenu}
-      className="flex items-center justify-between gap-2 bg-[#262b3a] rounded-lg px-2.5 py-1.5 cursor-grab select-none touch-none"
+      className="flex items-center justify-between gap-2 bg-surface-field rounded-lg px-2.5 py-1.5 cursor-grab select-none touch-none"
       style={{ opacity: isDragging ? 0.4 : 1 }}
     >
       <span className="text-sm text-slate-200 truncate flex items-center gap-1.5">
@@ -366,7 +366,7 @@ function GroupPanel({ idx, color, children }) {
   return (
     <div
       ref={setNodeRef}
-      className={`bg-[#1a1e2b] border rounded-2xl overflow-hidden flex flex-col transition-colors ${isOver ? 'border-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'border-slate-800'}`}
+      className={`bg-base-200 border rounded-2xl overflow-hidden flex flex-col transition-colors ${isOver ? 'border-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'border-slate-800'}`}
     >
       {children}
     </div>

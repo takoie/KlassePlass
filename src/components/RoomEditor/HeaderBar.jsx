@@ -3,7 +3,7 @@ import React from 'react';
 /** Toppbar: rom-valg, nytt rom-knapp, lagre-status og slett-knapp. */
 export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoom, handleOpenNewModal, saveState }) {
   return (
-    <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
+    <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
       <div className="flex items-center gap-2 flex-wrap">
         {onBack && (
           <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
@@ -13,7 +13,7 @@ export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoo
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Rom:</span>
           <select
-            className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold min-w-40"
+            className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold min-w-40"
             value={selectedRoom?.id || ''}
             onChange={(e) => {
               const found = rooms.find(r => r.id === Number(e.target.value));

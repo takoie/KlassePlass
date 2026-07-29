@@ -16,7 +16,7 @@ export default function UpdateBanner() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-[200] w-80 bg-[#262b3a] border border-emerald-500/40 rounded-2xl shadow-2xl p-4 animate-[fadeIn_0.2s_ease-out]">
+    <div className="fixed bottom-4 right-4 z-[200] w-80 bg-surface-field border border-emerald-500/40 rounded-2xl shadow-2xl p-4 animate-[fadeIn_0.2s_ease-out]">
       <div className="flex items-start gap-3">
         <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
           <i className="fa-solid fa-arrow-up text-emerald-400 text-sm"></i>

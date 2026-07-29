@@ -2,21 +2,22 @@ import React from 'react';
 
 /**
  * Toppbar: klasse-valg, periode-valg, lagre-status og slett-knapp.
- * Kartets navn er gitt av klassen (ikke fritekst) — perioden identifiseres
- * kun av ukeangivelsen, som vises direkte i nedtrekksmenyen. Rommet knyttes
- * til klassen én gang (ved opprettelse) og vises derfor kun som info her,
- * ikke som en egen nedtrekksmeny å endre løpende.
+ * Perioden identifiseres kun av ukeangivelsen, som vises direkte i
+ * nedtrekksmenyen — kartets eget navn redigeres via blyant-ikonet
+ * (modal_edit_period). Rommet knyttes til klassen én gang (ved opprettelse)
+ * og vises derfor kun som info her, ikke som en egen nedtrekksmeny å endre
+ * løpende.
  */
 export default function HeaderBar({
   onBack,
   classes, selectedClass, setSelectedClass,
   rooms, selectedRoom,
   seatings, selectedSeatingId, handleSelectSeating, setEditingPeriod,
-  saveState, handleDelete,
+  saveState, handleDelete, handlePrint,
 }) {
   const roomName = rooms.find(r => r.id === Number(selectedRoom))?.name || '—';
   return (
-    <div className="px-4 py-2 bg-[#1a1e2b] border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0 shadow-md">
+    <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0 shadow-md">
       <div className="flex items-center gap-2 flex-wrap">
         {onBack && (
           <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
@@ -26,7 +27,7 @@ export default function HeaderBar({
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Klasse:</span>
           <select
-            className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold max-w-28"
+            className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold max-w-28"
             value={selectedClass}
             onChange={(e) => setSelectedClass(Number(e.target.value))}
           >
@@ -35,14 +36,14 @@ export default function HeaderBar({
         </div>
         <div className="flex items-center gap-1.5" title="Rommet er knyttet til klassen og endres i rom-editoren">
           <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Rom:</span>
-          <span className="text-xs font-bold text-slate-300 px-2 py-1 bg-[#262b3a] border border-slate-700 rounded">{roomName}</span>
+          <span className="text-xs font-bold text-slate-300 px-2 py-1 bg-surface-field border border-slate-700 rounded">{roomName}</span>
         </div>
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Periode:</span>
         <select
-          className="select select-bordered select-xs bg-[#262b3a] border-slate-700 text-white font-bold max-w-32"
+          className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold max-w-32"
           value={selectedSeatingId}
           onChange={(e) => handleSelectSeating(e.target.value)}
         >
@@ -53,7 +54,7 @@ export default function HeaderBar({
         </select>
         <button
           className="btn btn-ghost btn-xs text-slate-400 hover:text-white"
-          title="Rediger ukeangivelse"
+          title="Rediger navn og periode"
           onClick={() => {
             const existing = seatings.find(s => s.id === Number(selectedSeatingId));
             if (existing) setEditingPeriod({ id: existing.id, name: existing.name, comment: existing.comment || '' });
@@ -81,6 +82,12 @@ export default function HeaderBar({
             <i className="fa-solid fa-circle-check text-[#34d399]"></i> Lagret
           </span>
         )}
+        <button
+          className="btn btn-outline btn-xs border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap"
+          onClick={handlePrint}
+        >
+          <i className="fa-solid fa-print text-indigo-400"></i> Skriv ut / PDF
+        </button>
         <button
           className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs whitespace-nowrap"
           onClick={handleDelete}

@@ -18,10 +18,15 @@ export default function Layout({ currentView, setCurrentView, children }) {
   ];
 
   return (
-    <div className="flex h-full w-full bg-[#12151e] p-3 gap-3 relative">
+    <div className="flex h-full w-full app-shell-bg p-3 gap-3 relative">
       {/* Global Titlebar (Always on top) */}
       {!isFullscreen && (
         <div className="titlebar flex items-center justify-end pr-3 pt-3 flex-shrink-0 bg-transparent absolute top-0 right-0 w-full z-[100] pointer-events-none" style={{ WebkitAppRegion: 'drag', height: '40px' }}>
+          {(currentView === 'seating' || currentView === 'rooms') && (
+            <div className="absolute left-1/2 top-5 h-7 flex items-center -translate-x-1/2 select-none" style={{ WebkitAppRegion: 'drag' }}>
+              <span className="font-extrabold text-white text-lg tracking-wider">KLASSE<span className="text-[#f59e0b] tracking-wider drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]">PLASS</span></span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag', pointerEvents: 'auto' }}>
             <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.minimizeWindow()} title="Minimer">
               <i className="fa-solid fa-minus text-xs"></i>
@@ -38,7 +43,7 @@ export default function Layout({ currentView, setCurrentView, children }) {
 
       {/* Sidebar for Desktop */}
       {!isFullscreen && currentView !== 'seating' && currentView !== 'rooms' && currentView !== 'station-presenter' && (
-        <div className="w-56 bg-[#1a1e2b] flex flex-col z-50 flex-shrink-0 rounded-2xl border border-slate-800/80 shadow-2xl p-3">
+        <div className="w-56 bg-base-200 flex flex-col z-50 flex-shrink-0 rounded-2xl border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5),0_0_60px_-25px_rgba(52,211,153,0.35)] p-3">
         
         {/* Logo Area - Perfekt Midtstilt */}
         <div className="h-16 flex items-center justify-center mb-3" style={{ WebkitAppRegion: 'drag' }}>
@@ -84,7 +89,7 @@ export default function Layout({ currentView, setCurrentView, children }) {
           klassekart/rom/stasjonspresentasjon) eller synlig. Tidligere hoppet "seating" og
           "station-presenter" over denne innpakningen, som fikk deres egne topplinjer til
           å kollidere visuelt med vinduskontrollene (minimer/maksimer/lukk). */}
-      <div className="flex-1 flex flex-col overflow-hidden relative bg-[#202534] rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">
+      <div className="flex-1 flex flex-col overflow-hidden relative bg-base-100 rounded-2xl border border-white/10 shadow-[0_10px_35px_rgba(0,0,0,0.6),0_0_80px_-25px_rgba(52,211,153,0.3)]">
         <div className="flex-1 overflow-hidden pt-10">
           {children}
         </div>

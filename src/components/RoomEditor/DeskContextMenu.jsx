@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 
 /** Høyreklikk-meny på ett eller flere valgte bord: gruppe, kapasitet, soner, dupliser/slett. */
 export default function DeskContextMenu({
@@ -7,12 +7,34 @@ export default function DeskContextMenu({
   setDeskCapacity, toggleZoneOnSelected,
   handleDuplicateSelected, handleDeleteSelected,
 }) {
+  const menuRef = useRef(null);
+  const [pos, setPos] = useState(null);
+
+  // Menyens reelle høyde varierer med innhold og kan ikke gjettes på forhånd -
+  // mål den faktiske DOM-størrelsen og klem den innenfor vinduet før den vises,
+  // slik at den ikke havner delvis skjult under vinduskanten når bordet ligger langt ned.
+  useLayoutEffect(() => {
+    if (!contextMenu || !menuRef.current) { setPos(null); return; }
+    const margin = 8;
+    const { offsetWidth: w, offsetHeight: h } = menuRef.current;
+    let top = contextMenu.mouseY;
+    let left = contextMenu.mouseX;
+    if (top + h > window.innerHeight - margin) top = Math.max(margin, window.innerHeight - h - margin);
+    if (left + w > window.innerWidth - margin) left = Math.max(margin, window.innerWidth - w - margin);
+    setPos({ top, left });
+  }, [contextMenu]);
+
   if (!contextMenu) return null;
+
+  const style = pos
+    ? { top: pos.top, left: pos.left }
+    : { top: contextMenu.mouseY, left: contextMenu.mouseX, visibility: 'hidden' };
 
   return (
     <ul
-      className="menu bg-[#171a25] border border-slate-700 rounded-2xl shadow-2xl fixed z-50 p-2 text-xs text-slate-200 w-56"
-      style={{ top: contextMenu.mouseY, left: contextMenu.mouseX }}
+      ref={menuRef}
+      className="menu bg-surface-raised border border-slate-700 rounded-2xl shadow-2xl fixed z-50 p-2 text-xs text-slate-200 w-56"
+      style={style}
       onClick={(e) => e.stopPropagation()}
     >
       <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-slate-400">Makkergrupper</li>

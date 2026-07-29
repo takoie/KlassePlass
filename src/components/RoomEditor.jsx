@@ -740,13 +740,7 @@ export default function RoomEditor({ onBack, initialId }) {
       setSelectedDesks([item.id]);
     }
     
-    const menuHeight = 400; 
-    let y = e.clientY;
-    if (y + menuHeight > window.innerHeight) {
-      y = window.innerHeight - menuHeight - 20;
-    }
-    
-    setContextMenu({ mouseX: e.clientX, mouseY: y });
+    setContextMenu({ mouseX: e.clientX, mouseY: e.clientY });
   };
 
   const handleDeskClick = (e, item) => {
@@ -861,7 +855,7 @@ export default function RoomEditor({ onBack, initialId }) {
   ];
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#131620] overflow-hidden" onMouseUp={handleCanvasMouseUp}>
+    <div className="flex flex-col h-full w-full bg-base-300 overflow-hidden" onMouseUp={handleCanvasMouseUp}>
       <HeaderBar
         onBack={onBack}
         rooms={rooms} selectedRoom={selectedRoom} handleSelectRoom={handleSelectRoom}
@@ -871,7 +865,7 @@ export default function RoomEditor({ onBack, initialId }) {
       <div className="flex flex-1 overflow-hidden relative">
         {selectedRoom ? (
           <>
-            <div className="w-64 bg-[#1a1e2b] border-r border-slate-800 flex flex-col z-10 flex-shrink-0 overflow-y-auto shadow-xl">
+            <div className="w-64 bg-base-200 border-r border-slate-800 flex flex-col z-10 flex-shrink-0 overflow-y-auto shadow-xl">
               <RoomToolsDrawer
                 showNumbers={showNumbers}
                 setShowNumbers={setShowNumbers}
@@ -895,7 +889,7 @@ export default function RoomEditor({ onBack, initialId }) {
                 clearDesks={clearDesks}
               />
             </div>
-            <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden bg-[#131620] relative">
+            <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden bg-base-300 relative">
               <DndContext 
                 sensors={sensors} 
                 onDragStart={handleDragStart}
@@ -904,7 +898,7 @@ export default function RoomEditor({ onBack, initialId }) {
               >
                 <div 
                   ref={canvasRef}
-                  className="absolute bg-[#202534] border-2 border-slate-700 rounded-2xl shadow-2xl origin-top-left" 
+                  className="absolute bg-base-100 border-2 border-slate-700 rounded-2xl shadow-2xl origin-top-left" 
                   style={{ 
                     width: '1100px',
                     height: '700px',

@@ -36,7 +36,7 @@ export default function DeskItem({
   const groupColor = desk.groupId ? GROUP_COLORS[(desk.groupId - 1) % GROUP_COLORS.length] : null;
 
   let borderStyle = groupColor ? { borderWidth: '3px', borderColor: groupColor } : {};
-  let borderClass = 'border border-slate-700/70 bg-[#1a1e2b] hover:border-[#34d399]';
+  let borderClass = 'border border-slate-700/70 bg-base-200 hover:border-[#34d399]';
   
   if (isSelected) {
     borderClass = 'border-2 border-indigo-500 bg-indigo-950/50 shadow-[0_0_16px_rgba(99,102,241,0.6)] z-20 scale-105';
@@ -67,7 +67,7 @@ export default function DeskItem({
     >
       {showNumbers && (
         <div className="absolute top-1 left-1.5 z-20">
-          <span className="px-1.5 py-0.5 min-w-[20px] rounded bg-[#131620]/90 border border-slate-700/50 text-slate-300 font-extrabold text-[10px] flex items-center justify-center shadow-sm">
+          <span className="px-1.5 py-0.5 min-w-[20px] rounded bg-base-300/90 border border-slate-700/50 text-slate-300 font-extrabold text-[10px] flex items-center justify-center shadow-sm">
             {deskNumber}
           </span>
         </div>
@@ -83,7 +83,7 @@ export default function DeskItem({
 
       <div className="flex gap-1 w-full flex-1 items-center justify-center">
         {Array.from({ length: cap }).map((_, slotIdx) => (
-          <div key={slotIdx} className="flex-1 h-full bg-[#262b3a] rounded-lg flex items-center justify-center text-xs font-bold text-slate-400">
+          <div key={slotIdx} className="flex-1 h-full bg-surface-field rounded-lg flex items-center justify-center text-xs font-bold text-slate-400">
           </div>
         ))}
       </div>

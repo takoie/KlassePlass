@@ -106,7 +106,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
 
   return (
     <dialog id="modal_create_group" className="modal modal-bottom sm:modal-middle">
-      <div className="modal-box bg-[#171a25] border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
+      <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
         <h3 className="font-bold text-lg flex items-center gap-2 text-white">
           <i className="fa-solid fa-people-group text-fuchsia-400"></i> Ny gruppeinndeling
         </h3>
@@ -116,7 +116,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
             <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på inndelingen</label>
             <input
               type="text"
-              className="input input-bordered w-full bg-[#262b3a] border-slate-700 text-white"
+              className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="f.eks. Prosjektgrupper uke 12"
@@ -127,7 +127,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
           <div>
             <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klasse</label>
             <select
-              className="select select-bordered w-full bg-[#262b3a] border-slate-700 text-white"
+              className="select select-bordered w-full bg-surface-field border-slate-700 text-white"
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
             >
@@ -142,7 +142,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
               type="number"
               min="2"
               max={Math.max(2, classStudents.length)}
-              className="input input-bordered w-24 bg-[#262b3a] border-slate-700 text-white"
+              className="input input-bordered w-24 bg-surface-field border-slate-700 text-white"
               value={numGroups}
               onChange={(e) => setNumGroups(Number(e.target.value))}
             />
@@ -163,7 +163,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
               Unngå nylige gruppekombinasjoner — siste
               <input
                 type="number" min="1" max="20"
-                className="input input-bordered input-xs w-16 bg-[#262b3a] border-slate-700 text-white"
+                className="input input-bordered input-xs w-16 bg-surface-field border-slate-700 text-white"
                 value={avoidLastN}
                 onChange={(e) => setAvoidLastN(Number(e.target.value))}
                 disabled={!avoidHistory}

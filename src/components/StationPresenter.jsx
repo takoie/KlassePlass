@@ -79,12 +79,12 @@ export default function StationPresenter({ onBack, initialId }) {
   };
 
   if (loading) {
-    return <div className="flex h-full w-full items-center justify-center bg-[#131620] text-slate-500">Laster...</div>;
+    return <div className="flex h-full w-full items-center justify-center bg-base-300 text-slate-500">Laster...</div>;
   }
 
   if (!session) {
     return (
-      <div className="flex flex-col h-full w-full items-center justify-center bg-[#131620] text-slate-500 gap-3">
+      <div className="flex flex-col h-full w-full items-center justify-center bg-base-300 text-slate-500 gap-3">
         <i className="fa-solid fa-arrows-rotate text-5xl opacity-20"></i>
         <h2 className="text-lg font-bold text-white">Fant ikke stasjonsøkten</h2>
         <button className="btn btn-ghost btn-sm text-slate-400" onClick={onBack}>
@@ -100,8 +100,8 @@ export default function StationPresenter({ onBack, initialId }) {
   const isLastRotation = rotationIndex >= session.rotationPlan.length - 1;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#131620] overflow-hidden">
-      <div className="px-6 py-3 bg-[#1a1e2b] border-b border-slate-800 flex justify-between items-center flex-shrink-0">
+    <div className="flex flex-col h-full w-full bg-base-300 overflow-hidden">
+      <div className="px-6 py-3 bg-base-200 border-b border-slate-800 flex justify-between items-center flex-shrink-0">
         <div className="flex items-center gap-4">
           <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Avslutt
@@ -122,7 +122,7 @@ export default function StationPresenter({ onBack, initialId }) {
             const studentIds = session.groups[groupIdx] || [];
             return (
               <div key={station.id} className={`rounded-2xl border-2 overflow-hidden ${station.isTeacher ? 'border-orange-500' : 'border-slate-800'}`}>
-                <div className={`px-4 py-3 flex items-center justify-between ${station.isTeacher ? 'bg-orange-500/20' : 'bg-[#1a1e2b]'}`}>
+                <div className={`px-4 py-3 flex items-center justify-between ${station.isTeacher ? 'bg-orange-500/20' : 'bg-base-200'}`}>
                   <span className="font-bold text-white flex items-center gap-2">
                     {station.isTeacher && <i className="fa-solid fa-chalkboard-user text-orange-400"></i>}
                     {station.name}
@@ -133,7 +133,7 @@ export default function StationPresenter({ onBack, initialId }) {
                     </span>
                   )}
                 </div>
-                <div className="bg-[#171a25] p-3 flex flex-col gap-1 min-h-[60px]">
+                <div className="bg-surface-raised p-3 flex flex-col gap-1 min-h-[60px]">
                   {studentIds.map(sid => {
                     const isLeader = typeof groupIdx === 'number' && (session.groupLeaders || [])[groupIdx] === sid;
                     return (
@@ -153,7 +153,7 @@ export default function StationPresenter({ onBack, initialId }) {
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-[#1a1e2b] border-t border-slate-800 flex items-center justify-center gap-6 flex-shrink-0">
+      <div className="px-6 py-4 bg-base-200 border-t border-slate-800 flex items-center justify-center gap-6 flex-shrink-0">
         <button className="btn btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => goToRotation(rotationIndex - 1)} disabled={rotationIndex === 0}>
           <i className="fa-solid fa-backward-step"></i> Forrige
         </button>

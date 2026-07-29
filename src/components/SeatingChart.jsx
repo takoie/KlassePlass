@@ -550,13 +550,13 @@ export default function SeatingChart({ onBack, initialId }) {
   };
 
   const handleSaveEditedPeriod = async () => {
-    if (!editingPeriod) return;
+    if (!editingPeriod || !editingPeriod.name?.trim()) return;
     try {
       const existing = seatings.find(s => s.id === editingPeriod.id);
       if (existing) {
         await window.api.saveSeating({
           id: existing.id,
-          name: editingPeriod.name,
+          name: editingPeriod.name.trim(),
           comment: editingPeriod.comment,
           classId: existing.class_id,
           roomId: existing.room_id,
@@ -565,7 +565,7 @@ export default function SeatingChart({ onBack, initialId }) {
         const newSeatings = await window.api.getSeatings();
         setSeatings(newSeatings);
         if (existing.id === Number(selectedSeatingId)) {
-          setChartName(editingPeriod.name);
+          setChartName(editingPeriod.name.trim());
           setChartComment(editingPeriod.comment);
         }
       }
@@ -601,9 +601,12 @@ export default function SeatingChart({ onBack, initialId }) {
       y: Math.max(70, Math.min(700 - 60 - 10, Math.round((2 * centerY - d.y - 60) / 10) * 10))
     })));
 
+    // Tavlen er 256×36px på skjermen (w-64 h-9) — speilingen må bruke disse
+    // faktiske målene, ikke de gamle 240×40, ellers havner tavlen noen px
+    // forskjøvet fra sin egentlige speilvendte posisjon i forhold til pultene.
     setBoardObj(prev => ({
-      x: Math.max(10, Math.min(1050 - 240, Math.round((2 * centerX - prev.x - 240) / 10) * 10)),
-      y: Math.max(10, Math.min(700 - 40, Math.round((2 * centerY - prev.y - 40) / 10) * 10))
+      x: Math.max(10, Math.min(1100 - 256 - 10, Math.round((2 * centerX - prev.x - 256) / 10) * 10)),
+      y: Math.max(10, Math.min(700 - 36 - 10, Math.round((2 * centerY - prev.y - 36) / 10) * 10))
     }));
   };
 
@@ -1297,7 +1300,7 @@ export default function SeatingChart({ onBack, initialId }) {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#131620] overflow-hidden relative">
+    <div className="flex flex-col h-full w-full bg-base-300 overflow-hidden relative">
       {/* Top Header Bar - Unifisert med RoomEditor */}
       {!isProjectorMode && (
         <HeaderBar
@@ -1306,7 +1309,7 @@ export default function SeatingChart({ onBack, initialId }) {
           rooms={rooms} selectedRoom={selectedRoom} setSelectedRoom={setSelectedRoom}
           seatings={seatings} selectedSeatingId={selectedSeatingId} handleSelectSeating={handleSelectSeating}
           setEditingPeriod={setEditingPeriod}
-          saveState={saveState} handleDelete={handleDelete}
+          saveState={saveState} handleDelete={handleDelete} handlePrint={handlePrint}
         />
       )}
 
@@ -1320,7 +1323,7 @@ export default function SeatingChart({ onBack, initialId }) {
             activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId} GROUP_COLORS={GROUP_COLORS}
             showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
             hideGroups={hideGroups} setHideGroups={setHideGroups}
-            handleRuleBasedFunSpin={handleRuleBasedFunSpin} handleAutoFill={handleAutoFill} flipRoom={flipRoom} handlePrint={handlePrint}
+            handleRuleBasedFunSpin={handleRuleBasedFunSpin} handleAutoFill={handleAutoFill} flipRoom={flipRoom}
             showHistory={showHistory} setShowHistory={setShowHistory}
             showNumbers={showNumbers} setShowNumbers={setShowNumbers}
             showZones={showZones} setShowZones={setShowZones}
@@ -1346,7 +1349,7 @@ export default function SeatingChart({ onBack, initialId }) {
         )}
 
         {/* 5. Main Canvas Area */}
-        <div className="flex-1 flex flex-col overflow-hidden relative bg-[#131620]" onMouseDown={startCanvasAction} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onClick={() => setContextMenu(null)}>
+        <div className="flex-1 flex flex-col overflow-hidden relative bg-base-300" onMouseDown={startCanvasAction} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onClick={() => setContextMenu(null)}>
           {activeFunMode === 'randombomb' && (
             <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
               <div className={`text-[10rem] font-black drop-shadow-[0_0_30px_rgba(244,63,94,0.8)] transition-transform ${bombBoom ? 'text-emerald-400 scale-125' : 'text-rose-500 animate-bounce'}`}>
@@ -1362,10 +1365,10 @@ export default function SeatingChart({ onBack, initialId }) {
           )}
 
           {/* Container for zooming/skalering */}
-          <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden bg-[#131620] relative">
+          <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden bg-base-300 relative">
             <div 
               ref={canvasRef}
-              className="absolute bg-[#202534] border-2 border-slate-700/50 rounded-2xl shadow-2xl origin-top-left"
+              className="absolute bg-base-100 border-2 border-slate-700/50 rounded-2xl shadow-2xl origin-top-left"
               style={{ 
                 width: '1100px',
                 height: '700px',
@@ -1435,12 +1438,12 @@ export default function SeatingChart({ onBack, initialId }) {
                         <div 
                           key={d.id}
                           onContextMenu={(e) => { e.preventDefault(); handleDeskContextMenu(e, d); }}
-                          className={`absolute h-[60px] rounded-xl bg-[#1a1e2b] flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-slate-700/70 z-10`}
+                          className={`absolute h-[60px] rounded-xl bg-base-200 flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-slate-700/70 z-10`}
                           style={{ left: d.x - offsetX, top: d.y, width: `${visualWidth}px`, ...borderStyle }}
                         >
                           {showNumbers && (
                             <div className="absolute -top-3 -left-2.5 z-20 pointer-events-none">
-                              <span className="w-6 h-6 rounded-full bg-[#131620] border-2 border-slate-600 text-slate-300 font-black text-xs flex items-center justify-center shadow-lg">
+                              <span className="w-6 h-6 rounded-full bg-base-300 border-2 border-slate-600 text-slate-300 font-black text-xs flex items-center justify-center shadow-lg">
                                 {deskNumber}
                               </span>
                             </div>
@@ -1471,7 +1474,7 @@ export default function SeatingChart({ onBack, initialId }) {
                               const conflictColor = showHistory && studentObj ? historyConflicts[studentObj.id] : null;
                               let bgClass = conflictColor 
                                 ? `${conflictColor} text-white shadow-md border-2` 
-                                : (studentObj ? 'bg-emerald-500/10 text-white shadow-md border border-emerald-500/20' : 'bg-[#171a25] text-slate-500 border border-slate-700/30');
+                                : (studentObj ? 'bg-emerald-500/10 text-white shadow-md border border-emerald-500/20' : 'bg-surface-raised text-slate-500 border border-slate-700/30');
 
                               if (isHoverTarget) {
                                 bgClass = 'border-2 border-emerald-400 bg-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.9)] scale-105 z-30 animate-pulse text-white font-extrabold';
@@ -1553,7 +1556,7 @@ export default function SeatingChart({ onBack, initialId }) {
                     {/* Dragged student overlay */}
                     {draggedStudent && (
                       <div 
-                        className="absolute z-50 pointer-events-none cursor-move h-[65px] rounded-xl border-2 border-emerald-500 bg-[#1a1e2b] flex flex-col items-center justify-center p-1 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-110 opacity-90"
+                        className="absolute z-50 pointer-events-none cursor-move h-[65px] rounded-xl border-2 border-emerald-500 bg-base-200 flex flex-col items-center justify-center p-1 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-110 opacity-90"
                         style={{ left: draggedStudent.currentX - 47, top: draggedStudent.currentY - 32, width: '109px' }}
                       >
                         <div className="w-full h-full rounded-lg flex items-center justify-center bg-emerald-500/20 text-white border border-emerald-500/40 text-sm font-bold truncate px-1 shadow-md">
