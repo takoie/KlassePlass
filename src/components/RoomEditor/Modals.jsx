@@ -4,11 +4,11 @@ import React from 'react';
 export default function Modals({
   inputModalRef, newRoomModalName, setNewRoomModalName, handleConfirmCreateNew,
   presetsList, selectedPreset, setSelectedPreset,
-  selectedRoom, handleDelete,
+  selectedRoom, handleDelete, setIsCreatingRoom,
 }) {
   return (
     <>
-      <dialog id="modal_create_new_room" className="modal modal-bottom sm:modal-middle">
+      <dialog id="modal_create_new_room" className="modal modal-bottom sm:modal-middle" onClose={() => setIsCreatingRoom(false)}>
         <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
           <h3 className="font-bold text-lg flex items-center gap-2 text-white">
             <i className="fa-solid fa-wand-magic-sparkles text-[#f59e0b]"></i> Opprett nytt klasserom

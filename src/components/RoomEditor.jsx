@@ -25,6 +25,7 @@ export default function RoomEditor({ onBack, initialId }) {
   const [roomName, setRoomName] = useState('');
   const [newRoomModalName, setNewRoomModalName] = useState('');
   const [selectedPreset, setSelectedPreset] = useState('2-2-2');
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [desks, setDesks] = useState([]); // [{ id, x, y, capacity: 1|2|3|4, zones: [], groupId: null }]
   const [doors, setDoors] = useState([]);
   const [windows, setWindows] = useState([]);
@@ -160,6 +161,7 @@ export default function RoomEditor({ onBack, initialId }) {
   };
 
   const handleOpenNewModal = () => {
+    setIsCreatingRoom(true);
     setNewRoomModalName('');
     setSelectedPreset('2-2-2');
     const modal = document.getElementById('modal_create_new_room');
@@ -906,28 +908,32 @@ export default function RoomEditor({ onBack, initialId }) {
                   onMouseMove={handleMouseMoveCanvas}
                   onMouseDown={handleCanvasMouseDown}
                 >
-                <BoardItem boardObj={boardObj} />
+                {!isCreatingRoom && (
+                  <>
+                    <BoardItem boardObj={boardObj} />
 
-                {doors.map((dr) => (
-                  <DoorItem key={dr.id} door={dr} onRotate={rotateDoor} onRemove={removeDoor} />
-                ))}
+                    {doors.map((dr) => (
+                      <DoorItem key={dr.id} door={dr} onRotate={rotateDoor} onRemove={removeDoor} />
+                    ))}
 
-                {windows.map((win) => (
-                  <WindowItem key={win.id} windowObj={win} onRotate={rotateWindow} onRemove={removeWindow} />
-                ))}
+                    {windows.map((win) => (
+                      <WindowItem key={win.id} windowObj={win} onRotate={rotateWindow} onRemove={removeWindow} />
+                    ))}
 
-                {desks.map((d) => (
-                    <DeskItem
-                      key={d.id}
-                      desk={d}
-                      isSelected={selectedDesks.includes(d.id)}
-                      showNumbers={showNumbers}
-                      showZones={showZones}
-                      deskNumber={deskNumberMap[d.id] || ''}
-                      onContextMenu={handleContextMenu}
-                      onClick={handleDeskClick}
-                    />
-                ))}
+                    {desks.map((d) => (
+                        <DeskItem
+                          key={d.id}
+                          desk={d}
+                          isSelected={selectedDesks.includes(d.id)}
+                          showNumbers={showNumbers}
+                          showZones={showZones}
+                          deskNumber={deskNumberMap[d.id] || ''}
+                          onContextMenu={handleContextMenu}
+                          onClick={handleDeskClick}
+                        />
+                    ))}
+                  </>
+                )}
 
                 {selectionBox && (
                   <div 
@@ -978,6 +984,7 @@ export default function RoomEditor({ onBack, initialId }) {
         handleConfirmCreateNew={handleConfirmCreateNew}
         presetsList={presetsList} selectedPreset={selectedPreset} setSelectedPreset={setSelectedPreset}
         selectedRoom={selectedRoom} handleDelete={handleDelete}
+        setIsCreatingRoom={setIsCreatingRoom}
       />
     </div>
   );
