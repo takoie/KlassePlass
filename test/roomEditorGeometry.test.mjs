@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getDeskRect, rectsOverlap, desksOverlap, findOverlappingDeskIds, hasCollision, findFreeSpot, findFreeGroupOffset } from '../src/components/RoomEditor/geometry.mjs';
+import { getDeskRect, rectsOverlap, desksOverlap, findOverlappingDeskIds, hasCollision, findFreeSpot, findFreeGroupOffset, computeBoundedDelta } from '../src/components/RoomEditor/geometry.mjs';
 
 test('getDeskRect uses capacity*100 width and 60 height', () => {
   const rect = getDeskRect({ x: 10, y: 20, capacity: 2 });
@@ -118,4 +118,70 @@ test('findFreeGroupOffset returns null when no offset within canvas bounds works
   const existing = [];
   const offset = findFreeGroupOffset({ desks: group, existingDesks: existing, startDx: 20, startDy: 20 });
   assert.equal(offset, null);
+});
+
+test('computeBoundedDelta keeps the desk within wall bounds (and grid-snaps the result)', () => {
+  const moving = [{ id: 'm', x: 20, y: 70, capacity: 1 }];
+  const result = computeBoundedDelta({ movingDesks: moving, rawDx: -50, rawDy: -50, stationaryDesks: [] });
+  const finalX = moving[0].x + result.dx;
+  const finalY = moving[0].y + result.dy;
+  // Vegg-grensene (WALL_LEFT=15, WALL_TOP=60) skal aldri krysses, og siden
+  // ingen magnetisk snap er mulig (ingen stasjonære bord), skal sluttposisjonen
+  // alltid rutenett-justeres til nærmeste 10px.
+  assert.ok(finalX >= 15, `finalX ${finalX} skal ikke krysse venstre vegg`);
+  assert.ok(finalY >= 60, `finalY ${finalY} skal ikke krysse øvre vegg`);
+  assert.equal(finalX % 10, 0);
+  assert.equal(finalY % 10, 0);
+});
+
+test('computeBoundedDelta snaps to the nearest candidate, not the first in array order', () => {
+  const moving = [{ id: 'm', x: 0, y: 100, capacity: 1 }];
+  // 'far' er først i listen, men krever et mye større hopp fra rå-draget (pull=19)
+  // enn 'near' (pull=1) for å snappe pent inntil. Nærmeste skal vinne uansett
+  // rekkefølge i arrayet.
+  const stationary = [
+    { id: 'far', x: 419, y: 100, capacity: 1 },
+    { id: 'near', x: 401, y: 100, capacity: 1 },
+  ];
+  const result = computeBoundedDelta({ movingDesks: moving, rawDx: 300, rawDy: 0, stationaryDesks: stationary });
+  assert.equal(result.isSnapped, true);
+  assert.equal(result.dx, 301);
+  assert.deepEqual(result.targetDeskIds, ['near']);
+});
+
+test('computeBoundedDelta falls back to 10px grid snap when nothing is nearby', () => {
+  const moving = [{ id: 'm', x: 103, y: 203, capacity: 1 }];
+  const result = computeBoundedDelta({ movingDesks: moving, rawDx: 4, rawDy: 4, stationaryDesks: [] });
+  assert.equal(result.isSnapped, false);
+  assert.equal((moving[0].x + result.dx) % 10, 0);
+  assert.equal((moving[0].y + result.dy) % 10, 0);
+});
+
+test('computeBoundedDelta with skipSnap=true skips both magnetic and grid snapping', () => {
+  const moving = [{ id: 'm', x: 103, y: 203, capacity: 1 }];
+  const result = computeBoundedDelta({ movingDesks: moving, rawDx: 44, rawDy: 17, stationaryDesks: [], skipSnap: true });
+  assert.equal(result.isSnapped, false);
+  assert.equal(result.dx, 44);
+  assert.equal(result.dy, 17);
+});
+
+test('computeBoundedDelta blocks a move that would create a new overlap', () => {
+  const moving = [{ id: 'm', x: 0, y: 100, capacity: 1 }];
+  const stationary = [{ id: 's', x: 150, y: 100, capacity: 1 }];
+  const result = computeBoundedDelta({ movingDesks: moving, rawDx: 100, rawDy: 0, stationaryDesks: stationary, skipSnap: true });
+  // Rå delta ville plassert 'm' oppå 's' (m: 100-200 vs s: 150-250) - blokkeres til dx=0
+  assert.equal(result.dx, 0);
+});
+
+test('computeBoundedDelta with ignoreOverlapIds allows moving out of a pre-existing overlap', () => {
+  const moving = [{ id: 'm', x: 100, y: 100, capacity: 1 }]; // overlapper 's' allerede før draget
+  const stationary = [{ id: 's', x: 100, y: 100, capacity: 1 }];
+  const result = computeBoundedDelta({
+    movingDesks: moving, rawDx: 50, rawDy: 0, stationaryDesks: stationary,
+    skipSnap: true, ignoreOverlapIds: ['s']
+  });
+  // Uten ignoreOverlapIds ville dette blitt blokkert siden 'm' fortsatt
+  // overlapper 's' underveis - men 's' er eksplisitt unntatt siden overlappet
+  // fantes allerede før draget startet.
+  assert.equal(result.dx, 50);
 });

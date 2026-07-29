@@ -89,3 +89,119 @@ export function findFreeGroupOffset({ desks, existingDesks, startDx = 20, startD
   }
   return null;
 }
+
+const SNAP_THRESHOLD = 20;
+const ADJACENCY_TOLERANCE = 14;
+
+function computeMagneticSnap(movingDesks, rawDx, rawDy, stationaryDesks) {
+  let best = null;
+  for (const md of movingDesks) {
+    const mdx = md.x + rawDx;
+    const mdy = md.y + rawDy;
+    const mdWidth = deskWidth(md);
+    for (const sd of stationaryDesks) {
+      const sx = sd.x, sy = sd.y;
+      const ow = deskWidth(sd);
+      const candidates = [];
+
+      if (Math.abs(mdy - sy) < ADJACENCY_TOLERANCE && Math.abs(mdx - (sx + ow)) < SNAP_THRESHOLD) {
+        candidates.push({ dx: (sx + ow) - md.x, dy: sy - md.y });
+      }
+      if (Math.abs(mdy - sy) < ADJACENCY_TOLERANCE && Math.abs((mdx + mdWidth) - sx) < SNAP_THRESHOLD) {
+        candidates.push({ dx: (sx - mdWidth) - md.x, dy: sy - md.y });
+      }
+      if (Math.abs(mdx - sx) < ADJACENCY_TOLERANCE && Math.abs(mdy - (sy + DESK_H)) < SNAP_THRESHOLD) {
+        candidates.push({ dx: sx - md.x, dy: (sy + DESK_H) - md.y });
+      }
+      if (Math.abs(mdx - sx) < ADJACENCY_TOLERANCE && Math.abs((mdy + DESK_H) - sy) < SNAP_THRESHOLD) {
+        candidates.push({ dx: sx - md.x, dy: (sy - DESK_H) - md.y });
+      }
+
+      for (const c of candidates) {
+        const pull = Math.abs(c.dx - rawDx) + Math.abs(c.dy - rawDy);
+        if (!best || pull < best.pull) best = { ...c, targetId: sd.id, pull };
+      }
+    }
+  }
+  return best;
+}
+
+export function computeBoundedDelta({
+  movingDesks, rawDx, rawDy, stationaryDesks,
+  skipSnap = false, ignoreOverlapIds = []
+}) {
+  let maxDx = rawDx, maxDy = rawDy;
+  movingDesks.forEach(d => {
+    const w = deskWidth(d);
+    const px = d.x + rawDx, py = d.y + rawDy;
+    if (px < WALL_LEFT) maxDx = Math.max(maxDx, WALL_LEFT - d.x);
+    if (px > CANVAS_W - w - WALL_RIGHT_MARGIN) maxDx = Math.min(maxDx, CANVAS_W - w - WALL_RIGHT_MARGIN - d.x);
+    if (py < WALL_TOP) maxDy = Math.max(maxDy, WALL_TOP - d.y);
+    if (py > CANVAS_H - DESK_H - WALL_BOTTOM_MARGIN) maxDy = Math.min(maxDy, CANVAS_H - DESK_H - WALL_BOTTOM_MARGIN - d.y);
+  });
+
+  let finalDx = maxDx, finalDy = maxDy;
+  let isSnapped = false;
+  let targetDeskIds = [];
+
+  if (!skipSnap) {
+    const snap = computeMagneticSnap(movingDesks, finalDx, finalDy, stationaryDesks);
+    if (snap) {
+      finalDx = snap.dx; finalDy = snap.dy; isSnapped = true;
+      targetDeskIds = [snap.targetId];
+    } else if (movingDesks.length > 0) {
+      finalDx = Math.round((movingDesks[0].x + finalDx) / 10) * 10 - movingDesks[0].x;
+      finalDy = Math.round((movingDesks[0].y + finalDy) / 10) * 10 - movingDesks[0].y;
+    }
+  }
+
+  if (hasCollision(movingDesks, finalDx, finalDy, stationaryDesks, ignoreOverlapIds)) {
+    if (!hasCollision(movingDesks, finalDx, 0, stationaryDesks, ignoreOverlapIds)) finalDy = 0;
+    else if (!hasCollision(movingDesks, 0, finalDy, stationaryDesks, ignoreOverlapIds)) finalDx = 0;
+    else { finalDx = 0; finalDy = 0; }
+  }
+
+  const xLines = [];
+  const yLines = [];
+  movingDesks.forEach(md => {
+    const fx = md.x + finalDx;
+    const fy = md.y + finalDy;
+    const fw = deskWidth(md);
+    const fh = DESK_H;
+    const fCenterX = fx + fw / 2;
+    const fCenterY = fy + fh / 2;
+
+    stationaryDesks.forEach(sd => {
+      const ox = sd.x, oy = sd.y;
+      const ow = deskWidth(sd), oh = DESK_H;
+      const oCenterX = ox + ow / 2;
+      const oCenterY = oy + oh / 2;
+
+      if (Math.abs(fy - oy) <= 2) yLines.push(oy);
+      if (Math.abs(fCenterY - oCenterY) <= 2) yLines.push(oCenterY);
+      if (Math.abs((fy + fh) - (oy + oh)) <= 2) yLines.push(oy + oh);
+      if (Math.abs(fy - (oy + oh)) <= 2) yLines.push(oy + oh);
+      if (Math.abs((fy + fh) - oy) <= 2) yLines.push(oy);
+
+      if (Math.abs(fx - ox) <= 2) xLines.push(ox);
+      if (Math.abs(fCenterX - oCenterX) <= 2) xLines.push(oCenterX);
+      if (Math.abs((fx + fw) - (ox + ow)) <= 2) xLines.push(ox + ow);
+      if (Math.abs(fx - (ox + ow)) <= 2) xLines.push(ox + ow);
+      if (Math.abs((fx + fw) - ox) <= 2) xLines.push(ox);
+
+      const isAdjacentHorizontal = Math.abs(fy - oy) < ADJACENCY_TOLERANCE && (Math.abs(fx - (ox + ow)) < 6 || Math.abs((fx + fw) - ox) < 6);
+      const isAdjacentVertical = Math.abs(fx - ox) < ADJACENCY_TOLERANCE && (Math.abs(fy - (oy + oh)) < 6 || Math.abs((fy + fh) - oy) < 6);
+      if (isAdjacentHorizontal || isAdjacentVertical) {
+        if (!targetDeskIds.includes(sd.id)) targetDeskIds.push(sd.id);
+      }
+    });
+  });
+
+  return {
+    dx: finalDx,
+    dy: finalDy,
+    isSnapped,
+    targetDeskIds,
+    alignmentGuides: { xLines: [...new Set(xLines)], yLines: [...new Set(yLines)] }
+  };
+}
