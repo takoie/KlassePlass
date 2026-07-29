@@ -195,18 +195,15 @@ export default function RoomEditor({ onBack, initialId }) {
       let currentX = startX;
       for (let g of groups) {
         if (isNaN(g)) continue;
-        for (let c = 0; c < g; c++) {
-          newDesks.push({
-            id: (currentId++).toString(),
-            x: Math.round(currentX / 10) * 10,
-            y: Math.round((startY + (r * (deskH + gapY))) / 10) * 10,
-            capacity: 1,
-            zones: [],
-            groupId: null
-          });
-          currentX += deskW + gapX;
-        }
-        currentX += groupGap - gapX;
+        newDesks.push({
+          id: (currentId++).toString(),
+          x: Math.round(currentX / 10) * 10,
+          y: Math.round((startY + (r * (deskH + gapY))) / 10) * 10,
+          capacity: g,
+          zones: [],
+          groupId: null
+        });
+        currentX += (deskW * g) + groupGap;
       }
     }
     return newDesks;
