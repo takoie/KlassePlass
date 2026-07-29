@@ -8,6 +8,7 @@ import WindowItem from './RoomEditor/WindowItem';
 import HeaderBar from './RoomEditor/HeaderBar';
 import DeskContextMenu from './RoomEditor/DeskContextMenu';
 import Modals from './RoomEditor/Modals';
+import { computeBoundedDelta } from './RoomEditor/geometry';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -484,162 +485,18 @@ export default function RoomEditor({ onBack, initialId }) {
     window.addEventListener('mouseup', onMouseUp);
   };
 
-  const getBoundedDelta = (movingDesks, rawDx, rawDy, stationaryDesks) => {
-    const cw = 1100;
-    const ch = 700;
-    const deskH = 60;
-
-    // 1. Enforce Wall Boundaries
-    let maxAllowedDx = rawDx;
-    let maxAllowedDy = rawDy;
-    movingDesks.forEach(d => {
-      const deskW = (d.capacity || 1) * 100;
-      const potentialX = d.x + rawDx;
-      const potentialY = d.y + rawDy;
-      if (potentialX < 15) maxAllowedDx = Math.max(maxAllowedDx, 15 - d.x);
-      if (potentialX > cw - deskW - 15) maxAllowedDx = Math.min(maxAllowedDx, cw - deskW - 15 - d.x);
-      if (potentialY < 60) maxAllowedDy = Math.max(maxAllowedDy, 60 - d.y);
-      if (potentialY > ch - deskH - 15) maxAllowedDy = Math.min(maxAllowedDy, ch - deskH - 15 - d.y);
-    });
-
-    let finalDx = maxAllowedDx;
-    let finalDy = maxAllowedDy;
-    let isSnapped = false;
-    let targetDeskIds = [];
-    const snapThreshold = 20;
-
-    // 2. Magnetic Snapping to Stationary Desks
-    for (let md of movingDesks) {
-       const mdx = md.x + finalDx;
-       const mdy = md.y + finalDy;
-       const mdWidth = (md.capacity || 1) * 100;
-       const mdHeight = 60;
-
-       for (let sd of stationaryDesks) {
-         const sx = sd.x;
-         const sy = sd.y;
-         const ow = (sd.capacity || 1) * 100;
-         const oh = 60;
-
-         // Horizontal Snap (Adjacent Side-by-Side)
-         if (Math.abs(mdy - sy) < 14 && Math.abs(mdx - (sx + ow)) < snapThreshold) {
-           finalDx = (sx + ow) - md.x;
-           finalDy = sy - md.y;
-           isSnapped = true;
-           break;
-         } else if (Math.abs(mdy - sy) < 14 && Math.abs((mdx + mdWidth) - sx) < snapThreshold) {
-           finalDx = (sx - mdWidth) - md.x;
-           finalDy = sy - md.y;
-           isSnapped = true;
-           break;
-         } 
-         // Vertical Snap (Adjacent Top-to-Bottom)
-         else if (Math.abs(mdx - sx) < 14) {
-           if (Math.abs(mdy - (sy + oh)) < snapThreshold) {
-             finalDy = (sy + oh) - md.y;
-             finalDx = sx - md.x;
-             isSnapped = true;
-             break;
-           } else if (Math.abs((mdy + mdHeight) - sy) < snapThreshold) {
-             finalDy = (sy - mdHeight) - md.y;
-             finalDx = sx - md.x;
-             isSnapped = true;
-             break;
-           }
-         }
-       }
-    }
-
-    // Grid snap if not magnetically snapped
-    if (!isSnapped && movingDesks.length > 0) {
-      finalDx = Math.round((movingDesks[0].x + finalDx) / 10) * 10 - movingDesks[0].x;
-      finalDy = Math.round((movingDesks[0].y + finalDy) / 10) * 10 - movingDesks[0].y;
-    }
-
-    // 3. Collision Prevention (NO Overlaps Allowed)
-    const hasOverlap = (testDx, testDy) => {
-      for (let md of movingDesks) {
-        const mLeft = md.x + testDx;
-        const mRight = mLeft + (md.capacity || 1) * 100;
-        const mTop = md.y + testDy;
-        const mBottom = mTop + 60;
-
-        for (let sd of stationaryDesks) {
-          const sLeft = sd.x;
-          const sRight = sLeft + (sd.capacity || 1) * 100;
-          const sTop = sd.y;
-          const sBottom = sTop + 60;
-
-          if (mLeft < sRight - 1 && mRight > sLeft + 1 && mTop < sBottom - 1 && mBottom > sTop + 1) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
-
-    if (hasOverlap(finalDx, finalDy)) {
-      if (!hasOverlap(finalDx, 0)) {
-        finalDy = 0;
-      } else if (!hasOverlap(0, finalDy)) {
-        finalDx = 0;
-      } else {
-        finalDx = 0;
-        finalDy = 0;
-      }
-    }
-
-    // 4. Calculate Alignment Guide Lines (Stiplelinjer)
-    const xLines = [];
-    const yLines = [];
-
-    movingDesks.forEach(md => {
-      const fx = md.x + finalDx;
-      const fy = md.y + finalDy;
-      const fw = (md.capacity || 1) * 100;
-      const fh = 60;
-      const fCenterX = fx + fw / 2;
-      const fCenterY = fy + fh / 2;
-      
-      stationaryDesks.forEach(sd => {
-         const ox = sd.x;
-         const oy = sd.y;
-         const ow = (sd.capacity || 1) * 100;
-         const oh = 60;
-         const oCenterX = ox + ow / 2;
-         const oCenterY = oy + oh / 2;
-
-         // Check Horizontal Alignment (Top, Center, Bottom)
-         if (Math.abs(fy - oy) <= 2) yLines.push(oy);
-         if (Math.abs(fCenterY - oCenterY) <= 2) yLines.push(oCenterY);
-         if (Math.abs((fy + fh) - (oy + oh)) <= 2) yLines.push(oy + oh);
-         if (Math.abs(fy - (oy + oh)) <= 2) yLines.push(oy + oh);
-         if (Math.abs((fy + fh) - oy) <= 2) yLines.push(oy);
-
-         // Check Vertical Alignment (Left, Center, Right)
-         if (Math.abs(fx - ox) <= 2) xLines.push(ox);
-         if (Math.abs(fCenterX - oCenterX) <= 2) xLines.push(oCenterX);
-         if (Math.abs((fx + fw) - (ox + ow)) <= 2) xLines.push(ox + ow);
-         if (Math.abs(fx - (ox + ow)) <= 2) xLines.push(ox + ow);
-         if (Math.abs((fx + fw) - ox) <= 2) xLines.push(ox);
-
-         const isAdjacentHorizontal = Math.abs(fy - oy) < 14 && (Math.abs(fx - (ox + ow)) < 6 || Math.abs((fx + fw) - ox) < 6);
-         const isAdjacentVertical = Math.abs(fx - ox) < 14 && (Math.abs(fy - (oy + oh)) < 6 || Math.abs((fy + fh) - oy) < 6);
-
-         if (isAdjacentHorizontal || isAdjacentVertical) {
-             if (!targetDeskIds.includes(sd.id)) targetDeskIds.push(sd.id);
-         }
-      });
+  const getBoundedDelta = (movingDesks, rawDx, rawDy, stationaryDesks, options = {}) => {
+    const result = computeBoundedDelta({
+      movingDesks, rawDx, rawDy, stationaryDesks,
+      skipSnap: options.skipSnap || false,
+      ignoreOverlapIds: options.ignoreOverlapIds || []
     });
 
     return {
-      x: finalDx * scale,
-      y: finalDy * scale,
-      targetDeskIds,
-      alignmentGuides: {
-        xLines: [...new Set(xLines)],
-        yLines: [...new Set(yLines)]
-      }
+      x: result.dx * scale,
+      y: result.dy * scale,
+      targetDeskIds: result.targetDeskIds,
+      alignmentGuides: result.alignmentGuides
     };
   };
 
