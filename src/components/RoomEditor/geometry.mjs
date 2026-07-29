@@ -70,3 +70,22 @@ export function findFreeSpot({ capacity = 1, existingDesks, anchor = null }) {
 
   return { x: 50, y: 90 };
 }
+
+export function findFreeGroupOffset({ desks, existingDesks, startDx = 20, startDy = 20, stepSize = 20, maxSteps = 30 }) {
+  for (let step = 0; step < maxSteps; step++) {
+    const dx = startDx + step * stepSize;
+    const dy = startDy + step * stepSize;
+
+    const withinBounds = desks.every(d => {
+      const w = deskWidth(d);
+      return d.x + dx >= WALL_LEFT && d.x + dx + w <= CANVAS_W - WALL_RIGHT_MARGIN &&
+             d.y + dy >= WALL_TOP && d.y + dy + DESK_H <= CANVAS_H - WALL_BOTTOM_MARGIN;
+    });
+    if (!withinBounds) break;
+
+    if (!hasCollision(desks, dx, dy, existingDesks, [])) {
+      return { dx, dy };
+    }
+  }
+  return null;
+}

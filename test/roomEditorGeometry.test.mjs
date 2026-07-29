@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getDeskRect, rectsOverlap, desksOverlap, findOverlappingDeskIds, hasCollision, findFreeSpot } from '../src/components/RoomEditor/geometry.mjs';
+import { getDeskRect, rectsOverlap, desksOverlap, findOverlappingDeskIds, hasCollision, findFreeSpot, findFreeGroupOffset } from '../src/components/RoomEditor/geometry.mjs';
 
 test('getDeskRect uses capacity*100 width and 60 height', () => {
   const rect = getDeskRect({ x: 10, y: 20, capacity: 2 });
@@ -87,4 +87,35 @@ test('findFreeSpot falls back to grid scan when anchor search cannot find a spot
   }
   const spot = findFreeSpot({ capacity: 1, existingDesks: existing, anchor: { x: 300, y: 300 } });
   assert.deepEqual(spot, { x: 20, y: 90 });
+});
+
+test('findFreeGroupOffset returns the start offset when the whole group fits there', () => {
+  // y:100 (ikke 0) - må være >= WALL_TOP(60) for at gruppen skal stå på en
+  // gyldig hvileposisjon i utgangspunktet, ellers trigges vegg-klipping.
+  const group = [
+    { id: 'a', x: 0, y: 100, capacity: 1 },
+    { id: 'b', x: 100, y: 100, capacity: 1 },
+  ];
+  const offset = findFreeGroupOffset({ desks: group, existingDesks: [], startDx: 20, startDy: 20 });
+  assert.deepEqual(offset, { dx: 20, dy: 20 });
+});
+
+test('findFreeGroupOffset steps past a spot that only partially fits', () => {
+  const group = [
+    { id: 'a', x: 0, y: 100, capacity: 1 },
+    { id: 'b', x: 100, y: 100, capacity: 1 },
+  ];
+  // Blokkerer nøyaktig der (a) ville landet ved startDx/startDy=20,20 (x=20,y=120)
+  const existing = [{ id: 'blocker', x: 20, y: 120, capacity: 1 }];
+  const offset = findFreeGroupOffset({ desks: group, existingDesks: existing, startDx: 20, startDy: 20 });
+  // Bordet er 100x60: trenger dy >= 79px fra blocker.y(120) for å klarere i
+  // høyden, som først skjer ved steg 3 (dy = 20 + 3*20 = 80).
+  assert.deepEqual(offset, { dx: 80, dy: 80 });
+});
+
+test('findFreeGroupOffset returns null when no offset within canvas bounds works', () => {
+  const group = [{ id: 'a', x: 1000, y: 600, capacity: 1 }]; // allerede nær kanten
+  const existing = [];
+  const offset = findFreeGroupOffset({ desks: group, existingDesks: existing, startDx: 20, startDy: 20 });
+  assert.equal(offset, null);
 });
