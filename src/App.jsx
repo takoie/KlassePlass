@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import ClassManager from './components/ClassManager';
 import RoomEditor from './components/RoomEditor';
@@ -14,6 +14,14 @@ import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from '
 function App() {
   const [currentView, setCurrentView] = useState('classes-overview');
   const [editId, setEditId] = useState(null);
+
+  // Bruk lagret tema fra første render - index.html har "klasseplass" som
+  // statisk fallback for aller første maling, før innstillingene er hentet.
+  useEffect(() => {
+    window.api?.getSettings?.().then((s) => {
+      if (s?.theme) document.documentElement.setAttribute('data-theme', s.theme);
+    }).catch(() => {});
+  }, []);
 
   const handleEdit = (view, id) => {
     setEditId(id);

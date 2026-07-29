@@ -31,6 +31,7 @@ export default function RoomEditor({ onBack, initialId }) {
   const [windows, setWindows] = useState([]);
   const [boardObj, setBoardObj] = useState({ x: 405, y: 25 });
   const [saveState, setSaveState] = useState('saved');
+  const [defaultBoardPosition, setDefaultBoardPosition] = useState('top');
   
   // Generator state
   const [genStructure, setGenStructure] = useState('2-2-2');
@@ -68,6 +69,9 @@ export default function RoomEditor({ onBack, initialId }) {
 
   useEffect(() => {
     loadRooms();
+    window.api?.getSettings?.().then((s) => {
+      if (s?.boardPosition) setDefaultBoardPosition(s.boardPosition);
+    }).catch(() => {});
     const handleClickOutside = () => setContextMenu(null);
     window.addEventListener('click', handleClickOutside);
     return () => window.removeEventListener('click', handleClickOutside);
@@ -237,10 +241,19 @@ export default function RoomEditor({ onBack, initialId }) {
     const initialDesks = buildPresetDesks(selectedPreset, 4);
     const defaultDoors = [];
     const defaultWindows = [];
-    const defaultBoard = { x: 422, y: 15 };
+    let initialBoard = { x: 422, y: 15 };
+    let finalDesks = initialDesks;
+
+    // Nye rom starter med tavlen øverst — flipp til standardplasseringen
+    // fra Innstillinger ("Standard tavleplassering") hvis den er satt til nederst.
+    if (defaultBoardPosition === 'bottom') {
+      const flipped = flipLayoutData({ desks: initialDesks, boardObj: initialBoard, doors: defaultDoors, windows: defaultWindows });
+      finalDesks = flipped.desks;
+      initialBoard = flipped.boardObj;
+    }
 
     try {
-      const layoutData = { desks: initialDesks, doors: defaultDoors, windows: defaultWindows, boardObj: defaultBoard };
+      const layoutData = { desks: finalDesks, doors: defaultDoors, windows: defaultWindows, boardObj: initialBoard };
       const result = await window.api.saveRoom({
         id: null,
         name: nameToSave,
@@ -323,13 +336,16 @@ export default function RoomEditor({ onBack, initialId }) {
     })));
   };
 
-  const flipRoom = () => {
-    if (desks.length === 0 && !boardObj) return;
+  // Speilvender et helt romoppsett (bord, tavle, dører, vinduer) 180° rundt
+  // canvas-senteret. Ren funksjon slik at den kan brukes både av "Flipp"-
+  // knappen (muterer state direkte) og ved oppretting av nytt rom (der
+  // standard tavleplassering fra Innstillinger skal avgjøre startoppsettet).
+  const flipLayoutData = ({ desks: srcDesks, boardObj: srcBoard, doors: srcDoors, windows: srcWindows }) => {
     const cw = 1100;
     const ch = 700;
     const deskH = 60;
 
-    setDesks(prev => prev.map(d => {
+    const flippedDesks = srcDesks.map(d => {
       const dW = (d.capacity || 1) * 100;
       const flippedX = cw - (d.x + dW);
       const flippedY = ch - (d.y + deskH);
@@ -338,31 +354,41 @@ export default function RoomEditor({ onBack, initialId }) {
         x: Math.max(15, Math.min(cw - dW - 15, Math.round(flippedX / 10) * 10)),
         y: Math.max(60, Math.min(ch - deskH - 15, Math.round(flippedY / 10) * 10))
       };
-    }));
+    });
 
-    setBoardObj(prev => {
-      if (!prev) return prev;
-      const flippedX = cw - (prev.x + 256);
-      const flippedY = ch - (prev.y + 36);
+    const flippedBoard = srcBoard ? (() => {
+      const flippedX = cw - (srcBoard.x + 256);
+      const flippedY = ch - (srcBoard.y + 36);
       return {
         x: Math.max(15, Math.min(cw - 256 - 15, Math.round(flippedX / 10) * 10)),
         y: Math.max(15, Math.min(ch - 36 - 15, Math.round(flippedY / 10) * 10))
       };
-    });
+    })() : srcBoard;
 
-    setDoors(prev => prev.map(dr => ({
+    const flippedDoors = (srcDoors || []).map(dr => ({
       ...dr,
       x: Math.max(15, Math.min(cw - 64 - 15, Math.round((cw - (dr.x + 64)) / 10) * 10)),
       y: Math.max(15, Math.min(ch - 64 - 15, Math.round((ch - (dr.y + 64)) / 10) * 10)),
       rotation: (dr.rotation + 180) % 360
-    })));
+    }));
 
-    setWindows(prev => prev.map(win => ({
+    const flippedWindows = (srcWindows || []).map(win => ({
       ...win,
       x: Math.max(15, Math.min(cw - 80 - 15, Math.round((cw - (win.x + 80)) / 10) * 10)),
       y: Math.max(15, Math.min(ch - 80 - 15, Math.round((ch - (win.y + 80)) / 10) * 10)),
       rotation: (win.rotation + 180) % 360
-    })));
+    }));
+
+    return { desks: flippedDesks, boardObj: flippedBoard, doors: flippedDoors, windows: flippedWindows };
+  };
+
+  const flipRoom = () => {
+    if (desks.length === 0 && !boardObj) return;
+    const flipped = flipLayoutData({ desks, boardObj, doors, windows });
+    setDesks(flipped.desks);
+    setBoardObj(flipped.boardObj);
+    setDoors(flipped.doors);
+    setWindows(flipped.windows);
   };
 
   const addDesk = (capacity = 1) => {

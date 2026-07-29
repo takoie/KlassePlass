@@ -22,10 +22,10 @@ html, body {
    at appen ser ut som et vindu som flyter oppå ren svart. */
 .app-shell-bg {
   background:
-    radial-gradient(1100px circle at 12% -12%, rgba(52, 211, 153, 0.10), transparent 55%),
-    radial-gradient(900px circle at 88% -12%, rgba(52, 211, 153, 0.10), transparent 55%),
-    radial-gradient(800px circle at 105% 108%, rgba(52, 211, 153, 0.10), transparent 55%),
-    radial-gradient(900px circle at 8% 108%, rgba(52, 211, 153, 0.10), transparent 55%),
+    radial-gradient(1100px circle at 12% -12%, oklch(var(--p) / 0.10), transparent 55%),
+    radial-gradient(900px circle at 88% -12%, oklch(var(--p) / 0.10), transparent 55%),
+    radial-gradient(800px circle at 105% 108%, oklch(var(--p) / 0.10), transparent 55%),
+    radial-gradient(900px circle at 8% 108%, oklch(var(--p) / 0.10), transparent 55%),
     linear-gradient(165deg, #1b2032 0%, #12151f 45%, #0b0d14 100%);
 }
 
@@ -34,8 +34,8 @@ html, body {
    via backdrop-blur, i stedet for å blure en helt flat flate. */
 .module-content-bg {
   background:
-    radial-gradient(1000px circle at 12% -10%, rgba(52, 211, 153, 0.07), transparent 55%),
-    radial-gradient(900px circle at 100% 100%, rgba(52, 211, 153, 0.05), transparent 55%),
+    radial-gradient(1000px circle at 12% -10%, oklch(var(--p) / 0.07), transparent 55%),
+    radial-gradient(900px circle at 100% 100%, oklch(var(--p) / 0.05), transparent 55%),
     #202534;
 }
 
@@ -63,8 +63,8 @@ html, body {
 }
 
 .overblikk-nav-btn.active {
-  background-color: rgba(52, 211, 153, 0.14) !important;
-  color: #34d399 !important;
+  background-color: oklch(var(--p) / 0.14) !important;
+  color: oklch(var(--p)) !important;
   font-weight: 700 !important;
 }
 
@@ -76,9 +76,9 @@ html, body {
   transform: translateY(-50%);
   height: 60%;
   width: 4px;
-  background: #34d399;
+  background: oklch(var(--p));
   border-radius: 4px;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.8);
+  box-shadow: 0 0 10px oklch(var(--p) / 0.8);
 }
 
 /* NB: base-100/200/300 og primary/secondary-farger styres nå direkte av

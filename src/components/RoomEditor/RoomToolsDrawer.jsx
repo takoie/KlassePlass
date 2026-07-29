@@ -82,7 +82,7 @@ export default function RoomToolsDrawer({
                 <option value="3-3-3">3 - 3 - 3</option>
                 <option value="4-2-4">4 - 2 - 4</option>
                 <option value="4-4">4 - 4</option>
-                <option value="1-1-1-1-1">Eksamen</option>
+                <option value="1-1-1-1-1">Eksamen (1 og 1)</option>
               </select>
             </div>
 
@@ -96,7 +96,7 @@ export default function RoomToolsDrawer({
       </details>
 
       {/* Legg til Bord (Collapse) */}
-      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible">
+      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
         <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
           <i className="fa-solid fa-chair text-amber-400 mr-1.5"></i> Legg til bord
         </summary>

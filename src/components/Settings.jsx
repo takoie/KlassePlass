@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('visning');
-  const [settings, setSettings] = useState({ boardPosition: 'top' });
+  const [settings, setSettings] = useState({ boardPosition: 'top', theme: 'klasseplass' });
   const [dbMessage, setDbMessage] = useState(null);
   const [appVersion, setAppVersion] = useState(null);
 
@@ -24,6 +24,11 @@ export default function Settings() {
     try {
       await window.api.saveSettings({ [key]: value });
     } catch(e) {}
+  };
+
+  const handleSetTheme = (themeId) => {
+    document.documentElement.setAttribute('data-theme', themeId);
+    handleSaveSetting('theme', themeId);
   };
 
   const handleBackup = async () => {
@@ -67,57 +72,60 @@ export default function Settings() {
     }
   };
 
+  const themeOptions = [
+    { id: 'klasseplass', label: 'Standard', colors: ['#34d399', '#4f46e5', '#f59e0b'] },
+    { id: 'havbris', label: 'Havbris', colors: ['#38bdf8', '#6366f1', '#f59e0b'] },
+    { id: 'solnedgang', label: 'Solnedgang', colors: ['#fb923c', '#f43f5e', '#38bdf8'] },
+    { id: 'lavendel', label: 'Lavendel', colors: ['#a78bfa', '#06b6d4', '#f59e0b'] },
+  ];
+
+  const features = [
+    { icon: 'fa-solid fa-users', title: 'Klasser', text: 'Registrer klasser og elever, og definer regler for hvem som bør eller ikke bør sitte sammen.' },
+    { icon: 'fa-solid fa-school', title: 'Rom', text: 'Tegn opp klasserommet fritt med bord, tavle, dører og vinduer - dra og slipp i egen editor.' },
+    { icon: 'fa-solid fa-map-location-dot', title: 'Klassekart', text: 'Plasser elevene i rommet, generer forslag automatisk, og hold styr på flere perioder over tid.' },
+    { icon: 'fa-solid fa-people-group', title: 'Gruppearbeid', text: 'Sett sammen makkergrupper automatisk ut fra reglene dine, med historikk som unngår gjentakelser.' },
+    { icon: 'fa-solid fa-arrows-rotate', title: 'Stasjoner', text: 'Planlegg og kjør stasjonsundervisning med rotasjon mellom grupper, klart for prosjektor.' },
+    { icon: 'fa-solid fa-print', title: 'Utskrift', text: 'Skriv ut eller eksporter klassekart og stasjonsoppsett som PDF, med tilpassbart innhold.' },
+  ];
+
+  const tabs = [
+    { id: 'visning', label: 'Visning & generelt', icon: 'fa-solid fa-display' },
+    { id: 'database', label: 'Database & sikkerhetskopi', icon: 'fa-solid fa-database' },
+    { id: 'om', label: 'Om KlassePlass', icon: 'fa-solid fa-circle-info' },
+    { id: 'personvern', label: 'Personvern & GDPR', icon: 'fa-solid fa-shield-halved' },
+    { id: 'lisenser', label: 'Lisenser', icon: 'fa-solid fa-scale-balanced' },
+  ];
+
   return (
-    <div className="flex h-full module-content-bg text-slate-100">
-      {/* Sidebar for settings tabs */}
-      <div className="w-64 bg-surface-raised border-r border-slate-800 p-4 flex-shrink-0">
-        <h2 className="text-xl font-bold mb-6 px-2 flex items-center gap-2 text-white">
+    <div className="flex flex-col h-full module-content-bg text-slate-100">
+      {/* Toppmeny for innstillings-faner */}
+      <div className="flex items-center gap-4 px-6 pt-6 pb-4 border-b border-white/10 flex-shrink-0 bg-white/[0.03] backdrop-blur-md overflow-x-auto">
+        <h2 className="text-lg font-bold flex items-center gap-2 text-white flex-shrink-0">
           <i className="fa-solid fa-gear text-emerald-400"></i> Innstillinger
         </h2>
 
-        <div className="flex flex-col gap-1.5">
-          <button
-            className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'visning' ? 'active' : ''}`}
-            onClick={() => setActiveTab('visning')}
-          >
-            <i className="fa-solid fa-display text-xs flex-shrink-0"></i>
-            <span className="truncate min-w-0 flex-1 text-left">Visning & generelt</span>
-          </button>
-          <button
-            className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'database' ? 'active' : ''}`}
-            onClick={() => setActiveTab('database')}
-          >
-            <i className="fa-solid fa-database text-xs flex-shrink-0"></i>
-            <span className="truncate min-w-0 flex-1 text-left">Database & sikkerhetskopi</span>
-          </button>
-          <button
-            className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'om' ? 'active' : ''}`}
-            onClick={() => setActiveTab('om')}
-          >
-            <i className="fa-solid fa-circle-info text-xs flex-shrink-0"></i>
-            <span className="truncate min-w-0 flex-1 text-left">Om KlassePlass</span>
-          </button>
-          <button
-            className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'personvern' ? 'active' : ''}`}
-            onClick={() => setActiveTab('personvern')}
-          >
-            <i className="fa-solid fa-shield-halved text-xs flex-shrink-0"></i>
-            <span className="truncate min-w-0 flex-1 text-left">Personvern & GDPR</span>
-          </button>
-          <button
-            className={`overblikk-nav-btn !h-10 text-xs justify-start ${activeTab === 'lisenser' ? 'active' : ''}`}
-            onClick={() => setActiveTab('lisenser')}
-          >
-            <i className="fa-solid fa-scale-balanced text-xs flex-shrink-0"></i>
-            <span className="truncate min-w-0 flex-1 text-left">Lisenser</span>
-          </button>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`btn btn-sm rounded-full border-none gap-2 font-semibold ${
+                activeTab === tab.id
+                  ? 'bg-emerald-500/15 text-emerald-400 font-bold hover:bg-emerald-500/20'
+                  : 'bg-transparent text-slate-400 hover:bg-white/5 hover:text-slate-200'
+              }`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <i className={`${tab.icon} text-xs`}></i>
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Content Area */}
       <div className="flex-1 p-8 overflow-y-auto">
         {activeTab === 'visning' && (
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 text-white">Visning & generelt</h3>
             
             <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
@@ -125,7 +133,7 @@ export default function Settings() {
               <p className="text-xs text-slate-400 mb-4">Velg om tavlen skal ligge øverst eller nederst i klasserommet som standard.</p>
               
               <div className="form-control max-w-xs">
-                <select 
+                <select
                   className="select select-bordered bg-base-200 border-slate-700 text-slate-200 focus:border-emerald-500"
                   value={settings.boardPosition || 'top'}
                   onChange={(e) => handleSaveSetting('boardPosition', e.target.value)}
@@ -135,11 +143,42 @@ export default function Settings() {
                 </select>
               </div>
             </div>
+
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
+              <h4 className="font-bold text-sm text-slate-200 mb-1">Fargetema</h4>
+              <p className="text-xs text-slate-400 mb-4">Velg fargeprofilen som passer deg best. Gjelder for hele appen.</p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {themeOptions.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => handleSetTheme(t.id)}
+                    className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+                      (settings.theme || 'klasseplass') === t.id
+                        ? 'border-white/30 bg-white/5'
+                        : 'border-white/10 hover:border-white/20 hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    {(settings.theme || 'klasseplass') === t.id && (
+                      <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white/10 flex items-center justify-center">
+                        <i className="fa-solid fa-check text-[9px] text-white"></i>
+                      </span>
+                    )}
+                    <div className="flex gap-1">
+                      {t.colors.map((c, i) => (
+                        <span key={i} className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: c }}></span>
+                      ))}
+                    </div>
+                    <span className="text-xs font-semibold text-slate-200">{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {activeTab === 'database' && (
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 text-white">Database & sikkerhetskopi</h3>
 
             {dbMessage && (
@@ -179,7 +218,7 @@ export default function Settings() {
         )}
 
         {activeTab === 'om' && (
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
             <div className="text-center py-10 bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6 shadow-xl">
               <h1 className="text-4xl font-extrabold mb-2 text-white tracking-wider">
                 KLASSE<span className="text-[#f59e0b]">PLASS</span>
@@ -187,7 +226,26 @@ export default function Settings() {
               {appVersion && (
                 <p className="text-xs text-slate-500 font-mono mb-2">v{appVersion}</p>
               )}
-              <p className="text-sm text-slate-400 max-w-md mx-auto">Et enkelt, raskt og 100% lokalt verktøy for lærere — opprett klasser, design klasserom, sett sammen klassekart, fordel elever i grupper og kjør stasjonsundervisning.</p>
+              <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
+                KlassePlass er et raskt, 100% lokalt verktøy laget for lærerhverdagen - fra å sette opp klassen
+                og klasserommet, til å planlegge klassekart, gruppearbeid og stasjonsundervisning, uten
+                innlogging, abonnement eller nettskyavhengighet. Alt lagres på din egen maskin, og alt du
+                gjør lagres fortløpende mens du jobber.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              {features.map((f) => (
+                <div key={f.title} className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-5 flex gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                    <i className={`${f.icon} text-sm`}></i>
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-sm text-slate-200 mb-1">{f.title}</h5>
+                    <p className="text-xs text-slate-400 leading-relaxed">{f.text}</p>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
@@ -200,7 +258,7 @@ export default function Settings() {
         )}
 
         {activeTab === 'personvern' && (
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 text-white">Personvern og GDPR</h3>
             <div className="bg-amber-950/40 border border-amber-500/40 text-amber-200 rounded-2xl p-6 mb-6">
               <h4 className="font-bold mb-2 flex items-center gap-2 text-amber-300">
@@ -221,7 +279,7 @@ export default function Settings() {
         )}
 
         {activeTab === 'lisenser' && (
-          <div className="max-w-2xl">
+          <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 text-white">Tredjepartsbiblioteker & Lisenser</h3>
             <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl">
               <table className="table w-full text-xs text-slate-300">
