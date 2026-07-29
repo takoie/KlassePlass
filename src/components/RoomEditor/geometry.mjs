@@ -34,3 +34,39 @@ export function desksOverlap(a, b) {
 export function findOverlappingDeskIds(desk, otherDesks) {
   return otherDesks.filter(d => d.id !== desk.id && desksOverlap(desk, d)).map(d => d.id);
 }
+
+export function hasCollision(movingDesks, testDx, testDy, stationaryDesks, ignoreIds = []) {
+  for (const md of movingDesks) {
+    const mRect = getDeskRect(md, testDx, testDy);
+    for (const sd of stationaryDesks) {
+      if (ignoreIds.includes(sd.id)) continue;
+      if (rectsOverlap(mRect, getDeskRect(sd))) return true;
+    }
+  }
+  return false;
+}
+
+export function findFreeSpot({ capacity = 1, existingDesks, anchor = null }) {
+  const w = capacity * DESK_UNIT_W;
+  const isFree = (x, y) => !existingDesks.some(d => rectsOverlap(
+    { left: x, top: y, right: x + w, bottom: y + DESK_H },
+    getDeskRect(d)
+  ));
+
+  if (anchor) {
+    for (let step = 0; step < 30; step++) {
+      const x = anchor.x + step * 20;
+      const y = anchor.y + step * 20;
+      if (x + w > CANVAS_W - WALL_RIGHT_MARGIN || y + DESK_H > CANVAS_H - WALL_BOTTOM_MARGIN) break;
+      if (isFree(x, y)) return { x, y };
+    }
+  }
+
+  for (let y = 90; y <= CANVAS_H - DESK_H - 20; y += 80) {
+    for (let x = 20; x <= CANVAS_W - w - 20; x += 115) {
+      if (isFree(x, y)) return { x, y };
+    }
+  }
+
+  return { x: 50, y: 90 };
+}

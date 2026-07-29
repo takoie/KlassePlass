@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getDeskRect, rectsOverlap, desksOverlap, findOverlappingDeskIds } from '../src/components/RoomEditor/geometry.mjs';
+import { getDeskRect, rectsOverlap, desksOverlap, findOverlappingDeskIds, hasCollision, findFreeSpot } from '../src/components/RoomEditor/geometry.mjs';
 
 test('getDeskRect uses capacity*100 width and 60 height', () => {
   const rect = getDeskRect({ x: 10, y: 20, capacity: 2 });
@@ -38,4 +38,53 @@ test('findOverlappingDeskIds returns only overlapping desks, excludes self', () 
     { id: 'c', x: 500, y: 500, capacity: 1 },
   ];
   assert.deepEqual(findOverlappingDeskIds(target, others), ['b']);
+});
+
+test('hasCollision detects overlap at a given test offset', () => {
+  const moving = [{ id: 'm', x: 0, y: 0, capacity: 1 }];
+  const stationary = [{ id: 's', x: 50, y: 0, capacity: 1 }];
+  assert.equal(hasCollision(moving, 0, 0, stationary, []), true);
+  assert.equal(hasCollision(moving, 200, 0, stationary, []), false);
+});
+
+test('hasCollision ignores desk ids in ignoreIds', () => {
+  const moving = [{ id: 'm', x: 0, y: 0, capacity: 1 }];
+  const stationary = [{ id: 's', x: 50, y: 0, capacity: 1 }];
+  assert.equal(hasCollision(moving, 0, 0, stationary, ['s']), false);
+});
+
+test('findFreeSpot with no anchor returns first free grid cell (top-left scan)', () => {
+  const spot = findFreeSpot({ capacity: 1, existingDesks: [] });
+  assert.deepEqual(spot, { x: 20, y: 90 });
+});
+
+test('findFreeSpot with no anchor skips occupied cells', () => {
+  const existing = [{ id: 'a', x: 20, y: 90, capacity: 1 }];
+  const spot = findFreeSpot({ capacity: 1, existingDesks: existing });
+  assert.deepEqual(spot, { x: 135, y: 90 });
+});
+
+test('findFreeSpot with anchor returns anchor itself if free', () => {
+  const spot = findFreeSpot({ capacity: 1, existingDesks: [], anchor: { x: 300, y: 300 } });
+  assert.deepEqual(spot, { x: 300, y: 300 });
+});
+
+test('findFreeSpot with anchor steps diagonally past an occupied anchor', () => {
+  const existing = [{ id: 'a', x: 300, y: 300, capacity: 1 }];
+  const spot = findFreeSpot({ capacity: 1, existingDesks: existing, anchor: { x: 300, y: 300 } });
+  // Bordet er 100x60: en diagonal +20-steg overlapper fortsatt (både x- og
+  // y-avstand under bordets bredde/høyde) helt til steg 3 (+60,+60), der
+  // y-avstanden (60) akkurat klarer å bryte overlappet.
+  assert.deepEqual(spot, { x: 360, y: 360 });
+});
+
+test('findFreeSpot falls back to grid scan when anchor search cannot find a spot', () => {
+  // Fyll hele det diagonale søket fra (300,300) og fremover med opptatte bord,
+  // slik at anchor-søket gir opp og faller tilbake til rutenett-skannet.
+  const existing = [];
+  for (let step = 0; step < 30; step++) {
+    existing.push({ id: `blocker-${step}`, x: 300 + step * 20, y: 300 + step * 20, capacity: 1 });
+  }
+  const spot = findFreeSpot({ capacity: 1, existingDesks: existing, anchor: { x: 300, y: 300 } });
+  assert.deepEqual(spot, { x: 20, y: 90 });
 });
