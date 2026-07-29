@@ -52,6 +52,7 @@ export default function RoomEditor({ onBack, initialId }) {
   const selectedDesksRef = useRef(selectedDesks);
   const isDraggingRef = useRef(false);
   const preOverlappingIdsRef = useRef([]);
+  const altKeyRef = useRef(false);
   const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => { desksRef.current = desks; }, [desks]);
@@ -523,7 +524,8 @@ export default function RoomEditor({ onBack, initialId }) {
     const stationary = desksRef.current.filter(d => !desksToMoveIds.includes(d.id));
 
     const result = getBoundedDelta(movingDesksObjs, rawDx, rawDy, stationary, {
-      ignoreOverlapIds: preOverlappingIdsRef.current
+      ignoreOverlapIds: preOverlappingIdsRef.current,
+      skipSnap: altKeyRef.current
     });
 
     // Direct DOM guide lines (60fps performance without React re-render loops)
@@ -660,7 +662,8 @@ export default function RoomEditor({ onBack, initialId }) {
       const stationary = desks.filter(d => !desksToMove.includes(d.id));
       const movingDesks = desks.filter(d => desksToMove.includes(d.id));
       const result = getBoundedDelta(movingDesks, delta.x / scale, delta.y / scale, stationary, {
-        ignoreOverlapIds: preOverlappingIdsRef.current
+        ignoreOverlapIds: preOverlappingIdsRef.current,
+        skipSnap: altKeyRef.current
       });
 
       setDesks(prev => prev.map(d => {
@@ -731,6 +734,20 @@ export default function RoomEditor({ onBack, initialId }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedDesks, desks]);
+
+  useEffect(() => {
+    const onAltDown = (e) => { if (e.key === 'Alt') altKeyRef.current = true; };
+    const onAltUp = (e) => { if (e.key === 'Alt') altKeyRef.current = false; };
+    const onBlur = () => { altKeyRef.current = false; }; // f.eks. alt-tab bort fra vinduet
+    window.addEventListener('keydown', onAltDown);
+    window.addEventListener('keyup', onAltUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onAltDown);
+      window.removeEventListener('keyup', onAltUp);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   const handleContextMenu = (e, item) => {
     e.preventDefault();
