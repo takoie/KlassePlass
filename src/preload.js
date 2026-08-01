@@ -26,22 +26,6 @@ contextBridge.exposeInMainWorld('api', {
 
   // Constraints
   getConstraints:   (cid)    => ipcRenderer.invoke('get-constraints', cid),
-  saveConstraint:   (data)   => ipcRenderer.invoke('save-constraint', data),
-  deleteConstraint: (id)     => ipcRenderer.invoke('delete-constraint', id),
-
-  // Historikk
-  getHistory:       (cid, n) => ipcRenderer.invoke('get-history', cid, n),
-  saveHistory:      (data)   => ipcRenderer.invoke('save-history', data),
-  duplicateSeating: (data)   => ipcRenderer.invoke('duplicate-seating', data),
-
-  // Eksport / Import
-  exportBundle:     (cid)    => ipcRenderer.invoke('export-bundle', cid),
-  importBundle:     (data)   => ipcRenderer.invoke('import-bundle', data),
-
-  // Presentasjonsvindu
-  openPresentation:       (data)   => ipcRenderer.send('open-presentation', data),
-  presentationCmd:        (cmd)    => ipcRenderer.send('presentation-cmd', cmd),
-  syncPresentationTheme:  (data)   => ipcRenderer.send('sync-presentation-theme', data),
 
   // Settings
   getSettings:      ()       => ipcRenderer.invoke('get-settings'),
@@ -70,17 +54,6 @@ contextBridge.exposeInMainWorld('api', {
   getGroupHistory:          (cid, n) => ipcRenderer.invoke('get-group-history', cid, n),
   saveGroupHistory:         (d)      => ipcRenderer.invoke('save-group-history', d),
 
-  // Deltakelseslogg
-  getParticipation:        (sid, date) => ipcRenderer.invoke('get-participation', sid, date),
-  saveParticipation:       (d)         => ipcRenderer.invoke('save-participation', d),
-  getParticipationSummary: (sid)       => ipcRenderer.invoke('get-participation-summary', sid),
-  clearParticipation:      (sid, date) => ipcRenderer.invoke('clear-participation', sid, date),
-
-  // Timeplan
-  getSchedule:          ()      => ipcRenderer.invoke('get-schedule'),
-  saveScheduleEntry:    (d)     => ipcRenderer.invoke('save-schedule-entry', d),
-  deleteScheduleEntry:  (id)    => ipcRenderer.invoke('delete-schedule-entry', id),
-
   // Stasjonsundervisning
   getStationSessions:   (cid)   => ipcRenderer.invoke('get-station-sessions', cid),
   getStationSession:    (id)    => ipcRenderer.invoke('get-station-session', id),
@@ -89,7 +62,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // App info
   getVersion:       ()       => ipcRenderer.invoke('get-version'),
-  getDbPath:        ()       => ipcRenderer.invoke('get-db-path'),
+  getMigrationInfo: ()       => ipcRenderer.invoke('get-migration-info'),
 
   // Window controls
   minimizeWindow:   ()       => ipcRenderer.send('window-minimize'),

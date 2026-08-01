@@ -3,7 +3,7 @@
  * Kjøres ved oppstart. CREATE TABLE IF NOT EXISTS er idempotent.
  */
 
-const CURRENT_VERSION = 9;
+const CURRENT_VERSION = 11;
 
 /** Kjør alle migrations mot en åpen sql.js db-instans */
 function runMigrations(db) {
@@ -143,6 +143,14 @@ function runMigrations(db) {
 
       // ---- v9: Stasjon-gruppeledere — group_leaders kolonne ----
       try { db.run(`ALTER TABLE station_sessions ADD COLUMN group_leaders TEXT DEFAULT '[]'`); } catch(e){}
+
+      // ---- v10: Finere tidsstyring — sekunder i tillegg til minutter, og mulighet for å kjøre uten tidtaker ----
+      try { db.run(`ALTER TABLE station_sessions ADD COLUMN seconds_per_station INTEGER DEFAULT 0`); } catch(e){}
+      try { db.run(`ALTER TABLE station_sessions ADD COLUMN no_timer INTEGER DEFAULT 0`); } catch(e){}
+
+      // ---- v11: Egendefinerte gruppenavn i gruppearbeid ----
+      try { db.run(`ALTER TABLE group_assignments ADD COLUMN use_custom_names INTEGER DEFAULT 0`); } catch(e){}
+      try { db.run(`ALTER TABLE group_assignment_groups ADD COLUMN group_name TEXT`); } catch(e){}
 
       // Sett schema-versjon
       db.run(`INSERT OR IGNORE INTO schema_version (version) VALUES (?)`, [CURRENT_VERSION]);

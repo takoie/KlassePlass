@@ -92,8 +92,13 @@ export function findFreeGroupOffset({ desks, existingDesks, startDx = 20, startD
 
 const SNAP_THRESHOLD = 20;
 const ADJACENCY_TOLERANCE = 14;
+// Når to nabo-pulter konkurrerer om snapping med nesten lik "pull" (f.eks. flere pulter
+// på rad i et generert oppsett), gir vi den pulten som allerede var snap-mål forrige frame
+// en liten fordel. Uten dette kan ett piksels muselbevegelse vippe valget mellom to
+// nesten likeverdige mål og få pulten til å "hoppe" til et annet sted enn ventet.
+const HYSTERESIS_BONUS = 6;
 
-function computeMagneticSnap(movingDesks, rawDx, rawDy, stationaryDesks) {
+function computeMagneticSnap(movingDesks, rawDx, rawDy, stationaryDesks, preferredTargetId = null) {
   let best = null;
   for (const md of movingDesks) {
     const mdx = md.x + rawDx;
@@ -118,7 +123,8 @@ function computeMagneticSnap(movingDesks, rawDx, rawDy, stationaryDesks) {
       }
 
       for (const c of candidates) {
-        const pull = Math.abs(c.dx - rawDx) + Math.abs(c.dy - rawDy);
+        let pull = Math.abs(c.dx - rawDx) + Math.abs(c.dy - rawDy);
+        if (preferredTargetId && sd.id === preferredTargetId) pull -= HYSTERESIS_BONUS;
         if (!best || pull < best.pull) best = { ...c, targetId: sd.id, pull };
       }
     }
@@ -128,7 +134,7 @@ function computeMagneticSnap(movingDesks, rawDx, rawDy, stationaryDesks) {
 
 export function computeBoundedDelta({
   movingDesks, rawDx, rawDy, stationaryDesks,
-  skipSnap = false, ignoreOverlapIds = []
+  skipSnap = false, ignoreOverlapIds = [], preferredTargetId = null
 }) {
   let maxDx = rawDx, maxDy = rawDy;
   movingDesks.forEach(d => {
@@ -145,7 +151,7 @@ export function computeBoundedDelta({
   let targetDeskIds = [];
 
   if (!skipSnap) {
-    const snap = computeMagneticSnap(movingDesks, finalDx, finalDy, stationaryDesks);
+    const snap = computeMagneticSnap(movingDesks, finalDx, finalDy, stationaryDesks, preferredTargetId);
     if (snap) {
       finalDx = snap.dx; finalDy = snap.dy; isSnapped = true;
       targetDeskIds = [snap.targetId];

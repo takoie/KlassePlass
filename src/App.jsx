@@ -11,6 +11,7 @@ import StationPresenter from './components/StationPresenter';
 import UpdateBanner from './components/UpdateBanner';
 import OnboardingGuide from './components/OnboardingGuide';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
+import { showToast } from './shared/utils';
 
 function App() {
   const [currentView, setCurrentView] = useState('classes-overview');
@@ -23,6 +24,14 @@ function App() {
     window.api?.getSettings?.().then((s) => {
       if (s?.theme) document.documentElement.setAttribute('data-theme', s.theme);
       if (!s?.onboardingCompleted) setShowOnboarding(true);
+    }).catch(() => {});
+
+    // Varsle brukeren dersom databasen nettopp ble migrert til nyere
+    // schema-versjon — en sikkerhetskopi av den forrige versjonen ble tatt.
+    window.api?.getMigrationInfo?.().then((info) => {
+      if (info) {
+        showToast(`Databasen ble oppdatert (v${info.fromVersion} → v${info.toVersion}). Sikkerhetskopi lagret ved siden av databasefilen.`, 'info');
+      }
     }).catch(() => {});
   }, []);
 
@@ -38,12 +47,14 @@ function App() {
 
   const handleCloseOnboarding = () => {
     setShowOnboarding(false);
-    window.api?.saveSettings?.({ onboardingCompleted: true }).catch(() => {});
+    window.api?.saveSettings?.({ onboardingCompleted: true }).catch(() => {
+      showToast('Kunne ikke lagre at veiledningen er fullført. Den kan dukke opp igjen neste gang.', 'error');
+    });
   };
 
   const renderView = () => {
     switch(currentView) {
-      case 'classes-overview': return <ClassesOverview onEdit={(id) => handleEdit('classes', id)} onAdd={() => handleAdd('classes')} />;
+      case 'classes-overview': return <ClassesOverview onEdit={(id) => handleEdit('classes', id)} />;
       case 'rooms-overview': return <RoomsOverview onEdit={(id) => handleEdit('rooms', id)} onAdd={() => handleAdd('rooms')} />;
       case 'seating-overview': return <SeatingOverview onEdit={(id) => handleEdit('seating', id)} onAdd={() => handleAdd('seating')} />;
       case 'group-overview': return <GroupOverview onEdit={(id) => handleEdit('group-editor', id)} />;

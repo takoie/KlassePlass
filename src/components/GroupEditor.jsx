@@ -24,6 +24,8 @@ export default function GroupEditor({ onBack, initialId }) {
   const [allStudentIds, setAllStudentIds] = useState([]);
   const [constraints, setConstraints] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [groupNames, setGroupNames] = useState([]);
+  const [useCustomNames, setUseCustomNames] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const [regenerating, setRegenerating] = useState(false);
@@ -73,6 +75,8 @@ export default function GroupEditor({ onBack, initialId }) {
       setAllStudentIds(students.map(s => s.id));
       setConstraints(mappedConstraints);
       setGroups(groupRows.map(row => { try { return JSON.parse(row.student_ids); } catch (e) { return []; } }));
+      setGroupNames(groupRows.map(row => row.group_name || ''));
+      setUseCustomNames(!!assignment.use_custom_names);
       setDirty(false);
       setSaveState('saved');
     } catch (e) {}
@@ -111,6 +115,29 @@ export default function GroupEditor({ onBack, initialId }) {
       setDirty(true);
     } catch (e) {}
     setRegenerating(false);
+  };
+
+  const addGroup = () => {
+    setGroups(prev => [...prev, []]);
+    setGroupNames(prev => [...prev, '']);
+    setDirty(true);
+  };
+
+  const removeGroup = (idx) => {
+    if (groups[idx].length > 0) return;
+    setGroups(prev => prev.filter((_, i) => i !== idx));
+    setGroupNames(prev => prev.filter((_, i) => i !== idx));
+    setDirty(true);
+  };
+
+  const updateGroupName = (idx, value) => {
+    setGroupNames(prev => prev.map((n, i) => i === idx ? value : n));
+    setDirty(true);
+  };
+
+  const toggleCustomNames = () => {
+    setUseCustomNames(prev => !prev);
+    setDirty(true);
   };
 
   const moveStudent = (studentId, fromIdx, toIdx) => {
@@ -165,11 +192,14 @@ export default function GroupEditor({ onBack, initialId }) {
     if (!assignmentId) return;
     setSaveState('saving');
     try {
-      const groupsPayload = groups.map((studentIds, i) => ({ groupNumber: i + 1, studentIds }));
+      const groupsPayload = groups.map((studentIds, i) => ({
+        groupNumber: i + 1, studentIds,
+        groupName: useCustomNames && groupNames[i]?.trim() ? groupNames[i].trim() : null,
+      }));
       await window.api.saveGroupAssignment({
         id: assignmentId, name: name.trim() || 'Uten navn', classId,
         sourceSeatingId: null, useConstraints, avoidLastN, requireLeaders, leaderIds, lockedIds,
-        groups: groupsPayload,
+        useCustomNames, groups: groupsPayload,
       });
       const pairs = buildGroupPairs(groups, studentsById);
       await window.api.saveGroupHistory({ classId, assignmentId, pairs });
@@ -233,6 +263,16 @@ export default function GroupEditor({ onBack, initialId }) {
               <i className="fa-solid fa-circle-check text-[#34d399]"></i> Lagret
             </span>
           )}
+          <button
+            className={`btn btn-sm gap-2 ${useCustomNames ? 'bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`}
+            onClick={toggleCustomNames}
+            title="Bytt mellom nummererte og egendefinerte gruppenavn"
+          >
+            <i className="fa-solid fa-pen"></i> Egendefinerte navn
+          </button>
+          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={addGroup}>
+            <i className="fa-solid fa-plus"></i> Legg til gruppe
+          </button>
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={handleRegenerate} disabled={regenerating}>
             <i className={`fa-solid fa-shuffle ${regenerating ? 'fa-spin' : ''}`}></i> Generer på nytt
           </button>
@@ -255,9 +295,31 @@ export default function GroupEditor({ onBack, initialId }) {
               const color = GROUP_COLORS[idx % GROUP_COLORS.length];
               return (
                 <GroupPanel key={idx} idx={idx} color={color}>
-                  <div className="px-4 py-2.5 flex items-center justify-between" style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
-                    <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
-                    <span className="text-xs text-slate-400">{studentIds.length} elever</span>
+                  <div className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
+                    {useCustomNames ? (
+                      <input
+                        type="text"
+                        value={groupNames[idx] || ''}
+                        onChange={(e) => updateGroupName(idx, e.target.value)}
+                        placeholder={`Gruppe ${idx + 1}`}
+                        className="font-bold text-sm bg-transparent border-b border-transparent hover:border-slate-600 focus:border-current focus:outline-none min-w-0 flex-1"
+                        style={{ color }}
+                      />
+                    ) : (
+                      <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
+                    )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs text-slate-400">{studentIds.length} elever</span>
+                      {studentIds.length === 0 && groups.length > 1 && (
+                        <button
+                          className="text-slate-400 hover:text-red-400 transition-colors"
+                          title="Fjern tom gruppe"
+                          onClick={() => removeGroup(idx)}
+                        >
+                          <i className="fa-solid fa-trash text-xs"></i>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="p-2 flex flex-col gap-1.5 flex-1">
                     {studentIds.length === 0 && (
@@ -315,6 +377,7 @@ export default function GroupEditor({ onBack, initialId }) {
             studentsById,
             leaderIds,
             groupColors: GROUP_COLORS,
+            groupNames: groups.map((_, i) => (useCustomNames && groupNames[i]?.trim()) ? groupNames[i].trim() : null),
           }}
           initialShowNumbers={false}
           initialShowZones={false}

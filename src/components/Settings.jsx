@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { showToast } from '../shared/utils';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('visning');
@@ -15,7 +16,9 @@ export default function Settings() {
     try {
       const s = await window.api.getSettings();
       if (s) setSettings(s);
-    } catch(e) {}
+    } catch(e) {
+      showToast('Kunne ikke laste innstillinger. Standardverdier brukes.', 'error');
+    }
   };
 
   const handleSaveSetting = async (key, value) => {
@@ -23,7 +26,9 @@ export default function Settings() {
     setSettings(newSettings);
     try {
       await window.api.saveSettings({ [key]: value });
-    } catch(e) {}
+    } catch(e) {
+      showToast('Kunne ikke lagre innstillingen.', 'error');
+    }
   };
 
   const handleSetTheme = (themeId) => {
@@ -269,11 +274,50 @@ export default function Settings() {
               </p>
             </div>
             
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-slate-200 mb-3">Retningslinjer for skolen</h4>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Behandling av personopplysninger skjer i henhold til skolens interne personvernrutiner og UDIRs retningslinjer for digitale verktøy i skolen.
               </p>
+            </div>
+
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
+              <h4 className="font-bold text-sm text-slate-200 mb-3">Regelverk og lenker</h4>
+              <ul className="flex flex-col gap-3">
+                <li>
+                  <a
+                    href="https://www.udir.no/regelverk-og-tilsyn/personvern-for-barnehage-og-skole/"
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-emerald-400 hover:underline font-bold text-xs flex items-center gap-2"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    UDIR: Personvern (GDPR) i barnehage og skole
+                  </a>
+                  <p className="text-xs text-slate-500 mt-1">Utdanningsdirektoratets samleside om hvordan barnehager og skoler skal behandle personopplysninger om barn og elever i tråd med GDPR.</p>
+                </li>
+                <li>
+                  <a
+                    href="https://www.udir.no/regelverk-og-tilsyn/personvern-for-barnehage-og-skole/veiledere/personvern-i-skytjenester/"
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-emerald-400 hover:underline font-bold text-xs flex items-center gap-2"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    UDIR: Veileder om personvern i skytjenester
+                  </a>
+                  <p className="text-xs text-slate-500 mt-1">Krav til risikovurdering og databehandleravtaler når skolen bruker skytjenester. KlassePlass lagrer alt lokalt og faller utenfor dette, men veilederen er nyttig bakgrunn for skoleeiers helhetlige personvernarbeid.</p>
+                </li>
+                <li>
+                  <a
+                    href="https://www.datatilsynet.no/regelverk-og-verktoy/lover-og-regler/om-personopplysningsloven-og-nar-den-gjelder/"
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-emerald-400 hover:underline font-bold text-xs flex items-center gap-2"
+                  >
+                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    Datatilsynet: Personopplysningsloven og GDPR i Norge
+                  </a>
+                  <p className="text-xs text-slate-500 mt-1">Datatilsynets generelle forklaring av personopplysningsloven og EUs personvernforordning (GDPR), og når regelverket gjelder.</p>
+                </li>
+              </ul>
             </div>
           </div>
         )}
@@ -281,7 +325,9 @@ export default function Settings() {
         {activeTab === 'lisenser' && (
           <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 text-white">Tredjepartsbiblioteker & Lisenser</h3>
-            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl">
+
+            <h4 className="font-bold text-sm text-slate-200 mb-2">Kjøretidsbiblioteker (kode som følger med i appen)</h4>
+            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6">
               <table className="table w-full text-xs text-slate-300">
                 <thead>
                   <tr className="border-b border-slate-700/80 text-slate-400">
@@ -293,11 +339,28 @@ export default function Settings() {
                   <tr><td className="py-2.5 px-4 font-semibold">React & React DOM</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">Electron</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">electron-updater</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">Vite</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">Tailwind CSS & daisyUI</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">dnd kit</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">dnd kit (core, sortable, utilities)</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">sql.js (SQLite for nettleser/WASM)</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">Font Awesome Free</td><td className="py-2.5 px-4 text-emerald-400">CC BY 4.0 / SIL OFL 1.1 / MIT</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4 className="font-bold text-sm text-slate-200 mb-2">Byggeverktøy (brukt til å utvikle, style og pakke appen)</h4>
+            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl">
+              <table className="table w-full text-xs text-slate-300">
+                <thead>
+                  <tr className="border-b border-slate-700/80 text-slate-400">
+                    <th className="py-3 px-4 text-left">Verktøy</th>
+                    <th className="py-3 px-4 text-left">Lisens</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80">
+                  <tr><td className="py-2.5 px-4 font-semibold">Vite & @vitejs/plugin-react</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Tailwind CSS & daisyUI</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">PostCSS & Autoprefixer</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">electron-builder</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">concurrently & wait-on</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                 </tbody>
               </table>
             </div>

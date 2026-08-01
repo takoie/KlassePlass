@@ -5,7 +5,7 @@ import DeskContextMenu from './SeatingChart/DeskContextMenu';
 import HeaderBar from './SeatingChart/HeaderBar';
 import Toolbar from './SeatingChart/Toolbar';
 import StudentDrawer from './SeatingChart/StudentDrawer';
-import { sortSlotsByDeskOrder, findBestPlacement } from '../lib/seatingSolver.mjs';
+import { findBestPlacement } from '../lib/seatingSolver.mjs';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
@@ -41,8 +41,6 @@ export default function SeatingChart({ onBack, initialId }) {
   const [chartName, setChartName] = useState('');
   const [chartComment, setChartComment] = useState('Uke 1-4');
   const [desks, setDesks] = useState([]);
-  const [doors, setDoors] = useState([]);
-  const [windows, setWindows] = useState([]);
   const [boardObj, setBoardObj] = useState({ x: 422, y: 15 });
   const [saveState, setSaveState] = useState('saved');
   
@@ -204,8 +202,6 @@ export default function SeatingChart({ onBack, initialId }) {
         zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
         groupId: d.groupId || null
       })));
-      setDoors(deskSnapshot.doors || []);
-      setWindows(deskSnapshot.windows || []);
       setBoardObj(deskSnapshot.boardObj || { x: 422, y: 15 });
     } else if (rm) {
       try {
@@ -216,8 +212,6 @@ export default function SeatingChart({ onBack, initialId }) {
           zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
           groupId: d.groupId || null
         })));
-        setDoors(layout.doors || []);
-        setWindows(layout.windows || []);
         setBoardObj(layout.boardObj || { x: 422, y: 15 });
       } catch (e) {}
     }
@@ -281,11 +275,6 @@ export default function SeatingChart({ onBack, initialId }) {
 
     return () => clearTimeout(saveTimeoutRef.current);
   }, [placements, lockedSeats, studentRoles, studentNotes, chartName, chartComment, selectedClass, selectedRoom, boardObj, groupOverrides]);
-
-  const handleContextMenu = (e, slotKey, studentObj, deskId) => {
-    e.preventDefault();
-    setContextMenu({ mouseX: e.clientX, mouseY: e.clientY, slotKey, studentObj, deskId });
-  };
 
   const handleDeskContextMenu = (e, desk) => {
     e.preventDefault();
@@ -426,8 +415,6 @@ export default function SeatingChart({ onBack, initialId }) {
         zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
         groupId: d.groupId || null
       })));
-      setDoors(deskSnapshot.doors || []);
-      setWindows(deskSnapshot.windows || []);
       setBoardObj(deskSnapshot.boardObj || { x: 405, y: 25 });
     } else if (rm) {
       try {
@@ -438,8 +425,6 @@ export default function SeatingChart({ onBack, initialId }) {
           zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
           groupId: d.groupId || null
         })));
-        setDoors(layout.doors || []);
-        setWindows(layout.windows || []);
         setBoardObj(layout.boardObj || { x: 405, y: 25 });
       } catch (e) {}
     }
@@ -486,7 +471,7 @@ export default function SeatingChart({ onBack, initialId }) {
         // Frosset kopi av bordoppsettet. Uten denne ville rom-redigering (spesielt
         // Hurtiglayout, som gir alle bord nye IDer) stille gjøre alle plasseringer
         // her foreldreløse neste gang kartet åpnes.
-        deskLayout: { desks, doors, windows, boardObj }
+        deskLayout: { desks, boardObj }
       });
 
       const result = await window.api.saveSeating({
@@ -530,7 +515,7 @@ export default function SeatingChart({ onBack, initialId }) {
         // Frosset kopi av bordoppsettet. Uten denne ville rom-redigering (spesielt
         // Hurtiglayout, som gir alle bord nye IDer) stille gjøre alle plasseringer
         // her foreldreløse neste gang kartet åpnes.
-        deskLayout: { desks, doors, windows, boardObj }
+        deskLayout: { desks, boardObj }
       });
 
       const result = await window.api.saveSeating({
@@ -628,8 +613,6 @@ export default function SeatingChart({ onBack, initialId }) {
       const newDeskIds = new Set(newDesks.map(d => String(d.id)));
 
       setDesks(newDesks);
-      setDoors(layout.doors || []);
-      setWindows(layout.windows || []);
       setBoardObj(layout.boardObj || { x: 422, y: 15 });
 
       setPlacements(prev => {
@@ -1387,28 +1370,6 @@ export default function SeatingChart({ onBack, initialId }) {
                       </div>
                     </div>
 
-                    {/* Dører */}
-                    {doors.map((dr) => (
-                      <div key={dr.id} className="absolute select-none z-10 flex items-center justify-center pointer-events-none" style={{ left: dr.x, top: dr.y, transform: `rotate(${dr.rotation || 0}deg)` }}>
-                        <svg width="60" height="40" viewBox="0 0 60 40">
-                          <rect x="0" y="36" width="60" height="4" fill="#f59e0b" opacity="0.4" />
-                          <path d="M 0 36 A 36 36 0 0 1 36 0" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 3" />
-                          <line x1="0" y1="36" x2="36" y2="0" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
-                        </svg>
-                      </div>
-                    ))}
-
-                    {/* Vinduer */}
-                    {windows.map((win) => (
-                      <div key={win.id} className="absolute select-none z-10 flex items-center justify-center pointer-events-none" style={{ left: win.x, top: win.y, transform: `rotate(${win.rotation || 0}deg)` }}>
-                        <div className="w-20 h-6 bg-cyan-950/60 border-2 border-cyan-400 rounded flex flex-col justify-between p-0.5 shadow">
-                          <div className="w-full h-[2px] bg-cyan-300 opacity-60"></div>
-                          <div className="text-[9px] font-bold text-cyan-200 text-center tracking-widest leading-none">VINDU</div>
-                          <div className="w-full h-[2px] bg-cyan-300 opacity-60"></div>
-                        </div>
-                      </div>
-                    ))}
-
                     {/* Stilrene Bord */}
                     {desks.map((d) => {
                       const cap = d.capacity || 1;
@@ -1495,7 +1456,6 @@ export default function SeatingChart({ onBack, initialId }) {
                                 <div 
                                   key={slotIdx}
                                   className={`flex-1 h-full rounded-lg flex items-center justify-center relative transition-colors ${bgClass}`}
-                                  onContextMenu={(e) => { if (activeGroupId === null) handleContextMenu(e, slotKey, studentObj, d.id); }}
                                 >
                                   {isHoverTarget && !studentObj && (
                                     <span className="text-[10px] font-black text-emerald-300 uppercase tracking-widest pointer-events-none animate-bounce">Slipp her</span>

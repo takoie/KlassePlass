@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PrintPreviewModal from './Print/PrintPreviewModal';
 
-const GROUP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16'];
+export const GROUP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#84cc16'];
 
 export default function StationPresenter({ onBack, initialId }) {
   const [loading, setLoading] = useState(true);
@@ -46,13 +46,13 @@ export default function StationPresenter({ onBack, initialId }) {
 
       setSession({ ...s, stations, groups, groupLeaders, rotationPlan, className: cls?.name || '' });
       setStudentsById(byId);
-      setSecondsLeft((s.minutes_per_station || 10) * 60);
+      setSecondsLeft(((s.minutes_per_station ?? 10) * 60) + (s.seconds_per_station ?? 0));
     } catch (e) {}
     setLoading(false);
   };
 
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning || session?.no_timer) return;
     timerRef.current = setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
@@ -69,7 +69,7 @@ export default function StationPresenter({ onBack, initialId }) {
     clearInterval(timerRef.current);
     setIsRunning(false);
     setTimeUp(false);
-    setSecondsLeft((session?.minutes_per_station || 10) * 60);
+    setSecondsLeft(((session?.minutes_per_station ?? 10) * 60) + (session?.seconds_per_station ?? 0));
   };
 
   const goToRotation = (idx) => {
@@ -158,16 +158,24 @@ export default function StationPresenter({ onBack, initialId }) {
           <i className="fa-solid fa-backward-step"></i> Forrige
         </button>
 
-        <div className={`text-4xl font-black tabular-nums px-6 ${timeUp ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-          {mins}:{secs}
-        </div>
+        {session.no_timer ? (
+          <div className="text-xs text-slate-500 italic px-6 flex items-center gap-2">
+            <i className="fa-regular fa-clock opacity-50"></i> Ingen tidtaker — bytt når klassen er klar
+          </div>
+        ) : (
+          <>
+            <div className={`text-4xl font-black tabular-nums px-6 ${timeUp ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+              {mins}:{secs}
+            </div>
 
-        <button className="btn btn-circle bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30" onClick={() => setIsRunning(r => !r)}>
-          <i className={`fa-solid ${isRunning ? 'fa-pause' : 'fa-play'}`}></i>
-        </button>
-        <button className="btn btn-ghost text-slate-400 hover:text-white" onClick={resetTimer} title="Start tiden på nytt">
-          <i className="fa-solid fa-rotate-left"></i>
-        </button>
+            <button className="btn btn-circle bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30" onClick={() => setIsRunning(r => !r)}>
+              <i className={`fa-solid ${isRunning ? 'fa-pause' : 'fa-play'}`}></i>
+            </button>
+            <button className="btn btn-ghost text-slate-400 hover:text-white" onClick={resetTimer} title="Start tiden på nytt">
+              <i className="fa-solid fa-rotate-left"></i>
+            </button>
+          </>
+        )}
 
         <button className="btn btn-primary" onClick={() => goToRotation(rotationIndex + 1)} disabled={isLastRotation}>
           Neste rotasjon <i className="fa-solid fa-forward-step"></i>

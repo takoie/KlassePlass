@@ -114,6 +114,7 @@ export default function PrintPreviewModal({
           studentsById={groupWorkProps.studentsById}
           leaderIds={groupWorkProps.leaderIds}
           groupColors={groupWorkProps.groupColors}
+          groupNames={groupWorkProps.groupNames}
           settings={settings}
         />
       ),

@@ -2,11 +2,25 @@ const path    = require('path');
 const fs      = require('fs');
 const initSqlJs = require('sql.js');
 const { app } = require('electron');
-const { runMigrations, migrateRoomLayouts } = require('../db/schema.js');
+const { runMigrations, migrateRoomLayouts, CURRENT_VERSION } = require('../db/schema.js');
 
 let db = null;
 let dbPath = null;
 let SQL = null;
+let lastMigrationInfo = null;
+
+/** Leser høyeste schema_version fra en åpen db. 0 hvis tabellen mangler/er tom. */
+function getSchemaVersion(db) {
+  try {
+    const stmt = db.prepare('SELECT MAX(version) as v FROM schema_version');
+    stmt.step();
+    const version = stmt.getAsObject().v;
+    stmt.free();
+    return version || 0;
+  } catch {
+    return 0;
+  }
+}
 
 function getDbPath() {
   const configPath = path.join(app.getPath('userData'), 'db-location.json');
@@ -43,18 +57,30 @@ async function initDb() {
   console.log('Database:', dbPath);
   
   SQL = await initSqlJs();
+  lastMigrationInfo = null;
   if (fs.existsSync(dbPath)) {
     const filebuffer = fs.readFileSync(dbPath);
     db = new SQL.Database(filebuffer);
+
+    // Databasen fantes fra før og skal til en nyere schema-versjon:
+    // ta en sikkerhetskopi før migrations kjøres, og varsle renderer om det.
+    const fromVersion = getSchemaVersion(db);
+    if (fromVersion > 0 && fromVersion < CURRENT_VERSION) {
+      const backupPath = dbPath.replace(/\.db$/i, '') + `.v${fromVersion}-backup-${Date.now()}.db`;
+      fs.copyFileSync(dbPath, backupPath);
+      lastMigrationInfo = { fromVersion, toVersion: CURRENT_VERSION, backupPath };
+    }
   } else {
     db = new SQL.Database();
   }
-  
+
   await runMigrations(db);
   await migrateRoomLayouts(db);
   saveDbToDisk();
   return db;
 }
+
+function getMigrationInfo() { return lastMigrationInfo; }
 
 function saveDbToDisk() {
   if (!db || !dbPath) return;
@@ -66,4 +92,4 @@ function saveDbToDisk() {
 function getDb()     { return db; }
 function getDbPathFn() { return dbPath; }
 
-module.exports = { initDb, getDb, getDbPathFn, loadSettings, saveSettings, saveDbToDisk };
+module.exports = { initDb, getDb, getDbPathFn, loadSettings, saveSettings, saveDbToDisk, getMigrationInfo };

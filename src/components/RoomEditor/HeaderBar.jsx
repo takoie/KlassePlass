@@ -42,6 +42,10 @@ export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoo
               <span className="text-amber-400 opacity-80 text-xs font-semibold flex items-center gap-1">
                 <i className="fa-solid fa-spinner fa-spin"></i> Lagrer...
               </span>
+            ) : saveState === 'error' ? (
+              <span className="text-red-400 text-xs font-semibold flex items-center gap-1">
+                <i className="fa-solid fa-triangle-exclamation"></i> Kunne ikke lagre
+              </span>
             ) : (
               <span className="text-[#34d399] text-xs font-semibold flex items-center gap-1">
                 <i className="fa-solid fa-circle-check text-[#34d399]"></i> Lagret
@@ -51,7 +55,7 @@ export default function HeaderBar({ onBack, rooms, selectedRoom, handleSelectRoo
 
           <button
             className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs"
-            onClick={() => document.getElementById(`modal_delete_room_${selectedRoom.id}`).showModal()}
+            onClick={() => document.getElementById(`modal_delete_room_${selectedRoom.id}`)?.showModal()}
           >
             <i className="fa-solid fa-trash"></i> Slett rom
           </button>

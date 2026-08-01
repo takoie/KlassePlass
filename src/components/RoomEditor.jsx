@@ -3,18 +3,11 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import DeskItem from './RoomEditor/DeskItem';
 import RoomToolsDrawer from './RoomEditor/RoomToolsDrawer';
 import BoardItem from './RoomEditor/BoardItem';
-import DoorItem from './RoomEditor/DoorItem';
-import WindowItem from './RoomEditor/WindowItem';
 import HeaderBar from './RoomEditor/HeaderBar';
 import DeskContextMenu from './RoomEditor/DeskContextMenu';
 import Modals from './RoomEditor/Modals';
 import { computeBoundedDelta, findOverlappingDeskIds, findFreeGroupOffset, findFreeSpot } from './RoomEditor/geometry';
-
-const GROUP_COLORS = [
-  '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
-  '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#84cc16',
-  '#06b6d4', '#d946ef', '#e11d48', '#22c55e', '#64748b'
-];
+import { showToast } from '../shared/utils';
 
 export default function RoomEditor({ onBack, initialId }) {
   const [rooms, setRooms] = useState([]);
@@ -27,8 +20,6 @@ export default function RoomEditor({ onBack, initialId }) {
   const [selectedPreset, setSelectedPreset] = useState('2-2-2');
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [desks, setDesks] = useState([]); // [{ id, x, y, capacity: 1|2|3|4, zones: [], groupId: null }]
-  const [doors, setDoors] = useState([]);
-  const [windows, setWindows] = useState([]);
   const [boardObj, setBoardObj] = useState({ x: 405, y: 25 });
   const [saveState, setSaveState] = useState('saved');
   const [defaultBoardPosition, setDefaultBoardPosition] = useState('top');
@@ -59,6 +50,8 @@ export default function RoomEditor({ onBack, initialId }) {
   const clipboardRef = useRef(null);
   const lastMousePosRef = useRef(null);
   const hasAutoOpenedRef = useRef(false);
+  const lastDeskDragResultRef = useRef(null);
+  const lastSnapTargetIdRef = useRef(null);
 
   useEffect(() => { desksRef.current = desks; }, [desks]);
   useEffect(() => { selectedDesksRef.current = selectedDesks; }, [selectedDesks]);
@@ -136,7 +129,9 @@ export default function RoomEditor({ onBack, initialId }) {
       } else if (data.length > 0 && !selectedRoom) {
         handleSelectRoom(data[0]);
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke hente rommene. Prøv å starte appen på nytt.', 'error');
+    }
     setLoading(false);
   };
 
@@ -154,7 +149,7 @@ export default function RoomEditor({ onBack, initialId }) {
     }, 1000); 
     
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [roomName, desks, doors, windows, boardObj]);
+  }, [roomName, desks, boardObj]);
 
   const handleSelectRoom = (r) => {
     isInitialLoadRef.current = true;
@@ -168,13 +163,9 @@ export default function RoomEditor({ onBack, initialId }) {
         zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
         groupId: d.groupId || null
       })));
-      setDoors((layout.doors || []).map(d => ({ ...d, rotation: d.rotation || 0 })));
-      setWindows((layout.windows || []).map(w => ({ ...w, rotation: w.rotation || 0 })));
       setBoardObj(layout.boardObj || { x: 405, y: 25 });
     } catch (e) {
       setDesks([]);
-      setDoors([]);
-      setWindows([]);
       setBoardObj({ x: 422, y: 15 });
     }
     setSelectedDesks([]);
@@ -239,21 +230,19 @@ export default function RoomEditor({ onBack, initialId }) {
     const nameToSave = newRoomModalName.trim();
     
     const initialDesks = buildPresetDesks(selectedPreset, 4);
-    const defaultDoors = [];
-    const defaultWindows = [];
     let initialBoard = { x: 422, y: 15 };
     let finalDesks = initialDesks;
 
     // Nye rom starter med tavlen øverst — flipp til standardplasseringen
     // fra Innstillinger ("Standard tavleplassering") hvis den er satt til nederst.
     if (defaultBoardPosition === 'bottom') {
-      const flipped = flipLayoutData({ desks: initialDesks, boardObj: initialBoard, doors: defaultDoors, windows: defaultWindows });
+      const flipped = flipLayoutData({ desks: initialDesks, boardObj: initialBoard });
       finalDesks = flipped.desks;
       initialBoard = flipped.boardObj;
     }
 
     try {
-      const layoutData = { desks: finalDesks, doors: defaultDoors, windows: defaultWindows, boardObj: initialBoard };
+      const layoutData = { desks: finalDesks, boardObj: initialBoard };
       const result = await window.api.saveRoom({
         id: null,
         name: nameToSave,
@@ -271,7 +260,9 @@ export default function RoomEditor({ onBack, initialId }) {
       };
 
       handleSelectRoom(createdRoom);
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke opprette nytt rom.', 'error');
+    }
 
     const modal = document.getElementById('modal_create_new_room');
     if (modal) modal.close();
@@ -281,7 +272,7 @@ export default function RoomEditor({ onBack, initialId }) {
   const saveCurrentRoom = async () => {
     if (!selectedRoom || !roomName.trim()) return;
     try {
-      const layoutData = { desks, doors, windows, boardObj };
+      const layoutData = { desks, boardObj };
       const result = await window.api.saveRoom({
         id: selectedRoom.id,
         name: roomName.trim(),
@@ -293,7 +284,10 @@ export default function RoomEditor({ onBack, initialId }) {
       const data = await window.api.getRooms();
       setRooms(data);
       setSaveState('saved');
-    } catch (e) {}
+    } catch (e) {
+      setSaveState('error');
+      showToast('Rommet kunne ikke lagres. Sjekk at det er nok diskplass, og prøv igjen.', 'error');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -306,7 +300,9 @@ export default function RoomEditor({ onBack, initialId }) {
       } else {
         setSelectedRoom(null);
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke slette rommet.', 'error');
+    }
   };
 
   const generateStructure = () => {
@@ -336,11 +332,11 @@ export default function RoomEditor({ onBack, initialId }) {
     })));
   };
 
-  // Speilvender et helt romoppsett (bord, tavle, dører, vinduer) 180° rundt
-  // canvas-senteret. Ren funksjon slik at den kan brukes både av "Flipp"-
-  // knappen (muterer state direkte) og ved oppretting av nytt rom (der
-  // standard tavleplassering fra Innstillinger skal avgjøre startoppsettet).
-  const flipLayoutData = ({ desks: srcDesks, boardObj: srcBoard, doors: srcDoors, windows: srcWindows }) => {
+  // Speilvender et helt romoppsett (bord, tavle) 180° rundt canvas-senteret.
+  // Ren funksjon slik at den kan brukes både av "Flipp"-knappen (muterer
+  // state direkte) og ved oppretting av nytt rom (der standard
+  // tavleplassering fra Innstillinger skal avgjøre startoppsettet).
+  const flipLayoutData = ({ desks: srcDesks, boardObj: srcBoard }) => {
     const cw = 1100;
     const ch = 700;
     const deskH = 60;
@@ -365,30 +361,14 @@ export default function RoomEditor({ onBack, initialId }) {
       };
     })() : srcBoard;
 
-    const flippedDoors = (srcDoors || []).map(dr => ({
-      ...dr,
-      x: Math.max(15, Math.min(cw - 64 - 15, Math.round((cw - (dr.x + 64)) / 10) * 10)),
-      y: Math.max(15, Math.min(ch - 64 - 15, Math.round((ch - (dr.y + 64)) / 10) * 10)),
-      rotation: (dr.rotation + 180) % 360
-    }));
-
-    const flippedWindows = (srcWindows || []).map(win => ({
-      ...win,
-      x: Math.max(15, Math.min(cw - 80 - 15, Math.round((cw - (win.x + 80)) / 10) * 10)),
-      y: Math.max(15, Math.min(ch - 80 - 15, Math.round((ch - (win.y + 80)) / 10) * 10)),
-      rotation: (win.rotation + 180) % 360
-    }));
-
-    return { desks: flippedDesks, boardObj: flippedBoard, doors: flippedDoors, windows: flippedWindows };
+    return { desks: flippedDesks, boardObj: flippedBoard };
   };
 
   const flipRoom = () => {
     if (desks.length === 0 && !boardObj) return;
-    const flipped = flipLayoutData({ desks, boardObj, doors, windows });
+    const flipped = flipLayoutData({ desks, boardObj });
     setDesks(flipped.desks);
     setBoardObj(flipped.boardObj);
-    setDoors(flipped.doors);
-    setWindows(flipped.windows);
   };
 
   const addDesk = (capacity = 1) => {
@@ -434,66 +414,6 @@ export default function RoomEditor({ onBack, initialId }) {
     }));
   };
 
-  const addDoor = () => {
-    const offset = doors.length * 35;
-    setDoors([...doors, { id: Date.now().toString(), x: 40 + offset, y: 40, rotation: 0, label: 'Dør' }]);
-  };
-
-  const addWindow = () => {
-    const offset = windows.length * 40;
-    setWindows([...windows, { id: Date.now().toString(), x: 260 + offset, y: 40, rotation: 0, label: 'Vindu' }]);
-  };
-
-  const rotateDoor = (id) => {
-    setDoors(doors.map(d => d.id === id ? { ...d, rotation: (d.rotation + 90) % 360 } : d));
-  };
-
-  const rotateWindow = (id) => {
-    setWindows(windows.map(w => w.id === id ? { ...w, rotation: (w.rotation + 90) % 360 } : w));
-  };
-
-  const removeDoor = (id) => {
-    setDoors(doors.filter(d => d.id !== id));
-  };
-
-  const removeWindow = (id) => {
-    setWindows(windows.filter(w => w.id !== id));
-  };
-
-  const handleObjectMouseDown = (e, item, type) => {
-    if (e.button !== 0) return;
-    e.stopPropagation();
-    e.preventDefault();
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origX = item.x;
-    const origY = item.y;
-
-    const onMouseMove = (moveEv) => {
-      const dx = moveEv.clientX - startX;
-      const dy = moveEv.clientY - startY;
-      const nx = Math.max(15, Math.min(1300 - 60, Math.round((origX + dx) / 10) * 10));
-      const ny = Math.max(15, Math.min(800 - 40, Math.round((origY + dy) / 10) * 10));
-
-      if (type === 'door') {
-        setDoors(prev => prev.map(d => d.id === item.id ? { ...d, x: nx, y: ny } : d));
-      } else if (type === 'window') {
-        setWindows(prev => prev.map(w => w.id === item.id ? { ...w, x: nx, y: ny } : w));
-      } else if (type === 'board') {
-        setBoardObj({ x: nx, y: ny });
-      }
-    };
-
-    const onMouseUp = () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-  };
-
   const getBoundedDelta = (movingDesks, rawDx, rawDy, stationaryDesks, options = {}) => {
     const result = computeBoundedDelta({
       movingDesks, rawDx, rawDy, stationaryDesks,
@@ -502,8 +422,8 @@ export default function RoomEditor({ onBack, initialId }) {
     });
 
     return {
-      x: result.dx * scale,
-      y: result.dy * scale,
+      x: result.dx,
+      y: result.dy,
       targetDeskIds: result.targetDeskIds,
       alignmentGuides: result.alignmentGuides
     };
@@ -515,10 +435,10 @@ export default function RoomEditor({ onBack, initialId }) {
     const rawDy = transform.y / scale;
 
     if (active.data.current.type !== 'desk') {
-       return { 
-         ...transform, 
-         x: Math.round(rawDx / 10) * 10 * scale, 
-         y: Math.round(rawDy / 10) * 10 * scale 
+       return {
+         ...transform,
+         x: Math.round(rawDx / 10) * 10,
+         y: Math.round(rawDy / 10) * 10
        };
     }
 
@@ -532,8 +452,22 @@ export default function RoomEditor({ onBack, initialId }) {
 
     const result = getBoundedDelta(movingDesksObjs, rawDx, rawDy, stationary, {
       ignoreOverlapIds: preOverlappingIdsRef.current,
-      skipSnap: altKeyRef.current
+      skipSnap: altKeyRef.current,
+      preferredTargetId: lastSnapTargetIdRef.current
     });
+
+    // Husk hvilken pult som ble snappet mot, slik at neste frame favoriserer samme
+    // mål (hysterese). Uten dette kan to nesten likeverdige nabo-pulter (typisk i et
+    // generert rad-oppsett) "kjempe" om å være mål fra frame til frame, og pulten
+    // ser ut til å hoppe rundt selv ved svært små musebevegelser.
+    lastSnapTargetIdRef.current = result.targetDeskIds?.[0] || null;
+
+    // Cache nøyaktig samme resultat som vises live (inkl. hvilken pult som
+    // highlightes grønt), slik at handleDragEnd kan gjenbruke det i stedet for
+    // å regne ut snap på nytt fra en potensielt marginalt annen rå-delta ved
+    // selve drop-eventet — det kunne før føre til at pulten "hoppet" til en
+    // annen posisjon enn den som var highlightet idet man slapp museknappen.
+    lastDeskDragResultRef.current = { desksToMoveIds, x: result.x, y: result.y };
 
     // Direct DOM guide lines (60fps performance without React re-render loops)
     const xGuide = document.getElementById('guide-line-x');
@@ -593,6 +527,8 @@ export default function RoomEditor({ onBack, initialId }) {
 
   const handleDragStart = (event) => {
     isDraggingRef.current = true;
+    lastDeskDragResultRef.current = null;
+    lastSnapTargetIdRef.current = null;
     const { active } = event;
     if (!active || active.data.current?.type !== 'desk') return;
 
@@ -646,44 +582,44 @@ export default function RoomEditor({ onBack, initialId }) {
         x: Math.max(10, Math.min(1100 - 256 - 10, prev.x + delta.x / scale)),
         y: Math.max(10, Math.min(700 - 36 - 10, prev.y + delta.y / scale))
       }));
-    } else if (active.data.current.type === 'door') {
-      const doorId = active.data.current.door.id;
-      setDoors(prev => prev.map(d => d.id === doorId ? {
-        ...d, 
-        x: Math.max(10, Math.min(1100 - 64, d.x + delta.x / scale)), 
-        y: Math.max(10, Math.min(700 - 64, d.y + delta.y / scale))
-      } : d));
-    } else if (active.data.current.type === 'window') {
-      const windowId = active.data.current.windowObj.id;
-      setWindows(prev => prev.map(w => w.id === windowId ? {
-        ...w, 
-        x: Math.max(10, Math.min(1100 - 80, w.x + delta.x / scale)), 
-        y: Math.max(10, Math.min(700 - 80, w.y + delta.y / scale))
-      } : w));
     } else if (active.data.current.type === 'desk') {
       const draggedDeskId = active.id;
       const isPartOftMultiSelection = selectedDesks.includes(draggedDeskId);
       const desksToMove = isPartOftMultiSelection ? selectedDesks : [draggedDeskId];
-      const draggedDesk = desks.find(d => d.id === draggedDeskId);
-      if (!draggedDesk) return;
-      const stationary = desks.filter(d => !desksToMove.includes(d.id));
-      const movingDesks = desks.filter(d => desksToMove.includes(d.id));
-      const result = getBoundedDelta(movingDesks, delta.x / scale, delta.y / scale, stationary, {
-        ignoreOverlapIds: preOverlappingIdsRef.current,
-        skipSnap: altKeyRef.current
-      });
+
+      // Gjenbruk resultatet fra siste live-frame (samme som ble vist/highlightet
+      // under draget) i stedet for å regne ut snap på nytt her — se kommentar
+      // i snapToDesksModifier.
+      const cached = lastDeskDragResultRef.current;
+      const cachedMatches = cached && cached.desksToMoveIds.length === desksToMove.length &&
+        cached.desksToMoveIds.every(id => desksToMove.includes(id));
+
+      let result;
+      if (cachedMatches) {
+        result = cached;
+      } else {
+        const draggedDesk = desks.find(d => d.id === draggedDeskId);
+        if (!draggedDesk) return;
+        const stationary = desks.filter(d => !desksToMove.includes(d.id));
+        const movingDesks = desks.filter(d => desksToMove.includes(d.id));
+        result = getBoundedDelta(movingDesks, delta.x / scale, delta.y / scale, stationary, {
+          ignoreOverlapIds: preOverlappingIdsRef.current,
+          skipSnap: altKeyRef.current
+        });
+      }
 
       setDesks(prev => prev.map(d => {
         if (desksToMove.includes(d.id)) {
-          return { ...d, x: Math.round(d.x + result.x / scale), y: Math.round(d.y + result.y / scale) };
+          return { ...d, x: Math.round(d.x + result.x), y: Math.round(d.y + result.y) };
         }
         return d;
       }));
+      lastDeskDragResultRef.current = null;
     }
   };
 
   const handleCanvasMouseDown = (e) => {
-    if (e.target !== canvasRef.current && e.target.closest('.desk-item, .board-item, .door-item, .window-item')) return;
+    if (e.target !== canvasRef.current && e.target.closest('.desk-item, .board-item')) return;
     if (e.button === 2) return;
     e.preventDefault();
     const rect = canvasRef.current.getBoundingClientRect();
@@ -881,14 +817,6 @@ export default function RoomEditor({ onBack, initialId }) {
     deskNumberMap[d.id] = idx + 1;
   });
 
-  const zoneMeta = {
-    window: { label: 'Vindurekke', icon: 'fa-solid fa-sun text-yellow-400', badgeClass: 'border-yellow-500/40 text-yellow-300 bg-yellow-950/80' },
-    door: { label: 'Dørsone', icon: 'fa-solid fa-door-open text-amber-400', badgeClass: 'border-amber-500/40 text-amber-300 bg-amber-950/80' },
-    front: { label: 'Fremste rad', icon: 'fa-solid fa-location-dot text-emerald-400', badgeClass: 'border-emerald-500/40 text-emerald-300 bg-emerald-950/80' },
-    back: { label: 'Bakerste rad', icon: 'fa-solid fa-arrow-down text-purple-400', badgeClass: 'border-purple-500/40 text-purple-300 bg-purple-950/80' },
-    center: { label: 'Midtsone', icon: 'fa-solid fa-align-center text-cyan-400', badgeClass: 'border-cyan-500/40 text-cyan-300 bg-cyan-950/80' }
-  };
-
   const presetsList = [
     { id: '2-2-2', title: 'Par-rekker', subtitle: '2-2-2 oppsett', icon: '║ ║ ║' },
     { id: '2-2', title: 'Kompakt par', subtitle: '2-2 oppsett', icon: '║ ║' },
@@ -928,8 +856,6 @@ export default function RoomEditor({ onBack, initialId }) {
                 genRows={genRows}
                 setGenRows={setGenRows}
                 generateStructure={generateStructure}
-                addDoor={addDoor}
-                addWindow={addWindow}
                 addDesk={addDesk}
                 clearDesks={clearDesks}
               />
@@ -957,14 +883,6 @@ export default function RoomEditor({ onBack, initialId }) {
                 {!isCreatingRoom && (
                   <>
                     <BoardItem boardObj={boardObj} />
-
-                    {doors.map((dr) => (
-                      <DoorItem key={dr.id} door={dr} onRotate={rotateDoor} onRemove={removeDoor} />
-                    ))}
-
-                    {windows.map((win) => (
-                      <WindowItem key={win.id} windowObj={win} onRotate={rotateWindow} onRemove={removeWindow} />
-                    ))}
 
                     {desks.map((d) => (
                         <DeskItem

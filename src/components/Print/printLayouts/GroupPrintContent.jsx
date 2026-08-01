@@ -70,11 +70,11 @@ export function estimateGroupsPageHeight(groupsOnPage, layout = 'vertical') {
   return Math.max(MIN_HEIGHT, rows * rowHeight);
 }
 
-function GroupCard({ studentIds, groupIdx, color, showColors, leaderId, findStudentName, membersDirection }) {
+function GroupCard({ studentIds, groupIdx, color, showColors, leaderId, findStudentName, membersDirection, groupName }) {
   return (
     <div style={{ border: `1px solid ${color}`, borderRadius: 8, overflow: 'hidden' }}>
       <div style={{ padding: '4px 10px', fontSize: 12, fontWeight: 700, background: showColors ? color : '#f3f4f6', color: '#111' }}>
-        Gruppe {groupIdx + 1} <span style={{ fontWeight: 400, opacity: 0.7 }}>({studentIds.length} elever)</span>
+        {groupName || `Gruppe ${groupIdx + 1}`} <span style={{ fontWeight: 400, opacity: 0.7 }}>({studentIds.length} elever)</span>
       </div>
       <div style={{ padding: '6px 12px', display: 'flex', flexDirection: membersDirection, flexWrap: 'wrap', gap: membersDirection === 'row' ? '2px 16px' : 2 }}>
         {studentIds.length === 0 && <span style={{ fontSize: 11, color: '#9ca3af', fontStyle: 'italic' }}>Ingen elever</span>}
@@ -88,7 +88,7 @@ function GroupCard({ studentIds, groupIdx, color, showColors, leaderId, findStud
   );
 }
 
-export default function GroupPrintContent({ groupsOnPage, studentsById, leaderIds, groupColors, settings }) {
+export default function GroupPrintContent({ groupsOnPage, studentsById, leaderIds, groupColors, groupNames, settings }) {
   const layout = settings.groupLayout || 'vertical';
   const findStudentName = (id) => studentsById[id]?.name || id;
 
@@ -99,7 +99,7 @@ export default function GroupPrintContent({ groupsOnPage, studentsById, leaderId
       <GroupCard
         key={groupIdx}
         studentIds={studentIds} groupIdx={groupIdx} color={color} showColors={settings.showColors}
-        leaderId={leaderId} findStudentName={findStudentName}
+        leaderId={leaderId} findStudentName={findStudentName} groupName={groupNames?.[groupIdx]}
         membersDirection={layout === 'horizontal' ? 'row' : 'column'}
       />
     );

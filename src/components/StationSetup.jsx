@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups } from '../shared/groupRandomizer';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core';
+import PrintPreviewModal from './Print/PrintPreviewModal';
+import { GROUP_COLORS } from './StationPresenter';
 
 /** Enkel round-robin rotasjonsplan: steps[rotasjon][stasjon] = gruppeindeks. */
 function buildRotationPlan(numGroups, numStations) {
@@ -58,6 +60,8 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [classId, setClassId] = useState('');
   const [classes, setClasses] = useState([]);
   const [minutesPerStation, setMinutesPerStation] = useState(10);
+  const [secondsPerStation, setSecondsPerStation] = useState(0);
+  const [noTimer, setNoTimer] = useState(false);
   const [stations, setStations] = useState([
     { id: newStationId(), name: '', isTeacher: false, note: '' },
     { id: newStationId(), name: '', isTeacher: false, note: '' },
@@ -68,8 +72,13 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [activeDragId, setActiveDragId] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [saveState, setSaveState] = useState('idle');
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const nameInputRefs = useRef({});
   const [pendingFocusId, setPendingFocusId] = useState(null);
+  const [nameDraft, setNameDraft] = useState('');
+  const nameModalInputRef = useRef(null);
+  const classSelectRef = useRef(null);
+  const hasAutoOpenedNameModalRef = useRef(false);
 
   useEffect(() => { loadInitial(); }, [initialId]);
 
@@ -93,6 +102,8 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           setName(s.name);
           setClassId(s.class_id);
           setMinutesPerStation(s.minutes_per_station ?? 10);
+          setSecondsPerStation(s.seconds_per_station ?? 0);
+          setNoTimer(!!s.no_timer);
           try { setStations(JSON.parse(s.stations || '[]')); } catch (e) {}
           let parsedGroups = [];
           try { parsedGroups = JSON.parse(s.groups || '[]'); setGroups(parsedGroups); } catch (e) {}
@@ -104,9 +115,27 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           }
           await loadStudentsForClass(s.class_id);
         }
+      } else if (initialId === 'new' && !hasAutoOpenedNameModalRef.current) {
+        hasAutoOpenedNameModalRef.current = true;
+        setNameDraft('');
+        setTimeout(() => {
+          const modal = document.getElementById('modal_new_station_session');
+          if (modal) {
+            modal.showModal();
+            setTimeout(() => nameModalInputRef.current?.focus(), 150);
+          }
+        }, 100);
       }
     } catch (e) {}
     setLoading(false);
+  };
+
+  const handleConfirmSessionName = () => {
+    if (!nameDraft.trim()) return;
+    setName(nameDraft.trim());
+    const modal = document.getElementById('modal_new_station_session');
+    if (modal) modal.close();
+    setTimeout(() => classSelectRef.current?.focus(), 150);
   };
 
   const loadStudentsForClass = async (cid) => {
@@ -199,7 +228,9 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
 
   const studentsById = Object.fromEntries(allStudents.map(s => [s.id, s]));
   const validStations = stations.filter(s => s.name.trim());
-  const canSave = name.trim() && classId && validStations.length >= 2;
+  const canSave = name.trim() && classId && validStations.length >= 2 && (noTimer || minutesPerStation * 60 + secondsPerStation > 0);
+  const hasGroupStationMismatch = validStations.length >= 2 && groups.length !== validStations.length;
+  const tooFewGroups = hasGroupStationMismatch && groups.length < validStations.length;
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -215,6 +246,8 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
         groupLeaders,
         rotationPlan,
         minutesPerStation,
+        secondsPerStation,
+        noTimer,
       });
       if (!sessionId && result?.lastID) setSessionId(result.lastID);
       setSaveState('saved');
@@ -242,6 +275,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-orange-400 px-3 h-8 rounded text-white w-40"
           />
           <select
+            ref={classSelectRef}
             className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold"
             value={classId}
             onChange={(e) => handleClassChange(e.target.value)}
@@ -251,6 +285,14 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           </select>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            className="btn btn-sm btn-ghost text-slate-400 hover:text-white gap-2"
+            onClick={() => setShowPrintPreview(true)}
+            disabled={validStations.length < 2}
+            title={validStations.length < 2 ? 'Legg til minst 2 stasjoner for å skrive ut' : undefined}
+          >
+            <i className="fa-solid fa-print"></i> Skriv ut / PDF
+          </button>
           {sessionId && (
             <button className="btn btn-sm bg-orange-500/20 text-orange-300 border-none hover:bg-orange-500/30 gap-2" onClick={() => onStartPresenting(sessionId)}>
               <i className="fa-solid fa-play"></i> Start økt
@@ -263,15 +305,54 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 max-w-4xl">
+      <div className="flex-1 overflow-y-auto">
+      <div className="p-6 flex flex-col gap-6 max-w-4xl mx-auto">
         <div className="bg-base-200 border border-slate-800 rounded-2xl p-5">
-          <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-2 block">Minutter per stasjon</label>
-          <input
-            type="number" min="1" max="60"
-            className="input input-bordered input-sm w-24 bg-surface-field border-slate-700 text-white"
-            value={minutesPerStation}
-            onChange={(e) => setMinutesPerStation(Number(e.target.value))}
-          />
+          <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-2 block">Tid per stasjon</label>
+          <div className="flex items-end gap-4 flex-wrap">
+            <div className={`flex items-end gap-2 transition-opacity ${noTimer ? 'opacity-40' : ''}`}>
+              <div>
+                <span className="text-[10px] text-slate-500 block mb-1">Minutter</span>
+                <input
+                  type="number" min="0" max="60"
+                  disabled={noTimer}
+                  className="input input-bordered input-sm w-20 bg-surface-field border-slate-700 text-white disabled:cursor-not-allowed"
+                  value={minutesPerStation}
+                  onChange={(e) => setMinutesPerStation(Math.max(0, Number(e.target.value)))}
+                />
+              </div>
+              <span className="text-slate-500 pb-1.5">:</span>
+              <div>
+                <span className="text-[10px] text-slate-500 block mb-1">Sekunder</span>
+                <input
+                  type="number" min="0" max="59" step="5"
+                  disabled={noTimer}
+                  className="input input-bordered input-sm w-20 bg-surface-field border-slate-700 text-white disabled:cursor-not-allowed"
+                  value={secondsPerStation}
+                  onChange={(e) => setSecondsPerStation(Math.min(59, Math.max(0, Number(e.target.value))))}
+                />
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pb-1.5">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-sm"
+                checked={noTimer}
+                onChange={(e) => setNoTimer(e.target.checked)}
+              />
+              Ingen tidtaker (styr rotasjon manuelt)
+            </label>
+          </div>
+          {noTimer && (
+            <p className="text-[11px] text-slate-500 italic mt-2">
+              Ingen nedtelling vises under økten — du bytter stasjon i eget tempo med "Neste rotasjon".
+            </p>
+          )}
+          {!noTimer && minutesPerStation * 60 + secondsPerStation === 0 && (
+            <p className="text-[11px] text-amber-300 italic mt-2">
+              Sett en tid over 0, eller kryss av for "Ingen tidtaker".
+            </p>
+          )}
         </div>
 
         <div className="bg-base-200 border border-slate-800 rounded-2xl p-5">
@@ -333,6 +414,31 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             </div>
           </div>
           {!classId && <p className="text-xs text-slate-500 italic">Velg en klasse for å fordele elever i grupper.</p>}
+          {hasGroupStationMismatch && (
+            <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-3 text-xs text-amber-200">
+              <i className="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 flex-shrink-0"></i>
+              <div className="flex-1">
+                {tooFewGroups ? (
+                  <>
+                    <strong>{groups.length} grupper</strong> dekker ikke <strong>{validStations.length} stasjoner</strong> 1:1.
+                    Det går fint å gjennomføre, men i hver rotasjon vil noen grupper stå oppført på flere stasjoner samtidig.
+                  </>
+                ) : (
+                  <>
+                    <strong>{groups.length} grupper</strong> er flere enn <strong>{validStations.length} stasjoner</strong>.
+                    Det går fint å gjennomføre, men noen grupper vil ikke bli tildelt en stasjon i rotasjonsplanen.
+                  </>
+                )}
+              </div>
+              <button
+                type="button"
+                className="btn btn-xs bg-amber-500/20 text-amber-300 border-none hover:bg-amber-500/30 flex-shrink-0 whitespace-nowrap"
+                onClick={() => setNumGroups(validStations.length)}
+              >
+                Sett til {validStations.length}
+              </button>
+            </div>
+          )}
           <DndContext
             sensors={sensors}
             onDragStart={(event) => setActiveDragId(event.active.id)}
@@ -372,6 +478,53 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           </DndContext>
         </div>
       </div>
+      </div>
+
+      <dialog id="modal_new_station_session" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-md">
+          <h3 className="font-bold text-lg flex items-center gap-2 text-white">
+            <i className="fa-solid fa-arrows-rotate text-orange-400"></i> Ny stasjonsøkt
+          </h3>
+          <p className="py-2 text-xs text-slate-400">Gi økten et navn, f.eks. tema eller dato:</p>
+          <input
+            ref={nameModalInputRef}
+            type="text"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmSessionName(); }}
+            placeholder="f.eks. Norsk - stasjoner uke 12..."
+            className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
+            autoFocus
+          />
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
+              <button className="btn btn-primary" onClick={handleConfirmSessionName} disabled={!nameDraft.trim()}>Opprett</button>
+            </form>
+          </div>
+        </div>
+      </dialog>
+
+      {showPrintPreview && (
+        <PrintPreviewModal
+          contentType="station"
+          chartName={name.trim() || 'Stasjonsplan'}
+          className={classes.find(c => String(c.id) === String(classId))?.name || ''}
+          chartComment=""
+          stationProps={{
+            stations: validStations,
+            groups,
+            groupLeaders,
+            rotationPlan: buildRotationPlan(groups.length, validStations.length),
+            students: allStudents,
+            groupColors: GROUP_COLORS,
+          }}
+          initialShowNumbers={false}
+          initialShowZones={false}
+          initialShowGroups={true}
+          onClose={() => setShowPrintPreview(false)}
+        />
+      )}
     </div>
   );
 }

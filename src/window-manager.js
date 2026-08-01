@@ -1,13 +1,13 @@
 /**
  * window-manager.js — Oppretting og lifecycle for Electron-vinduer.
- * winRef.win og winRef.presentationWin er delt referanse.
+ * winRef.win er delt referanse.
  */
 
-const { BrowserWindow, ipcMain, app, screen } = require('electron');
+const { BrowserWindow, app, screen, shell } = require('electron');
 const path = require('path');
 
 /** Delt referanse til vinduer — slik at ipc-handlers.js kan lese dem */
-const winRef = { win: null, presentationWin: null };
+const winRef = { win: null };
 
 // Standardstørrelse ved oppstart. Klemmes mot faktisk tilgjengelig
 // arbeidsområde slik at vinduet aldri åpnes større enn skjermen selv.
@@ -39,6 +39,15 @@ function createMainWindow() {
     },
   });
 
+  // Lenker med target="_blank" (og mailto:) skal åpnes i systemets nettleser/e-postklient,
+  // ikke i et nytt, uhåndtert Electron-vindu.
+  winRef.win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http:') || url.startsWith('https:') || url.startsWith('mailto:')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
   if (!app.isPackaged) {
     winRef.win.loadURL('http://localhost:3000');
     // Open DevTools by default in dev mode
@@ -50,53 +59,4 @@ function createMainWindow() {
   return winRef.win;
 }
 
-function registerPresentationHandler() {
-  // We handle presentation window in a similar way, using a React route e.g., /presentation
-  ipcMain.on('open-presentation-window', (_, layoutDataJson) => {
-    if (winRef.presentationWin && !winRef.presentationWin.isDestroyed()) {
-      winRef.presentationWin.focus();
-      winRef.presentationWin.webContents.send('render-layout', JSON.parse(layoutDataJson));
-      return;
-    }
-
-    winRef.presentationWin = new BrowserWindow({
-      width: 1280,
-      height: 800,
-      title: 'KlassePlass presentasjon',
-      frame: false,
-      transparent: false,
-      backgroundColor: '#16181d',
-      icon: path.join(__dirname, '..', 'assets', 'icon.ico'),
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        nodeIntegration: false,
-        contextIsolation: true,
-      },
-    });
-
-    if (!app.isPackaged) {
-      winRef.presentationWin.loadURL('http://localhost:3000/#/presentation');
-    } else {
-      winRef.presentationWin.loadFile(path.join(__dirname, '..', 'dist-react', 'index.html'), { hash: 'presentation' });
-    }
-
-    winRef.presentationWin.webContents.once('did-finish-load', () => {
-      winRef.presentationWin.webContents.send('render-layout', JSON.parse(layoutDataJson));
-    });
-    winRef.presentationWin.on('closed', () => { winRef.presentationWin = null; });
-  });
-
-  // Forwardér presentation-kommandoer (next/show-all/reset) til presentasjonsvinduet
-  ipcMain.on('presentation-cmd', (_, cmd) => {
-    winRef.presentationWin?.webContents.send('presentation-cmd', cmd);
-  });
-
-  // Synkroniser tema-endringer fra hovedvinduet til presentasjonsvinduet
-  ipcMain.on('sync-presentation-theme', (_, themeData) => {
-    if (winRef.presentationWin && !winRef.presentationWin.isDestroyed()) {
-      winRef.presentationWin.webContents.send('apply-theme', themeData);
-    }
-  });
-}
-
-module.exports = { winRef, createMainWindow, registerPresentationHandler };
+module.exports = { winRef, createMainWindow };

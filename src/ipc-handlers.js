@@ -6,7 +6,7 @@
 const { ipcMain, dialog, app, shell } = require('electron');
 const path    = require('path');
 const fs      = require('fs');
-const { getDb, getDbPathFn, loadSettings, saveSettings, saveDbToDisk } = require('./db.js');
+const { getDb, getDbPathFn, loadSettings, saveSettings, saveDbToDisk, getMigrationInfo } = require('./db.js');
 
 /** Hjelpefunksjon: pakk sql.js inn i Promise for bakoverkompatibilitet */
 const dbAll = (sql, p = []) => new Promise((res, rej) => {
@@ -60,7 +60,7 @@ function registerHandlers(winRef) {
 
   // ---- App info ----
   ipcMain.handle('get-version', async () => app.getVersion());
-  ipcMain.handle('get-db-path', async () => getDbPathFn());
+  ipcMain.handle('get-migration-info', async () => getMigrationInfo());
 
   // ---- Settings ----
   ipcMain.handle('get-settings',   async ()       => loadSettings());
@@ -125,21 +125,8 @@ function registerHandlers(winRef) {
     return dbRun('DELETE FROM seatings WHERE id=?', [id]);
   });
 
-  // ---- Historikk ----
-  ipcMain.handle('get-history', async (_, classId, n = 10) =>
-    dbAll('SELECT * FROM seating_history WHERE class_id=? ORDER BY created_at DESC LIMIT ?', [classId, n]));
-
-  // Lagre historikk kalles fra save-seating-path (etter lagring)
-  ipcMain.handle('save-history', async (_, { classId, chartId, pairs, neighbors }) =>
-    dbRun('INSERT INTO seating_history (class_id, chart_id, pairs, neighbors) VALUES (?,?,?,?)',
-      [classId, chartId, JSON.stringify(pairs ?? []), JSON.stringify(neighbors ?? [])]));
-
   // ---- Constraints ----
   ipcMain.handle('get-constraints',    async (_, cid) => dbAll('SELECT * FROM student_constraints WHERE class_id=?', [cid]));
-  ipcMain.handle('save-constraint',    async (_, { classId, studentA, studentB, type }) =>
-    dbRun('INSERT INTO student_constraints (class_id,student_a,student_b,type) VALUES (?,?,?,?)',
-      [classId, studentA, studentB, type]));
-  ipcMain.handle('delete-constraint',  async (_, id) => dbRun('DELETE FROM student_constraints WHERE id=?', [id]));
 
   // ---- Gruppearbeid ----
   ipcMain.handle('get-group-assignments', async (_, classId) => {
@@ -157,23 +144,24 @@ function registerHandlers(winRef) {
   ipcMain.handle('get-group-assignment', async (_, id) =>
     dbGet('SELECT * FROM group_assignments WHERE id=?', [id]));
 
-  ipcMain.handle('save-group-assignment', async (_, { id, name, classId, sourceSeatingId, useConstraints, avoidLastN, requireLeaders, leaderIds, lockedIds, groups }) => {
+  ipcMain.handle('save-group-assignment', async (_, { id, name, classId, sourceSeatingId, useConstraints, avoidLastN, requireLeaders, leaderIds, lockedIds, useCustomNames, groups }) => {
     const lids = JSON.stringify(leaderIds ?? []);
     const lockIds = JSON.stringify(lockedIds ?? []);
+    const useNames = useCustomNames ? 1 : 0;
     let assignmentId = id;
     if (id) {
-      await dbRun('UPDATE group_assignments SET name=?,use_constraints=?,avoid_last_n=?,require_leaders=?,leader_ids=?,locked_ids=? WHERE id=?',
-        [name, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, lockIds, id]);
+      await dbRun('UPDATE group_assignments SET name=?,use_constraints=?,avoid_last_n=?,require_leaders=?,leader_ids=?,locked_ids=?,use_custom_names=? WHERE id=?',
+        [name, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, lockIds, useNames, id]);
       await dbRun('DELETE FROM group_assignment_groups WHERE assignment_id=?', [id]);
     } else {
       const r = await dbRun(
-        'INSERT INTO group_assignments (name,class_id,source_seating_id,use_constraints,avoid_last_n,require_leaders,leader_ids,locked_ids) VALUES (?,?,?,?,?,?,?,?)',
-        [name, classId, sourceSeatingId ?? null, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, lockIds]);
+        'INSERT INTO group_assignments (name,class_id,source_seating_id,use_constraints,avoid_last_n,require_leaders,leader_ids,locked_ids,use_custom_names) VALUES (?,?,?,?,?,?,?,?,?)',
+        [name, classId, sourceSeatingId ?? null, useConstraints ? 1 : 0, avoidLastN, requireLeaders ? 1 : 0, lids, lockIds, useNames]);
       assignmentId = r.lastID;
     }
     for (const g of groups ?? []) {
-      await dbRun('INSERT INTO group_assignment_groups (assignment_id,group_number,student_ids) VALUES (?,?,?)',
-        [assignmentId, g.groupNumber, JSON.stringify(g.studentIds)]);
+      await dbRun('INSERT INTO group_assignment_groups (assignment_id,group_number,student_ids,group_name) VALUES (?,?,?,?)',
+        [assignmentId, g.groupNumber, JSON.stringify(g.studentIds), g.groupName ?? null]);
     }
     return { lastID: assignmentId };
   });
@@ -193,31 +181,6 @@ function registerHandlers(winRef) {
   ipcMain.handle('save-group-history', async (_, { classId, assignmentId, pairs }) =>
     dbRun('INSERT INTO group_history (class_id,assignment_id,pairs) VALUES (?,?,?)',
       [classId, assignmentId, JSON.stringify(pairs)]));
-
-  // ---- Eksport / Import bundle ----
-  ipcMain.handle('export-bundle', async (_, classId) => {
-    const cls      = await dbGet('SELECT * FROM classes WHERE id=?', [classId]);
-    const seatings = await dbAll('SELECT * FROM seatings WHERE class_id=?', [classId]);
-    const history  = await dbAll('SELECT * FROM seating_history WHERE class_id=?', [classId]);
-    const constr   = await dbAll('SELECT * FROM student_constraints WHERE class_id=?', [classId]);
-    return { version: 2, class: cls, seatings, history, constraints: constr, exportedAt: new Date().toISOString() };
-  });
-
-  ipcMain.handle('import-bundle', async (_, bundle) => {
-    if (!bundle?.class) return { success: false, error: 'Ugyldig bundle' };
-    const { lastID: cid } = await dbRun('INSERT INTO classes (name, students) VALUES (?,?)',
-      [bundle.class.name + ' (importert)', bundle.class.students]);
-    for (const s of bundle.seatings ?? []) {
-      const { lastID: sid } = await dbRun(
-        'INSERT INTO seatings (name,class_id,room_id,placements,comment,created_at) VALUES (?,?,?,?,?,?)',
-        [s.name, cid, s.room_id, s.placements, s.comment ?? '', s.created_at]);
-      for (const h of bundle.history?.filter(x => x.chart_id === s.id) ?? []) {
-        await dbRun('INSERT INTO seating_history (class_id,chart_id,pairs,neighbors,created_at) VALUES (?,?,?,?,?)',
-          [cid, sid, h.pairs, h.neighbors ?? '[]', h.created_at]);
-      }
-    }
-    return { success: true, newClassId: cid };
-  });
 
   // ---- Database backup / restore / move ----
   ipcMain.handle('backup-db', async () => {
@@ -300,52 +263,6 @@ function registerHandlers(winRef) {
     return { success: true };
   });
 
-  // ---- Dupliser klassekart (ny periode) ----
-  ipcMain.handle('duplicate-seating', async (_, { sourceId, name, comment }) => {
-    const source = await dbGet('SELECT * FROM seatings WHERE id=?', [sourceId]);
-    if (!source) return { error: 'Ikke funnet' };
-    return dbRun(
-      'INSERT INTO seatings (name, class_id, room_id, placements, comment) VALUES (?,?,?,?,?)',
-      [name, source.class_id, source.room_id, source.placements, comment ?? '']
-    );
-  });
-
-  // ---- Deltakelseslogg ----
-  ipcMain.handle('get-participation', async (_, seatingId, date) =>
-    dbAll('SELECT * FROM participation_logs WHERE seating_id=? AND date=?', [seatingId, date]));
-
-  ipcMain.handle('save-participation', async (_, { seatingId, studentId, date, events }) => {
-    const eventsJson = JSON.stringify(events ?? []);
-    return dbRun(
-      `INSERT INTO participation_logs (seating_id, student_id, date, events)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(seating_id, student_id, date) DO UPDATE SET events=excluded.events`,
-      [seatingId, studentId, date, eventsJson]
-    );
-  });
-
-  ipcMain.handle('get-participation-summary', async (_, seatingId) =>
-    dbAll('SELECT * FROM participation_logs WHERE seating_id=? ORDER BY date DESC', [seatingId]));
-
-  ipcMain.handle('clear-participation', async (_, seatingId, date) =>
-    dbRun('DELETE FROM participation_logs WHERE seating_id=? AND date=?', [seatingId, date]));
-
-  // ---- Timeplan ----
-  ipcMain.handle('get-schedule', async () =>
-    dbAll(`SELECT sc.*, c.name as class_name FROM schedule sc
-           LEFT JOIN classes c ON sc.class_id=c.id
-           ORDER BY weekday, period`));
-
-  ipcMain.handle('save-schedule-entry', async (_, { id, classId, weekday, period, note }) => {
-    if (id) return dbRun('UPDATE schedule SET class_id=?,weekday=?,period=?,note=? WHERE id=?',
-      [classId, weekday, period, note ?? '', id]);
-    return dbRun('INSERT INTO schedule (class_id,weekday,period,note) VALUES (?,?,?,?)',
-      [classId, weekday, period, note ?? '']);
-  });
-
-  ipcMain.handle('delete-schedule-entry', async (_, id) =>
-    dbRun('DELETE FROM schedule WHERE id=?', [id]));
-
   // ---- Stasjonsundervisning ----
   ipcMain.handle('get-station-sessions', async (_, classId) => {
     const sql = classId
@@ -361,17 +278,18 @@ function registerHandlers(winRef) {
   ipcMain.handle('get-station-session', async (_, id) =>
     dbGet('SELECT * FROM station_sessions WHERE id=?', [id]));
 
-  ipcMain.handle('save-station-session', async (_, { id, name, classId, stations, groups, groupLeaders, rotationPlan, minutesPerStation }) => {
+  ipcMain.handle('save-station-session', async (_, { id, name, classId, stations, groups, groupLeaders, rotationPlan, minutesPerStation, secondsPerStation, noTimer }) => {
     const s = JSON.stringify(stations ?? []);
     const g = JSON.stringify(groups ?? []);
     const gl = JSON.stringify(groupLeaders ?? []);
     const r = JSON.stringify(rotationPlan ?? []);
+    const nt = noTimer ? 1 : 0;
     if (id) return dbRun(
-      'UPDATE station_sessions SET name=?,stations=?,groups=?,group_leaders=?,rotation_plan=?,minutes_per_station=? WHERE id=?',
-      [name, s, g, gl, r, minutesPerStation ?? 10, id]);
+      'UPDATE station_sessions SET name=?,stations=?,groups=?,group_leaders=?,rotation_plan=?,minutes_per_station=?,seconds_per_station=?,no_timer=? WHERE id=?',
+      [name, s, g, gl, r, minutesPerStation ?? 10, secondsPerStation ?? 0, nt, id]);
     return dbRun(
-      'INSERT INTO station_sessions (name,class_id,stations,groups,group_leaders,rotation_plan,minutes_per_station) VALUES (?,?,?,?,?,?,?)',
-      [name, classId, s, g, gl, r, minutesPerStation ?? 10]);
+      'INSERT INTO station_sessions (name,class_id,stations,groups,group_leaders,rotation_plan,minutes_per_station,seconds_per_station,no_timer) VALUES (?,?,?,?,?,?,?,?,?)',
+      [name, classId, s, g, gl, r, minutesPerStation ?? 10, secondsPerStation ?? 0, nt]);
   });
 
   ipcMain.handle('delete-station-session', async (_, id) =>

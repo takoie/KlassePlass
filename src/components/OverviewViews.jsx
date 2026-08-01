@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CreateGroupModal from './GroupWork/CreateGroupModal';
+import { showToast } from '../shared/utils';
 
 export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
   <div
@@ -93,14 +94,17 @@ export const PageLayout = ({ title, icon, onAdd, children }) => (
   </div>
 );
 
-export const ClassesOverview = ({ onEdit, onAdd }) => {
+export const ClassesOverview = ({ onEdit }) => {
   const [classes, setClasses] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  
+  const [newClassName, setNewClassName] = useState('');
+
   useEffect(() => { loadClasses(); }, []);
-  
+
   const loadClasses = async () => {
-    try { setClasses(await window.api.getClasses()); } catch (e) {}
+    try { setClasses(await window.api.getClasses()); } catch (e) {
+      showToast('Kunne ikke hente klassene.', 'error');
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -108,21 +112,41 @@ export const ClassesOverview = ({ onEdit, onAdd }) => {
     try {
       await window.api.deleteClass(deleteTarget.id);
       await loadClasses();
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke slette klassen.', 'error');
+    }
     setDeleteTarget(null);
   };
 
+  const handleOpenCreate = () => {
+    setNewClassName('');
+    document.getElementById('modal_create_class')?.showModal();
+  };
+
+  const handleCreate = async () => {
+    const name = newClassName.trim() || 'Ny klasse';
+    try {
+      const payload = JSON.stringify({ students: [], rules: [] });
+      const result = await window.api.saveClass({ name, students: payload });
+      document.getElementById('modal_create_class')?.close();
+      await loadClasses();
+      if (result?.lastID) onEdit(result.lastID);
+    } catch (e) {
+      showToast('Kunne ikke opprette ny klasse.', 'error');
+    }
+  };
+
   return (
-    <PageLayout title="Mine klasser" icon="fa-solid fa-users" onAdd={onAdd}>
+    <PageLayout title="Mine klasser" icon="fa-solid fa-users" onAdd={handleOpenCreate}>
       {classes.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klasser opprettet enda.</p> : null}
       {classes.map(cls => {
         let count = 0;
-        try { 
+        try {
           const parsed = JSON.parse(cls.students || '[]');
           count = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
         } catch(e){}
         return (
-          <Card 
+          <Card
             key={cls.id}
             title={cls.name}
             badgeText="KLASSE"
@@ -137,13 +161,46 @@ export const ClassesOverview = ({ onEdit, onAdd }) => {
         );
       })}
 
-      <ConfirmDeleteModal 
+      <ConfirmDeleteModal
         isOpen={!!deleteTarget}
         title="klasse"
         itemName={deleteTarget?.name}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <dialog id="modal_create_class" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-lg text-emerald-400 mb-6 flex items-center gap-2">
+            <i className="fa-solid fa-users"></i> Opprett ny klasse
+          </h3>
+
+          <div>
+            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klassenavn</label>
+            <input
+              type="text"
+              className="input input-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500"
+              value={newClassName}
+              onChange={e => setNewClassName(e.target.value)}
+              placeholder="F.eks. 8A"
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreate(); } }}
+            />
+          </div>
+
+          <div className="modal-action mt-8">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 hover:text-slate-100">Avbryt</button>
+            </form>
+            <button className="btn btn-primary font-bold px-8 shadow-lg shadow-emerald-900/50" onClick={handleCreate}>
+              Opprett & rediger <i className="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
     </PageLayout>
   );
 };
@@ -155,7 +212,9 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
   useEffect(() => { loadRooms(); }, []);
 
   const loadRooms = async () => {
-    try { setRooms(await window.api.getRooms()); } catch (e) {}
+    try { setRooms(await window.api.getRooms()); } catch (e) {
+      showToast('Kunne ikke hente rommene.', 'error');
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -163,7 +222,9 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
     try {
       await window.api.deleteRoom(deleteTarget.id);
       await loadRooms();
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke slette rommet.', 'error');
+    }
     setDeleteTarget(null);
   };
 
@@ -235,11 +296,15 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       setRooms(r);
       if (c.length > 0) setSelectedClass(c[0].id);
       if (r.length > 0) setSelectedRoom(r[0].id);
-    } catch(e){}
+    } catch(e){
+      showToast('Kunne ikke hente klasser og rom.', 'error');
+    }
   };
 
   const loadSeatings = async () => {
-    try { setSeatings(await window.api.getSeatings()); } catch (e) {}
+    try { setSeatings(await window.api.getSeatings()); } catch (e) {
+      showToast('Kunne ikke hente klassekartene.', 'error');
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -254,7 +319,9 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
         await window.api.deleteSeating(deleteTarget.id);
       }
       await loadSeatings();
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke slette klassekartet.', 'error');
+    }
     setDeleteTarget(null);
   };
 
@@ -295,7 +362,9 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
         const created = all.find(s => s.name === name && s.class_id === Number(selectedClass));
         if (created) onEdit(created.id);
       }
-    } catch(e){}
+    } catch(e){
+      showToast('Kunne ikke opprette klassekartet.', 'error');
+    }
   };
 
   let modalDeskCount = 0;
@@ -356,7 +425,9 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                  });
                  if (result?.lastID) onEdit(result.lastID);
                  await loadSeatings();
-               } catch(err) { console.error("Import feilet", err); }
+               } catch(err) {
+                 showToast('Filen kunne ikke importeres. Sjekk at det er en gyldig .klasseplass/.json-fil.', 'error');
+               }
              };
              reader.readAsText(file);
           };
@@ -508,7 +579,9 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
       const [a, c] = await Promise.all([window.api.getGroupAssignments(), window.api.getClasses()]);
       setAssignments(a);
       setClasses(c);
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke hente gruppeinndelingene.', 'error');
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -523,7 +596,9 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
         await window.api.deleteGroupAssignment(deleteTarget.id);
       }
       await loadAll();
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke slette gruppeinndelingen.', 'error');
+    }
     setDeleteTarget(null);
   };
 

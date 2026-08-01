@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { showToast } from '../shared/utils';
 
 const normalizeStudent = (s) => {
   if (typeof s === 'string') {
@@ -28,7 +29,6 @@ export default function ClassManager({ onBack, initialId }) {
   
   const saveTimeoutRef = useRef(null);
   const isInitialLoadRef = useRef(true);
-  const hasAutoOpenedRef = useRef(false);
 
   useEffect(() => {
     loadClasses();
@@ -39,17 +39,16 @@ export default function ClassManager({ onBack, initialId }) {
     try {
       const data = await window.api.getClasses();
       setClasses(data);
-      if (initialId === 'new' && !hasAutoOpenedRef.current) {
-        hasAutoOpenedRef.current = true;
-        setTimeout(() => handleCreateNew(), 100);
-      } else if (initialId && initialId !== 'new') {
+      if (initialId && initialId !== 'new') {
         const found = data.find(c => c.id === Number(initialId));
         if (found) handleSelectClass(found);
         else if (data.length > 0) handleSelectClass(data[0]);
       } else if (data.length > 0 && !selectedClass) {
         handleSelectClass(data[0]);
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke hente klassene. Prøv å starte appen på nytt.', 'error');
+    }
     setLoading(false);
   };
 
@@ -104,7 +103,9 @@ export default function ClassManager({ onBack, initialId }) {
       setRules([]);
       await loadClasses();
       setSaveState('saved');
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke opprette ny klasse.', 'error');
+    }
     setTimeout(() => isInitialLoadRef.current = false, 100);
   };
 
@@ -125,7 +126,10 @@ export default function ClassManager({ onBack, initialId }) {
       const data = await window.api.getClasses();
       setClasses(data);
       setSaveState('saved');
-    } catch (e) {}
+    } catch (e) {
+      setSaveState('error');
+      showToast('Klassen kunne ikke lagres. Sjekk at det er nok diskplass, og prøv igjen.', 'error');
+    }
   };
 
   const handleDelete = async (id) => {
@@ -138,7 +142,9 @@ export default function ClassManager({ onBack, initialId }) {
       } else {
         setSelectedClass(null);
       }
-    } catch (e) {}
+    } catch (e) {
+      showToast('Kunne ikke slette klassen.', 'error');
+    }
   };
 
   const addStudent = (e) => {
@@ -197,7 +203,7 @@ export default function ClassManager({ onBack, initialId }) {
     }));
     setStudents([...students, ...newObjects]);
     setImportData('');
-    document.getElementById('modal_import_students').close();
+    document.getElementById('modal_import_students')?.close();
   };
 
   const ruleOptions = [
@@ -241,8 +247,8 @@ export default function ClassManager({ onBack, initialId }) {
 
         {selectedClass && (
           <button 
-            className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs" 
-            onClick={() => document.getElementById(`modal_delete_${selectedClass.id}`).showModal()}
+            className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs"
+            onClick={() => document.getElementById(`modal_delete_${selectedClass.id}`)?.showModal()}
           >
             <i className="fa-solid fa-trash"></i> Slett klasse
           </button>
@@ -267,6 +273,10 @@ export default function ClassManager({ onBack, initialId }) {
                 {saveState === 'saving' ? (
                   <span className="text-amber-400 opacity-80 flex items-center gap-1">
                     <i className="fa-solid fa-spinner fa-spin"></i> Lagrer...
+                  </span>
+                ) : saveState === 'error' ? (
+                  <span className="text-red-400 flex items-center gap-1 shadow-sm">
+                    <i className="fa-solid fa-triangle-exclamation"></i> Kunne ikke lagre
                   </span>
                 ) : (
                   <span className="text-[#34d399] flex items-center gap-1 shadow-sm">

@@ -12,8 +12,6 @@ export default function RoomToolsDrawer({
   genRows,
   setGenRows,
   generateStructure,
-  addDoor,
-  addWindow,
   addDesk,
   clearDesks,
   showNumbers,
