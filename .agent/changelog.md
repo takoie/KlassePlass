@@ -5,6 +5,92 @@ Dette dokumentet loggfører alle endringer i KlassePlass-prosjektet. Kort, lesba
 
 ---
 
+## 2026-08-01 — Fiks drag-and-drop-snapping, Electron 28→43, splittet RoomEditor.jsx og SeatingChart.jsx i hooks
+
+Fortsettelse av koderevisjonens punkt 1 (bugfiks), 4 (Electron-oppgradering) og
+5 (splitte opp store filer), gjort trinnvis med brukertest mellom hvert steg
+(direkte endringer på `main`, ingen commit før hvert steg var bekreftet).
+
+**Pult-snapping i RoomEditor — flere runder feilsøking:**
+- Fant og fikset en dobbel-skalering-bug (`scale²`) i `getBoundedDelta`:
+  resultatet ble multiplisert med `scale` og deretter brukt som
+  `translate3d()` på et element allerede nøstet inne i en
+  `scale(scale)`-transformert forelder (canvaset auto-skaleres via
+  `ResizeObserver`, ikke en manuell zoom-bryter).
+- Cachet live-forhåndsvisningens snap-resultat (`lastDeskDragResultRef`) slik
+  at `handleDragEnd` gjenbruker akkurat det som ble vist/highlightet under
+  draget, i stedet for å regne ut snap på nytt fra en marginalt annen rå-delta
+  ved selve slippet.
+- **Reell bug funnet og fikset:** en `preferredTargetId`-hysterese (lagt til
+  for å hindre at pulten "hopper" mellom to nesten likeverdige nabo-mål) ble
+  sendt til `getBoundedDelta`, men selve wrapper-funksjonen glemte å
+  videreformidle parameteren til `computeBoundedDelta` — hysteresen var altså
+  helt virkningsløs helt til dette ble oppdaget under hook-splittingen og
+  rettet i `useDeskDragAndDrop.js`.
+- To forsøk på "skli mot vegg ved kollisjon i stedet for å hoppe tilbake til
+  startposisjon" (diagonal binærsøk, deretter aksevis binærsøk) ble begge
+  reversert etter brukertilbakemelding om at de gjorde snappingen verre — endte
+  på den opprinnelige, enkle kollisjons-fallback-logikken i
+  `geometry.mjs`. **Lærdom:** ikke finjuster kollisjonshåndtering blindt uten
+  å kunne reprodusere brukerens eksakte rom-oppsett.
+
+**Fjernet dør/vindu-funksjonaliteten** i RoomEditor og SeatingChart (kun
+soner — Dørsone/Vindurekke/Fremste rad/Bakerste rad/Midtsone — består) etter
+eksplisitt brukerønske ("blir for rotete"): `DoorItem.jsx`/`WindowItem.jsx`
+slettet, all dør/vindu-state, handlers og rendering fjernet fra begge
+hovedfilene.
+
+**Electron 28.0.0 → 43.2.0, electron-builder 24.9.1 → 25.1.8, electron-updater → 6.8.9:**
+appen brukte allerede det moderne, sikre IPC-mønsteret
+(`nodeIntegration: false`, `contextIsolation: true`, ingen `remote`-modul),
+så selve oppgraderingen krevde ingen kodeendringer — kun `npm install` +
+`npm audit fix` (ikke-brytende) for transitive sårbarheter i
+`electron-builder`s avhengigheter (`form-data`, `js-yaml`, `lodash`).
+**electron-builder 26.15.3 (nyeste ved oppgraderingstidspunktet) har en
+Windows-spesifikk bug**: `EPERM: operation not permitted, rename
+'dist\win-unpacked.tmp' -> 'dist\win-unpacked'` ved pakking av den betydelig
+større Electron 43-utpakkingen — reprodusert konsekvent (ikke tilfeldig
+antivirus-timing) både i sandkasse-miljø og på brukerens maskin, også som
+administrator. Løst ved å nedgradere `electron-builder` til `25.1.8` (siste
+2.0.0 ble bygget med 24.9.1 uten problemer). **Viktig for fremtidige
+oppgraderinger:** ikke oppgrader `electron-builder` forbi 25.x uten å først
+verifisere at `npm run dist` fortsatt fullfører på Windows — se
+`.agent/roadmap.md` under "Kjente Bugs".
+
+**Splittet RoomEditor.jsx (955 → 234 linjer) i `src/components/RoomEditor/hooks/`:**
+`useCanvasFit` (skalering/sentrering), `useDeskDragAndDrop` (all
+snap/drag-logikk over), `useDeskSelection` (utvalg, boks-utvalg,
+kontekstmeny, kopier/lim inn/dupliser), `useRooms` (rom-CRUD, autolagring,
+generator, sentrer/flipp). Delt tilstand (`desks`, `boardObj`,
+`selectedDesks`) eies av hovedkomponenten og sendes inn som parametre til
+hver hook — unngår sirkulær avhengighet mellom hookene.
+
+**Splittet SeatingChart.jsx (1590 → 515 linjer) i `src/components/SeatingChart/hooks/`:**
+`useCanvasFit`, `useFunModes` (Rulett/Randombombe/Musikkstoler/Makkerbytte/
+Spotlight/gradvis avdekking/"Plasser alle"/"Randomiser"), `useGroupLasso`
+(lasso-basert gruppetildeling), `useStudentDragAndDrop` (dra elever
+seter↔skuff), `useSeatings` (klassekart-CRUD, autolagring, perioder,
+historikk-konflikter, "flipp rom", "oppdater fra romplan"). Samme mønster:
+delt tilstand (`desks`, `boardObj`, `groupOverrides`) eies av
+hovedkomponenten. `handleMouseMove`/`handleMouseUp` er nå tynne wrappere som
+først spør lasso-hooken om den håndterte eventet, ellers faller videre til
+drag-hooken.
+
+**Verifisert:** `npx vite build` grønt etter hvert enkelt steg, samt manuell
+brukertest i ekte kjørende app mellom hvert steg (canvas-skalering,
+drag-and-drop/snapping, utvalg/kontekstmeny/kopier-lim-inn, alle fun modes,
+klassekart-CRUD/autolagring/perioder/historikk). Versjon satt til `2.1.0`.
+
+**Berørte filer:** `src/components/RoomEditor.jsx`,
+`src/components/RoomEditor/geometry.mjs`,
+`src/components/RoomEditor/hooks/*.js` (4 nye),
+`src/components/RoomEditor/RoomToolsDrawer.jsx`,
+`src/components/SeatingChart.jsx`,
+`src/components/SeatingChart/hooks/*.js` (5 nye), `package.json`
+(slettet: `src/components/RoomEditor/DoorItem.jsx`, `WindowItem.jsx`)
+
+---
+
 ## 2026-07-29 — Ryddet død kode + koblet auto-update-varsel til React-UI
 
 **Død kode fjernet** (alt bekreftet ubrukt — ingen imports fra den levende

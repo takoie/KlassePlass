@@ -8,7 +8,7 @@ Denne agenten overvåker og dokumenterer backend-arkitekturen for KlassePlass.
 ## Arkitektur
 
 ### 🏗️ Stack
-- **Platform:** Electron 28.0.0
+- **Platform:** Electron 43.2.0 (oppgradert fra 28.0.0, se changelog 2026-08-01)
 - **Database:** SQLite3 v5.1.7
 - **IPC:** Electron IPC (Inter-Process Communication)
 - **Main Process:** `main.js`

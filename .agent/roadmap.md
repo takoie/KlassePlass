@@ -212,6 +212,16 @@ Dette dokumentet holder oversikt over fremtidige planer, funksjoner og forbedrin
 ### Bugs
 - Ingen kjente kritiske bugs for øyeblikket
 
+### ⚠️ Byggeverktøy — ikke oppgrader blindt
+- **`electron-builder` er pinnet til `25.1.8`** (i `package.json`). Versjon
+  `26.15.3` (og trolig hele `26.x`-serien) har en Windows-bug som gir
+  `EPERM: operation not permitted, rename 'dist\win-unpacked.tmp' -> 'dist\win-unpacked'`
+  ved `npm run dist` — reprodusert konsekvent (ikke antivirus-flaks) på flere
+  maskiner, også som administrator. `24.9.1` fungerte fint (brukt til v2.0.0).
+  Før neste oppgradering av `electron-builder`: verifiser at `npm run dist`
+  faktisk fullfører og produserer en installer på Windows, ikke bare at
+  `npm install` går gjennom. Se changelog 2026-08-01 for full kontekst.
+
 ### Forbedringer
 - **Performance:** Optimalisere rendering ved store klasserom (50+ pulter)
 - **UX:** Bedre visuell feedback ved drag-operasjoner
