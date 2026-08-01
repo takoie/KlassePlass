@@ -5,20 +5,17 @@ import DeskContextMenu from './SeatingChart/DeskContextMenu';
 import HeaderBar from './SeatingChart/HeaderBar';
 import Toolbar from './SeatingChart/Toolbar';
 import StudentDrawer from './SeatingChart/StudentDrawer';
-import { findBestPlacement } from '../lib/seatingSolver.mjs';
+import { useCanvasFit } from './SeatingChart/hooks/useCanvasFit';
+import { useFunModes } from './SeatingChart/hooks/useFunModes';
+import { useGroupLasso } from './SeatingChart/hooks/useGroupLasso';
+import { useStudentDragAndDrop } from './SeatingChart/hooks/useStudentDragAndDrop';
+import { useSeatings } from './SeatingChart/hooks/useSeatings';
 
 const GROUP_COLORS = [
   '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
   '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#84cc16',
   '#06b6d4', '#d946ef', '#e11d48', '#22c55e', '#64748b'
 ];
-
-const normalizeStudent = (s) => {
-  if (typeof s === 'string') {
-    return { id: `stu-${Math.random().toString(36).substr(2, 9)}`, name: s, note: '' };
-  }
-  return s && s.id && s.name ? { ...s, note: s.note || '' } : { id: `stu-${Math.random().toString(36).substr(2, 9)}`, name: String(s || ''), note: '' };
-};
 
 const getFontSizeClass = (name) => {
   if (!name) return 'text-xs font-extrabold';
@@ -30,28 +27,8 @@ const getFontSizeClass = (name) => {
 };
 
 export default function SeatingChart({ onBack, initialId }) {
-  const [classes, setClasses] = useState([]);
-  const [rooms, setRooms] = useState([]);
-  const [seatings, setSeatings] = useState([]);
-  
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedRoom, setSelectedRoom] = useState('');
-  const [selectedSeatingId, setSelectedSeatingId] = useState('');
-  
-  const [chartName, setChartName] = useState('');
-  const [chartComment, setChartComment] = useState('Uke 1-4');
   const [desks, setDesks] = useState([]);
   const [boardObj, setBoardObj] = useState({ x: 422, y: 15 });
-  const [saveState, setSaveState] = useState('saved');
-  
-  const [placements, setPlacements] = useState({});
-  const [lockedSeats, setLockedSeats] = useState({});
-  const [studentRoles, setStudentRoles] = useState({});
-  const [studentNotes, setStudentNotes] = useState({});
-  const [classRules, setClassRules] = useState([]);
-  
-  const [allStudents, setAllStudents] = useState([]);
-  const [unplacedStudents, setUnplacedStudents] = useState([]);
   const [ruleReport, setRuleReport] = useState(null);
 
   // UI State
@@ -59,188 +36,45 @@ export default function SeatingChart({ onBack, initialId }) {
   const [hideSensitiveInfo, setHideSensitiveInfo] = useState(false);
   const [showNumbers, setShowNumbers] = useState(true);
   const [showZones, setShowZones] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [hideGroups, setHideGroups] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showStudentDrawer, setShowStudentDrawer] = useState(false);
   const [showPeriodsDrawer, setShowPeriodsDrawer] = useState(false);
   const [editingNoteStudent, setEditingNoteStudent] = useState(null);
   const [noteInputValue, setNoteInputValue] = useState('');
-  const [historyConflicts, setHistoryConflicts] = useState({});
   const [contextMenu, setContextMenu] = useState(null);
-  const [editingPeriod, setEditingPeriod] = useState(null);
-  const [newPeriodWeeks, setNewPeriodWeeks] = useState(4);
-  
-  // Grouping override state (Lasso)
-  const [groupOverrides, setGroupOverrides] = useState({});
+
   const [showGroupDrawer, setShowGroupDrawer] = useState(false);
-  const [activeGroupId, setActiveGroupId] = useState(null);
-  const [lasso, setLasso] = useState(null);
 
   // Fun Mode state
   const [showFunDrawer, setShowFunDrawer] = useState(false);
-  const [hoverSlotKey, setHoverSlotKey] = useState(null);
 
-  // Gradvis avdekking (del av Fun Mode)
-  const [revealMode, setRevealMode] = useState(false);
-  const [revealOrder, setRevealOrder] = useState([]);
-  const [revealedSlots, setRevealedSlots] = useState(new Set());
-
-  // Delte fun modes (Roulette/Randombomb/Musikkstoler/Makkerbytte/Spotlight).
-  // Under en kjøring vises `funModeGhosts` OPPÅ de virkelige `placements` for de
-  // aktuelle setene — selve `placements` (og dermed autolagringen) røres ikke før
-  // resultatet er avgjort, bortsett fra Roulette som committer én elev om gangen
-  // (se Task 4).
-  const [activeFunMode, setActiveFunMode] = useState(null); // 'roulette' | 'randombomb' | 'musikkstoler' | 'makkerbytte' | 'spotlight' | null
-  const [funModeGhosts, setFunModeGhosts] = useState(null); // { [slotKey]: studentId | null } | null
-  const [bombCountdown, setBombCountdown] = useState(null);
-  const [bombBoom, setBombBoom] = useState(false);
-  const [spotlightSlotKey, setSpotlightSlotKey] = useState(null);
-
-  // Drag state
-  const [draggedStudent, setDraggedStudent] = useState(null);
-  const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
-  const funModeTimerRef = useRef(null);
-  const funModeFinalRef = useRef(null); // beregnet sluttresultat for gjeldende kjøring
-  const funModePreStateRef = useRef(null); // placements før Randombomb startet (for avbrytelse)
 
-  // Auto-save refs
-  const saveTimeoutRef = useRef(null);
-  const isInitialLoadRef = useRef(true);
+  const { scale, offset, containerRef, canvasRef } = useCanvasFit();
 
-  // Resize Observer for skalering
-  const containerRef = useRef(null);
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const {
+    groupOverrides, setGroupOverrides,
+    activeGroupId, setActiveGroupId,
+    lasso, startCanvasAction,
+    handleMouseMove: handleLassoMouseMove,
+    handleMouseUp: handleLassoMouseUp
+  } = useGroupLasso({ desks, canvasRef, scale });
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        const { width, height } = entry.contentRect;
-        const availW = width - 60;
-        const availH = height - 60;
-        const sX = availW / 1100;
-        const sY = availH / 700;
-        // Skaler både ned OG opp for å fylle det tilgjengelige vinduet — ikke
-        // bare krymp på små vinduer. Øvre tak hindrer at klasserommet blir
-        // urimelig stort/uskarpt-følende på svært brede skjermer.
-        const s = Math.min(1.5, sX, sY);
-        setScale(s);
+  const {
+    classes, rooms, seatings,
+    selectedClass, setSelectedClass, selectedRoom, setSelectedRoom, selectedSeatingId,
+    chartName, setChartName, chartComment, setChartComment, saveState,
+    placements, setPlacements, lockedSeats, setLockedSeats,
+    studentRoles, setStudentRoles, studentNotes, setStudentNotes, classRules,
+    allStudents, unplacedStudents, setUnplacedStudents,
+    showHistory, setShowHistory, historyConflicts,
+    editingPeriod, setEditingPeriod, newPeriodWeeks, setNewPeriodWeeks,
+    getStudentByIdOrName,
+    handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
+    flipRoom, syncFromRoom
+  } = useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides });
 
-        const scaledW = 1100 * s;
-        const scaledH = 700 * s;
-        setOffset({
-          x: Math.max(30, (width - scaledW) / 2),
-          y: Math.max(30, (height - scaledH) / 2)
-        });
-      }
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    loadBaseData();
-  }, []);
-
-  const loadBaseData = async () => {
-    try {
-      const cls = await window.api.getClasses();
-      const rms = await window.api.getRooms();
-      const sts = await window.api.getSeatings();
-      setClasses(cls);
-      setRooms(rms);
-      setSeatings(sts);
-      
-      if (initialId && initialId !== 'new') {
-        const seating = sts.find(s => s.id === Number(initialId));
-        if (seating) {
-          setSelectedSeatingId(seating.id);
-          setSelectedClass(seating.class_id);
-          setSelectedRoom(seating.room_id);
-          setChartName(seating.name);
-          setChartComment(seating.comment || 'Uke 1-4');
-          
-          let parsedPlacements = {};
-          let deskSnapshot = null;
-          try {
-            const extraData = seating.placements ? JSON.parse(seating.placements) : {};
-            if (extraData.placements) {
-              parsedPlacements = extraData.placements;
-              setLockedSeats(extraData.lockedSeats || {});
-              setStudentRoles(extraData.studentRoles || {});
-              setStudentNotes(extraData.studentNotes || {});
-              setGroupOverrides(extraData.groupOverrides || {});
-              deskSnapshot = extraData.deskLayout || null;
-            } else {
-              parsedPlacements = extraData;
-            }
-          } catch(e) {}
-
-          setPlacements(parsedPlacements);
-
-          // Setup chart with local variables
-          const clsObj = cls.find(c => c.id === Number(seating.class_id));
-          const rmObj = rms.find(r => r.id === Number(seating.room_id));
-          setupNewChartLocal(clsObj, rmObj, parsedPlacements, deskSnapshot);
-        }
-      }
-    } catch (e) {}
-  };
-
-  // deskSnapshot (om satt): bordoppsettet slik det var da klassekartet sist ble lagret.
-  // Rommets layout_data leses live og kan ha blitt regenerert (nye bord-IDer) siden den
-  // gang — uten snapshot ville lagrede elevplasseringer da peke på bord som ikke finnes
-  // lenger og se ut som om alle elevene forsvant. Se "Oppdater romplan"-knappen for bevisst sync.
-  const setupNewChartLocal = (cls, rm, currentPlacements, deskSnapshot) => {
-    if (deskSnapshot && Array.isArray(deskSnapshot.desks) && deskSnapshot.desks.length) {
-      setDesks(deskSnapshot.desks.map(d => ({
-        ...d,
-        capacity: d.capacity || 1,
-        zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
-        groupId: d.groupId || null
-      })));
-      setBoardObj(deskSnapshot.boardObj || { x: 422, y: 15 });
-    } else if (rm) {
-      try {
-        const layout = JSON.parse(rm.layout_data || '{}');
-        setDesks((layout.desks || []).map(d => ({
-          ...d,
-          capacity: d.capacity || 1,
-          zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
-          groupId: d.groupId || null
-        })));
-        setBoardObj(layout.boardObj || { x: 422, y: 15 });
-      } catch (e) {}
-    }
-
-    if (cls) {
-      try {
-        const parsedClass = cls.students ? JSON.parse(cls.students) : [];
-        let stuList = [];
-        let rls = [];
-
-        if (Array.isArray(parsedClass)) {
-          stuList = parsedClass.map(normalizeStudent);
-        } else {
-          stuList = (parsedClass.students || []).map(normalizeStudent);
-          rls = parsedClass.rules || [];
-        }
-
-        setAllStudents(stuList);
-        setClassRules(rls);
-
-        const placedIds = Object.values(currentPlacements);
-        setUnplacedStudents(stuList.filter(s => !placedIds.includes(s.id) && !placedIds.includes(s.name)));
-      } catch (e) {
-        setAllStudents([]);
-        setUnplacedStudents([]);
-        setClassRules([]);
-      }
-    }
-  };
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('toggle-projector', { detail: isProjectorMode }));
@@ -254,807 +88,46 @@ export default function SeatingChart({ onBack, initialId }) {
     }
   }, []);
 
-  useEffect(() => {
-    // isInitialLoadRef hopper over NØYAKTIG én kjøring — den umiddelbart etter at et
-    // klassekart nettopp ble lastet (så vi ikke "lagrer" data vi selv nettopp leste inn).
-    // Nullstilles her, IKKE via en tidsbasert setTimeout — en fast frist (f.eks. 100ms)
-    // ville stille droppe autolagringen for enhver ekte brukerendring (f.eks. "plasser
-    // alle") som skjedde å skje innenfor akkurat det tidsvinduet, uten at noe senere
-    // endring noensinne trigget et nytt lagringsforsøk.
-    if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-      return;
-    }
-    if (!selectedClass || !selectedRoom) return;
-
-    setSaveState('saving');
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveCurrentSeating();
-    }, 1000);
-
-    return () => clearTimeout(saveTimeoutRef.current);
-  }, [placements, lockedSeats, studentRoles, studentNotes, chartName, chartComment, selectedClass, selectedRoom, boardObj, groupOverrides]);
 
   const handleDeskContextMenu = (e, desk) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, desk });
   };
-  const getNeighbors = (placementsObj) => {
-    const pairs = [];
-    const placed = Object.keys(placementsObj).map(slot => ({
-       slot,
-       studentId: placementsObj[slot],
-       deskId: slot.split('_seat_')[0]
-    }));
-    
-    for (let i = 0; i < placed.length; i++) {
-       for (let j = i + 1; j < placed.length; j++) {
-           const p1 = placed[i];
-           const p2 = placed[j];
-           if (!p1.studentId || !p2.studentId) continue;
-           
-           let isNeighbor = false;
-           if (p1.deskId === p2.deskId) {
-               isNeighbor = true; // Samme bord
-           } else {
-               const d1 = desks.find(d => String(d.id) === String(p1.deskId));
-               const d2 = desks.find(d => String(d.id) === String(p2.deskId));
-               if (d1 && d2) {
-                   if (d1.groupId && d2.groupId && d1.groupId === d2.groupId) {
-                       isNeighbor = true; // Samme makkergruppe
-                   } else {
-                       // Enkel avstandssjekk (ved siden av hverandre)
-                       const d1Right = d1.x + (d1.capacity * 95);
-                       const d2Right = d2.x + (d2.capacity * 95);
-                       const d1Bottom = d1.y + 65;
-                       const d2Bottom = d2.y + 65;
-                       
-                       const isAdjacentHorizontal = Math.abs(d1.y - d2.y) < 20 && (Math.abs(d1.x - d2Right) < 40 || Math.abs(d1Right - d2.x) < 40);
-                       const isAdjacentVertical = Math.abs(d1.x - d2.x) < 20 && (Math.abs(d1.y - d2Bottom) < 40 || Math.abs(d1Bottom - d2.y) < 40);
-                       
-                       if (isAdjacentHorizontal || isAdjacentVertical) isNeighbor = true;
-                   }
-               }
-           }
-           if (isNeighbor) pairs.push([p1.studentId, p2.studentId]);
-       }
-    }
-    return pairs;
+
+  const {
+    draggedStudent, hoverSlotKey, startDrag,
+    handleMouseMove: handleDragMouseMove,
+    handleMouseUp: handleDragMouseUp
+  } = useStudentDragAndDrop({
+    canvasRef, scale, desks, placements, setPlacements,
+    unplacedStudents, setUnplacedStudents, getStudentByIdOrName
+  });
+
+  const handleMouseMove = (e) => {
+    if (handleLassoMouseMove(e)) return;
+    handleDragMouseMove(e);
   };
 
-  useEffect(() => {
-    if (!showHistory) {
-      setHistoryConflicts({});
-      return;
-    }
-    
-    const currentNeighbors = getNeighbors(placements);
-    if (currentNeighbors.length === 0) {
-      setHistoryConflicts({});
-      return;
-    }
-    
-    const pastCharts = seatings
-       .filter(s => s.class_id === selectedClass && s.id !== Number(selectedSeatingId))
-       .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-       .slice(0, 5);
-       
-    const pastNeighborsPerChart = pastCharts.map(c => {
-       try {
-         const p = JSON.parse(c.placements || '{}');
-         return getNeighbors(p.placements || p);
-       } catch(e) { return []; }
-    });
-    
-    const conflicts = {};
-    const colors = ['bg-red-500/80 border-red-400', 'bg-orange-400/80 border-orange-300', 'bg-yellow-400/80 border-yellow-300', 'bg-lime-400/80 border-lime-300', 'bg-emerald-500/80 border-emerald-400'];
-    
-    currentNeighbors.forEach(([s1, s2]) => {
-        for (let i = 0; i < pastNeighborsPerChart.length; i++) {
-           const pastPairs = pastNeighborsPerChart[i];
-           const satTogether = pastPairs.some(pair => (pair[0] === s1 && pair[1] === s2) || (pair[0] === s2 && pair[1] === s1));
-           if (satTogether) {
-               const color = colors[i];
-               if (!conflicts[s1] || colors.indexOf(color) < colors.indexOf(conflicts[s1])) conflicts[s1] = color;
-               if (!conflicts[s2] || colors.indexOf(color) < colors.indexOf(conflicts[s2])) conflicts[s2] = color;
-           }
-        }
-    });
-    setHistoryConflicts(conflicts);
-  }, [showHistory, placements, selectedClass, selectedSeatingId, seatings, desks]);
-
-  const handleSelectSeating = async (id, seatingsList = seatings) => {
-    isInitialLoadRef.current = true;
-    const seating = seatingsList.find(s => s.id === Number(id));
-    if (!seating) {
-      setSelectedSeatingId('');
-      setChartName('Nytt klassekart');
-      setChartComment('Uke 1-4');
-      setPlacements({});
-      setLockedSeats({});
-      setStudentRoles({});
-      setStudentNotes({});
-      if (selectedClass && selectedRoom) setupNewChart(selectedClass, selectedRoom, {});
-    } else {
-      setSelectedSeatingId(id);
-      setSelectedClass(seating.class_id);
-      setSelectedRoom(seating.room_id);
-      setChartName(seating.name);
-      setChartComment(seating.comment || 'Uke 1-4');
-      
-      let parsedPlacements = {};
-      let deskSnapshot = null;
-      try {
-        const extraData = seating.placements ? JSON.parse(seating.placements) : {};
-        if (extraData.placements) {
-          parsedPlacements = extraData.placements;
-          setLockedSeats(extraData.lockedSeats || {});
-          setStudentRoles(extraData.studentRoles || {});
-          setStudentNotes(extraData.studentNotes || {});
-          deskSnapshot = extraData.deskLayout || null;
-        } else {
-          parsedPlacements = extraData;
-        }
-      } catch(e) {}
-
-      setPlacements(parsedPlacements);
-      setupNewChart(seating.class_id, seating.room_id, parsedPlacements, deskSnapshot);
-    }
-    setSaveState('saved');
+  const handleMouseUp = () => {
+    if (handleLassoMouseUp()) return;
+    handleDragMouseUp();
   };
 
-  const setupNewChart = (cId, rId, currentPlacements, deskSnapshot) => {
-    const cls = classes.find(c => c.id === Number(cId));
-    const rm = rooms.find(r => r.id === Number(rId));
 
-    if (deskSnapshot && Array.isArray(deskSnapshot.desks) && deskSnapshot.desks.length) {
-      setDesks(deskSnapshot.desks.map(d => ({
-        ...d,
-        capacity: d.capacity || 1,
-        zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
-        groupId: d.groupId || null
-      })));
-      setBoardObj(deskSnapshot.boardObj || { x: 405, y: 25 });
-    } else if (rm) {
-      try {
-        const layout = JSON.parse(rm.layout_data || '{}');
-        setDesks((layout.desks || []).map(d => ({
-          ...d,
-          capacity: d.capacity || 1,
-          zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
-          groupId: d.groupId || null
-        })));
-        setBoardObj(layout.boardObj || { x: 405, y: 25 });
-      } catch (e) {}
-    }
-
-    if (cls) {
-      try {
-        const parsedClass = cls.students ? JSON.parse(cls.students) : [];
-        let stuList = [];
-        let rls = [];
-
-        if (Array.isArray(parsedClass)) {
-          stuList = parsedClass.map(normalizeStudent);
-        } else {
-          stuList = (parsedClass.students || []).map(normalizeStudent);
-          rls = parsedClass.rules || [];
-        }
-
-        setAllStudents(stuList);
-        setClassRules(rls);
-
-        const placedIds = Object.values(currentPlacements);
-        setUnplacedStudents(stuList.filter(s => !placedIds.includes(s.id) && !placedIds.includes(s.name)));
-      } catch (e) {
-        setAllStudents([]);
-        setUnplacedStudents([]);
-        setClassRules([]);
-      }
-    }
-  };
-
-  const getStudentByIdOrName = (idOrName) => {
-    return allStudents.find(s => s.id === idOrName || s.name === idOrName) || { id: idOrName, name: idOrName, note: '' };
-  };
-
-  const saveCurrentSeating = async () => {
-    if (!selectedClass || !selectedRoom || !chartName.trim()) return;
-    try {
-      const savePayload = JSON.stringify({
-        placements,
-        lockedSeats,
-        studentRoles,
-        studentNotes,
-        groupOverrides,
-        // Frosset kopi av bordoppsettet. Uten denne ville rom-redigering (spesielt
-        // Hurtiglayout, som gir alle bord nye IDer) stille gjøre alle plasseringer
-        // her foreldreløse neste gang kartet åpnes.
-        deskLayout: { desks, boardObj }
-      });
-
-      const result = await window.api.saveSeating({
-        id: selectedSeatingId || null,
-        name: chartName.trim(),
-        classId: selectedClass,
-        roomId: selectedRoom,
-        placements: savePayload,
-        comment: chartComment
-      });
-      if (!selectedSeatingId && result.lastID) {
-        setSelectedSeatingId(result.lastID);
-      }
-      const newSeatings = await window.api.getSeatings();
-      setSeatings(newSeatings);
-      setSaveState('saved');
-    } catch (e) {}
-  };
-
-  const handleStartNewPeriod = async (jumpWeeks) => {
-    if (!selectedClass || !selectedRoom) return;
-    const match = chartComment.match(/Uke\s+(\d+)\s*-\s*(\d+)/i);
-    let nextStart = 1;
-    if (match && match[2]) {
-      nextStart = parseInt(match[2]) + 1;
-    }
-    const weeks = Math.max(1, Number(jumpWeeks) || 4);
-    const nextEnd = nextStart + weeks - 1;
-
-    const newComment = `Uke ${nextStart}-${nextEnd}`;
-    // Navnet er gitt av klassen — ingen fritekst å taste inn per periode.
-    const newName = classes.find(c => c.id === Number(selectedClass))?.name || chartName;
-
-    try {
-      const savePayload = JSON.stringify({
-        placements,
-        lockedSeats,
-        studentRoles,
-        studentNotes,
-        groupOverrides,
-        // Frosset kopi av bordoppsettet. Uten denne ville rom-redigering (spesielt
-        // Hurtiglayout, som gir alle bord nye IDer) stille gjøre alle plasseringer
-        // her foreldreløse neste gang kartet åpnes.
-        deskLayout: { desks, boardObj }
-      });
-
-      const result = await window.api.saveSeating({
-        id: null,
-        name: newName,
-        classId: selectedClass,
-        roomId: selectedRoom,
-        placements: savePayload,
-        comment: newComment
-      });
-
-      const newSeatings = await window.api.getSeatings();
-      setSeatings(newSeatings);
-      if (result?.lastID) handleSelectSeating(result.lastID, newSeatings);
-      document.getElementById('modal_new_period')?.close();
-    } catch (e) {}
-  };
-
-  const handleSaveEditedPeriod = async () => {
-    if (!editingPeriod || !editingPeriod.name?.trim()) return;
-    try {
-      const existing = seatings.find(s => s.id === editingPeriod.id);
-      if (existing) {
-        await window.api.saveSeating({
-          id: existing.id,
-          name: editingPeriod.name.trim(),
-          comment: editingPeriod.comment,
-          classId: existing.class_id,
-          roomId: existing.room_id,
-          placements: existing.placements
-        });
-        const newSeatings = await window.api.getSeatings();
-        setSeatings(newSeatings);
-        if (existing.id === Number(selectedSeatingId)) {
-          setChartName(editingPeriod.name.trim());
-          setChartComment(editingPeriod.comment);
-        }
-      }
-      document.getElementById('modal_edit_period').close();
-    } catch(e) {}
-  };
-
-  const handleDelete = async () => {
-    if (!selectedSeatingId) return;
-    try {
-      await window.api.deleteSeating(selectedSeatingId);
-      setSelectedSeatingId('');
-      setPlacements({});
-      const newSeatings = await window.api.getSeatings();
-      setSeatings(newSeatings);
-      if (newSeatings.length > 0) handleSelectSeating(newSeatings[0].id, newSeatings);
-    } catch (e) {}
-  };
-
-  const flipRoom = () => {
-    if (desks.length === 0) return;
-    const minX = Math.min(...desks.map(d => d.x));
-    const maxX = Math.max(...desks.map(d => d.x + 100));
-    const minY = Math.min(...desks.map(d => d.y));
-    const maxY = Math.max(...desks.map(d => d.y + 60));
-    
-    const centerX = minX + (maxX - minX) / 2;
-    const centerY = minY + (maxY - minY) / 2;
-
-    setDesks(desks.map(d => ({
-      ...d,
-      x: Math.max(10, Math.min(1100 - (d.capacity || 1) * 100 - 10, Math.round((2 * centerX - d.x - ((d.capacity || 1) * 100)) / 10) * 10)),
-      y: Math.max(70, Math.min(700 - 60 - 10, Math.round((2 * centerY - d.y - 60) / 10) * 10))
-    })));
-
-    // Tavlen er 256×36px på skjermen (w-64 h-9) — speilingen må bruke disse
-    // faktiske målene, ikke de gamle 240×40, ellers havner tavlen noen px
-    // forskjøvet fra sin egentlige speilvendte posisjon i forhold til pultene.
-    setBoardObj(prev => ({
-      x: Math.max(10, Math.min(1100 - 256 - 10, Math.round((2 * centerX - prev.x - 256) / 10) * 10)),
-      y: Math.max(10, Math.min(700 - 36 - 10, Math.round((2 * centerY - prev.y - 36) / 10) * 10))
-    }));
-  };
-
-  // Henter romets NÅVÆRENDE oppsett og erstatter bord-snapshotet i dette klassekartet.
-  // Bord-IDer som ikke lenger finnes i rommet mister plasseringen sin (studenten havner
-  // i "uplassert") — det er forventet og er selve poenget: dette er en bevisst handling,
-  // ikke noe som skal skje stille av seg selv når rommet redigeres.
-  const syncFromRoom = () => {
-    const rm = rooms.find(r => r.id === Number(selectedRoom));
-    if (!rm) return;
-    try {
-      const layout = JSON.parse(rm.layout_data || '{}');
-      const newDesks = (layout.desks || []).map(d => ({
-        ...d,
-        capacity: d.capacity || 1,
-        zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
-        groupId: d.groupId || null
-      }));
-      const newDeskIds = new Set(newDesks.map(d => String(d.id)));
-
-      setDesks(newDesks);
-      setBoardObj(layout.boardObj || { x: 422, y: 15 });
-
-      setPlacements(prev => {
-        const next = {};
-        for (const [slotKey, val] of Object.entries(prev)) {
-          if (newDeskIds.has(slotKey.split('_seat_')[0])) next[slotKey] = val;
-        }
-        const keptIds = Object.values(next);
-        setUnplacedStudents(allStudents.filter(s => !keptIds.includes(s.id) && !keptIds.includes(s.name)));
-        return next;
-      });
-    } catch (e) {}
-    document.getElementById('modal_sync_room')?.close();
-  };
-
-  // Sorterer seteplasser etter bordnummer (logisk posisjon i rommet, fra tavlen og utover)
-  // slik at "de første N plassene" alltid betyr "de N plassene nærmest start på et fullt bord
-  // først" — ingen elev havner alene ved et bord mens et tidligere bord står halvfullt.
-  const sortSlotsByDeskOrder = (slots) => {
-    const isBoardAtTop = boardObj.y < 350;
-    const sortedDesks = [...desks].sort((a, b) => {
-      const yDiff = a.y - b.y;
-      if (isBoardAtTop) {
-        if (Math.abs(yDiff) > 35) return yDiff;
-        return a.x - b.x;
-      } else {
-        if (Math.abs(yDiff) > 35) return -yDiff;
-        return b.x - a.x;
-      }
-    });
-
-    const deskNumberMap = {};
-    sortedDesks.forEach((d, idx) => {
-      deskNumberMap[d.id] = idx + 1;
-    });
-
-    return [...slots].sort((a, b) => {
-      const num1 = deskNumberMap[a.deskId] || 999;
-      const num2 = deskNumberMap[b.deskId] || 999;
-      if (num1 === num2) return a.slotIdx - b.slotIdx;
-      return num1 - num2;
-    });
-  };
-
-  const handleAutoFill = () => {
-    let seatSlots = [];
-    desks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey]) {
-          seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
-        }
-      }
-    });
-
-    let availableStudents = [...unplacedStudents];
-    desks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey] && placements[slotKey]) {
-          availableStudents.push(getStudentByIdOrName(placements[slotKey]));
-        }
-      }
-    });
-
-    const basePlacements = { ...placements };
-    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
-
-    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, availableStudents.length);
-
-    const { placements: bestCandidate } = findBestPlacement({
-      seatSlots: targetSlots,
-      students: availableStudents,
-      basePlacements,
-      classRules,
-      desks,
-    });
-
-    const finalPlacedVals = Object.values(bestCandidate);
-    const finalUnplaced = availableStudents.filter(s => !finalPlacedVals.includes(s.id) && !finalPlacedVals.includes(s.name));
-
-    setPlacements(bestCandidate);
-    setUnplacedStudents(finalUnplaced);
-  };
-
-  // Randomiserer elevplassering umiddelbart (ingen animasjon) — bruker den delte
-  // regelmotoren i src/lib/seatingSolver.mjs (samme motor som Roulette/Randombomb/
-  // Musikkstoler/Makkerbytte bruker for å beregne SITT sluttresultat).
-  const handleRuleBasedFunSpin = () => {
-    let seatSlots = [];
-    desks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey]) {
-          seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
-        }
-      }
-    });
-
-    if (seatSlots.length === 0 || allStudents.length === 0) return;
-
-    const basePlacements = { ...placements };
-    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
-
-    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
-
-    const { placements: topPlacements } = findBestPlacement({
-      seatSlots: targetSlots,
-      students: allStudents,
-      basePlacements,
-      classRules,
-      desks,
-    });
-
-    setPlacements(topPlacements);
-    const finalVals = Object.values(topPlacements);
-    setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id)));
-  };
-
-  const clearFunModeTimer = () => {
-    if (funModeTimerRef.current) {
-      clearTimeout(funModeTimerRef.current);
-      funModeTimerRef.current = null;
-    }
-  };
-
-  // Rydder opp løpende animasjoner hvis komponenten forlates (naviger bort) midt i en
-  // fun mode-kjøring.
-  useEffect(() => () => clearFunModeTimer(), []);
-
-  // Setter det endelige, ekte resultatet og oppdaterer uplasserte-listen deretter.
-  const applyFunModeResult = (finalPlacements) => {
-    setPlacements(finalPlacements);
-    const finalVals = Object.values(finalPlacements);
-    setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id) && !finalVals.includes(s.name)));
-  };
-
-  // Felles avslutning: stopper timer, fjerner spøkelses-/nedtellings-visning. Rører
-  // ALDRI spotlightSlotKey — den gule uthevningen skal stå til neste trekning.
-  const endFunMode = () => {
-    clearFunModeTimer();
-    setFunModeGhosts(null);
-    setBombCountdown(null);
-    setBombBoom(false);
-    setActiveFunMode(null);
-    funModeFinalRef.current = null;
-    funModePreStateRef.current = null;
-  };
-
-  // Bygger listen av ikke-låste seteplasser for hele klasserommet — brukt av alle fem
-  // fun modes (Makkerbytte bruker en egen, filtrert variant, se Task 7).
-  const buildOpenSeatSlots = () => {
-    const seatSlots = [];
-    desks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey]) seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
-      }
-    });
-    return seatSlots;
-  };
-
-  const ROULETTE_HOP_DELAYS = [90, 100, 120, 150, 190, 250]; // ms per hopp, bremser ned
-  const ROULETTE_PAUSE_AFTER_LANDING = 150; // ms før neste elev starter
-
-  const startRoulette = () => {
-    if (activeFunMode || revealMode) return;
-    const seatSlots = buildOpenSeatSlots();
-    if (seatSlots.length === 0 || allStudents.length === 0) return;
-
-    const basePlacements = { ...placements };
-    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
-    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
-
-    const { placements: finalPlacements } = findBestPlacement({
-      seatSlots: targetSlots,
-      students: allStudents,
-      basePlacements,
-      classRules,
-      desks,
-    });
-
-    const revealOrderIds = allStudents
-      .map(s => s.id)
-      .filter(id => Object.values(finalPlacements).includes(id))
-      .sort(() => Math.random() - 0.5);
-
-    funModeFinalRef.current = finalPlacements;
-    setActiveFunMode('roulette');
-    setPlacements(basePlacements);
-    runRouletteStep(revealOrderIds, finalPlacements, basePlacements, 0);
-  };
-
-  const runRouletteStep = (order, finalPlacements, committedPlacements, idx) => {
-    if (idx >= order.length) {
-      applyFunModeResult(finalPlacements);
-      endFunMode();
-      return;
-    }
-
-    const studentId = order[idx];
-    const finalSlotKey = Object.keys(finalPlacements).find(k => finalPlacements[k] === studentId);
-    const openSlots = Object.keys(finalPlacements).filter(k => !committedPlacements[k] && k !== finalSlotKey);
-    const hopPool = openSlots.length > 0 ? openSlots : [finalSlotKey];
-    const hopSlotKeys = ROULETTE_HOP_DELAYS.map(() => hopPool[Math.floor(Math.random() * hopPool.length)]);
-
-    const runHop = (hopIdx) => {
-      if (hopIdx >= hopSlotKeys.length) {
-        const updated = { ...committedPlacements, [finalSlotKey]: studentId };
-        setFunModeGhosts(null);
-        setPlacements(updated);
-        funModeTimerRef.current = setTimeout(
-          () => runRouletteStep(order, finalPlacements, updated, idx + 1),
-          ROULETTE_PAUSE_AFTER_LANDING
-        );
-        return;
-      }
-      setFunModeGhosts({ [hopSlotKeys[hopIdx]]: studentId });
-      funModeTimerRef.current = setTimeout(() => runHop(hopIdx + 1), ROULETTE_HOP_DELAYS[hopIdx]);
-    };
-
-    runHop(0);
-  };
-
-  const stopRoulette = () => {
-    if (!funModeFinalRef.current) return;
-    clearFunModeTimer();
-    applyFunModeResult(funModeFinalRef.current);
-    endFunMode();
-  };
-
-  const RANDOMBOMB_TICK_MS = 700;
-
-  const startRandombomb = () => {
-    if (activeFunMode || revealMode) return;
-    const seatSlots = buildOpenSeatSlots();
-    if (seatSlots.length === 0 || allStudents.length === 0) return;
-
-    const basePlacements = { ...placements };
-    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
-    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
-
-    const { placements: finalPlacements } = findBestPlacement({
-      seatSlots: targetSlots,
-      students: allStudents,
-      basePlacements,
-      classRules,
-      desks,
-    });
-
-    funModeFinalRef.current = finalPlacements;
-    funModePreStateRef.current = { ...placements };
-    setActiveFunMode('randombomb');
-    runBombTick(targetSlots, allStudents, 5);
-  };
-
-  const runBombTick = (targetSlots, students, count) => {
-    setBombCountdown(count);
-
-    if (count <= 1) {
-      funModeTimerRef.current = setTimeout(() => {
-        setFunModeGhosts(null);
-        applyFunModeResult(funModeFinalRef.current);
-        setBombBoom(true);
-        funModeTimerRef.current = setTimeout(() => endFunMode(), 500);
-      }, RANDOMBOMB_TICK_MS);
-      return;
-    }
-
-    const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
-    const shuffledSlots = [...targetSlots].sort(() => Math.random() - 0.5);
-    const ghostMap = {};
-    shuffledSlots.forEach((slot, idx) => {
-      ghostMap[slot.slotKey] = idx < shuffledStudents.length ? shuffledStudents[idx].id : null;
-    });
-    setFunModeGhosts(ghostMap);
-
-    funModeTimerRef.current = setTimeout(() => runBombTick(targetSlots, students, count - 1), RANDOMBOMB_TICK_MS);
-  };
-
-  const cancelRandombomb = () => {
-    clearFunModeTimer();
-    if (funModePreStateRef.current) setPlacements(funModePreStateRef.current);
-    endFunMode();
-  };
-
-  const FUN_FLASH_COUNT = 5;
-  const FUN_FLASH_MS = 120;
-
-  // Rask "alle stoler flimrer"-animasjon uten nedtelling — brukes av både Musikkstoler
-  // og Makkerbytte (som sender inn en begrenset targetSlots/students-delmengde).
-  const runFlashTick = (targetSlots, students, remaining) => {
-    if (remaining <= 0) {
-      setFunModeGhosts(null);
-      applyFunModeResult(funModeFinalRef.current);
-      endFunMode();
-      return;
-    }
-
-    const shuffledStudents = [...students].sort(() => Math.random() - 0.5);
-    const shuffledSlots = [...targetSlots].sort(() => Math.random() - 0.5);
-    const ghostMap = {};
-    shuffledSlots.forEach((slot, idx) => {
-      ghostMap[slot.slotKey] = idx < shuffledStudents.length ? shuffledStudents[idx].id : null;
-    });
-    setFunModeGhosts(ghostMap);
-
-    funModeTimerRef.current = setTimeout(() => runFlashTick(targetSlots, students, remaining - 1), FUN_FLASH_MS);
-  };
-
-  const startMusikkstoler = () => {
-    if (activeFunMode || revealMode) return;
-    const seatSlots = buildOpenSeatSlots();
-    if (seatSlots.length === 0 || allStudents.length === 0) return;
-
-    const basePlacements = { ...placements };
-    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
-    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
-
-    const { placements: finalPlacements } = findBestPlacement({
-      seatSlots: targetSlots,
-      students: allStudents,
-      basePlacements,
-      classRules,
-      desks,
-    });
-
-    funModeFinalRef.current = finalPlacements;
-    setActiveFunMode('musikkstoler');
-    runFlashTick(targetSlots, allStudents, FUN_FLASH_COUNT);
-  };
-
-  const startMakkerbytte = () => {
-    if (activeFunMode || revealMode) return;
-
-    const groupedDesks = desks.filter(d => (groupOverrides[d.id] || d.groupId));
-    if (groupedDesks.length === 0) return;
-
-    let seatSlots = [];
-    groupedDesks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey]) seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
-      }
-    });
-    if (seatSlots.length === 0) return;
-
-    // Elever som allerede sitter i en gruppe-pult, pluss uplasserte (kan trekkes inn
-    // hvis det er ledig plass i gruppene). Elever ved ugrupperte pulter røres ikke.
-    const groupedSeatKeys = new Set(seatSlots.map(s => s.slotKey));
-    const groupedStudents = Object.entries(placements)
-      .filter(([slotKey]) => groupedSeatKeys.has(slotKey))
-      .map(([, studentId]) => getStudentByIdOrName(studentId));
-    const candidateStudents = [...groupedStudents, ...unplacedStudents];
-
-    const basePlacements = { ...placements };
-    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
-    const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, candidateStudents.length);
-
-    const { placements: groupResult } = findBestPlacement({
-      seatSlots: targetSlots,
-      students: candidateStudents,
-      basePlacements,
-      classRules,
-      desks,
-    });
-
-    // Slå sammen med resten av klasserommet, som IKKE er del av denne kjøringen.
-    const finalPlacements = { ...placements };
-    seatSlots.forEach(slot => delete finalPlacements[slot.slotKey]);
-    Object.assign(finalPlacements, groupResult);
-
-    funModeFinalRef.current = finalPlacements;
-    setActiveFunMode('makkerbytte');
-    runFlashTick(targetSlots, candidateStudents, FUN_FLASH_COUNT);
-  };
-
-  const SPOTLIGHT_HOP_DELAYS = [80, 90, 110, 140, 180, 230, 300];
-
-  const startSpotlight = () => {
-    if (activeFunMode || revealMode) return;
-    const occupiedSlotKeys = Object.keys(placements).filter(k => placements[k]);
-    if (occupiedSlotKeys.length === 0) return;
-
-    setActiveFunMode('spotlight');
-    setSpotlightSlotKey(null);
-    runSpotlightHop(occupiedSlotKeys, 0);
-  };
-
-  const runSpotlightHop = (occupiedSlotKeys, hopIdx) => {
-    if (hopIdx >= SPOTLIGHT_HOP_DELAYS.length) {
-      const finalPick = occupiedSlotKeys[Math.floor(Math.random() * occupiedSlotKeys.length)];
-      setSpotlightSlotKey(finalPick);
-      endFunMode();
-      return;
-    }
-    const hop = occupiedSlotKeys[Math.floor(Math.random() * occupiedSlotKeys.length)];
-    setSpotlightSlotKey(hop);
-    funModeTimerRef.current = setTimeout(() => runSpotlightHop(occupiedSlotKeys, hopIdx + 1), SPOTLIGHT_HOP_DELAYS[hopIdx]);
-  };
-
-  const dismissSpotlight = () => {
-    endFunMode();
-    setSpotlightSlotKey(null);
-  };
-
-  // Gradvis avdekking: skjuler navnene til alle plasserte elever og lar
-  // læreren avsløre dem én og én i tilfeldig rekkefølge (foran klassen).
-  const startReveal = () => {
-    const placedSlots = Object.keys(placements).filter(k => placements[k]);
-    if (placedSlots.length === 0) return;
-    setRevealOrder([...placedSlots].sort(() => Math.random() - 0.5));
-    setRevealedSlots(new Set());
-    setRevealMode(true);
-  };
-
-  const revealNext = () => {
-    const nextSlot = revealOrder.find(slot => !revealedSlots.has(slot));
-    if (!nextSlot) return;
-    setRevealedSlots(prev => new Set(prev).add(nextSlot));
-  };
-
-  const revealAll = () => {
-    setRevealedSlots(new Set(revealOrder));
-  };
-
-  const endReveal = () => {
-    setRevealMode(false);
-    setRevealOrder([]);
-    setRevealedSlots(new Set());
-  };
+  const {
+    activeFunMode, funModeGhosts, bombCountdown, bombBoom, spotlightSlotKey,
+    revealMode, revealOrder, revealedSlots,
+    handleAutoFill, handleRuleBasedFunSpin,
+    startRoulette, stopRoulette,
+    startRandombomb, cancelRandombomb,
+    startMusikkstoler, startMakkerbytte,
+    startSpotlight, dismissSpotlight,
+    startReveal, revealNext, revealAll, endReveal
+  } = useFunModes({
+    desks, boardObj, placements, setPlacements, lockedSeats,
+    allStudents, unplacedStudents, setUnplacedStudents, classRules,
+    groupOverrides, getStudentByIdOrName
+  });
 
   const toggleLockDesk = (deskId) => {
     const desk = desks.find(d => d.id === deskId);
@@ -1103,154 +176,6 @@ export default function SeatingChart({ onBack, initialId }) {
     if (new URLSearchParams(window.location.search).has('print_on_mount')) {
       window.history.replaceState(null, '', window.location.pathname);
     }
-  };
-
-  const startDrag = (e, studentObj, fromSlotKey = null) => {
-    if (e.button === 2) return;
-    e.preventDefault();
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    
-    let currentX = (e.clientX - rect.left) / scale - 50;
-    let currentY = (e.clientY - rect.top) / scale - 20;
-
-    setDraggedStudent({
-      studentObj,
-      fromSlotKey,
-      offsetX: 50,
-      offsetY: 20,
-      currentX,
-      currentY
-    });
-  };
-
-  // --- LASSO SELECTION LOGIC ---
-  const startCanvasAction = (e) => {
-    if (e.button === 2) return;
-    if (activeGroupId !== null) {
-      e.preventDefault();
-      if (!canvasRef.current) return;
-      const rect = canvasRef.current.getBoundingClientRect();
-      const cx = (e.clientX - rect.left) / scale;
-      const cy = (e.clientY - rect.top) / scale;
-      setLasso({ startX: cx, startY: cy, currentX: cx, currentY: cy });
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    
-    if (activeGroupId !== null && lasso) {
-      setLasso(prev => ({
-        ...prev,
-        currentX: (e.clientX - rect.left) / scale,
-        currentY: (e.clientY - rect.top) / scale
-      }));
-      return;
-    }
-
-    if (!draggedStudent) return;
-    const studentCurX = (e.clientX - rect.left) / scale - draggedStudent.offsetX;
-    const studentCurY = (e.clientY - rect.top) / scale - draggedStudent.offsetY;
-
-    setDraggedStudent(prev => ({
-      ...prev,
-      currentX: studentCurX,
-      currentY: studentCurY
-    }));
-
-    // Calculate hover target desk slot for clear visual highlight
-    const cx = studentCurX + 50;
-    const cy = studentCurY + 20;
-    let targetKey = null;
-
-    for (let d of desks) {
-      const cap = d.capacity || 1;
-      const deskW = cap * 100;
-      if (cx >= d.x && cx <= (d.x + deskW) && cy >= d.y && cy <= (d.y + 60)) {
-        const slotIdx = Math.min(cap - 1, Math.max(0, Math.floor((cx - d.x) / 100)));
-        targetKey = `${d.id}_seat_${slotIdx}`;
-        break;
-      }
-    }
-    setHoverSlotKey(targetKey);
-  };
-
-  const handleMouseUp = () => {
-    if (activeGroupId !== null && lasso) {
-      const minX = Math.min(lasso.startX, lasso.currentX);
-      const maxX = Math.max(lasso.startX, lasso.currentX);
-      const minY = Math.min(lasso.startY, lasso.currentY);
-      const maxY = Math.max(lasso.startY, lasso.currentY);
-      
-      const newOverrides = { ...groupOverrides };
-      desks.forEach(d => {
-        const deskW = (d.capacity || 1) * 100;
-        const deskH = 60;
-        // Sjekk om bordet overlapper med lasso
-        if (d.x < maxX && (d.x + deskW) > minX && d.y < maxY && (d.y + deskH) > minY) {
-          if (activeGroupId === 0) {
-            delete newOverrides[d.id];
-          } else {
-            newOverrides[d.id] = activeGroupId;
-          }
-        }
-      });
-      setGroupOverrides(newOverrides);
-      setLasso(null);
-      return;
-    }
-
-    if (!draggedStudent) return;
-    if (!canvasRef.current) { setDraggedStudent(null); return; }
-    
-    const { studentObj, fromSlotKey, currentX, currentY } = draggedStudent;
-    const cx = currentX + 50;
-    const cy = currentY + 20;
-    
-    let targetSlotKey = null;
-
-    for (let d of desks) {
-      const cap = d.capacity || 1;
-      const deskW = cap * 100;
-      if (cx >= d.x && cx <= (d.x + deskW) && cy >= d.y && cy <= (d.y + 60)) {
-        const slotW = 100;
-        const relativeX = cx - d.x;
-        const slotIdx = Math.min(cap - 1, Math.max(0, Math.floor(relativeX / slotW)));
-        targetSlotKey = `${d.id}_seat_${slotIdx}`;
-        break;
-      }
-    }
-
-    let newPlacements = { ...placements };
-    let newUnplaced = [...unplacedStudents];
-
-    if (targetSlotKey) {
-      if (fromSlotKey) delete newPlacements[fromSlotKey];
-      else newUnplaced = newUnplaced.filter(s => s.id !== studentObj.id && s.name !== studentObj.name);
-
-      const existingVal = newPlacements[targetSlotKey];
-      if (existingVal) {
-        const existingObj = getStudentByIdOrName(existingVal);
-        if (fromSlotKey) newPlacements[fromSlotKey] = existingObj.id; 
-        else newUnplaced.push(existingObj); 
-      }
-      newPlacements[targetSlotKey] = studentObj.id;
-    } else if (cx < -50) {
-      // Dratt ut til venstre (over elevskuffen eller verktøymenyen)
-      if (fromSlotKey) {
-        delete newPlacements[fromSlotKey];
-        if (!newUnplaced.some(s => s.id === studentObj.id)) newUnplaced.push(studentObj);
-      }
-    } else {
-      // Sluppet på gulvet - smetter bare tilbake (vi endrer ingenting)
-    }
-
-    setPlacements(newPlacements);
-    setUnplacedStudents(newUnplaced);
-    setDraggedStudent(null);
-    setHoverSlotKey(null);
   };
 
   // Autonummerering: Teller konsekvent basert på tavlas plassering (lærerperspektiv)
