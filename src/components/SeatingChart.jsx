@@ -72,7 +72,8 @@ export default function SeatingChart({ onBack, initialId }) {
     editingPeriod, setEditingPeriod, newPeriodWeeks, setNewPeriodWeeks,
     getStudentByIdOrName,
     handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
-    flipRoom, syncFromRoom
+    flipRoom, syncFromRoom,
+    canvasLight, toggleCanvasLight
   } = useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides });
 
 
@@ -245,6 +246,8 @@ export default function SeatingChart({ onBack, initialId }) {
             startMusikkstoler={startMusikkstoler}
             startMakkerbytte={startMakkerbytte}
             spotlightSlotKey={spotlightSlotKey} startSpotlight={startSpotlight} dismissSpotlight={dismissSpotlight}
+            canvasLight={canvasLight}
+            toggleCanvasLight={toggleCanvasLight}
           />
         )}
 
@@ -276,12 +279,14 @@ export default function SeatingChart({ onBack, initialId }) {
           <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden bg-base-300 relative">
             <div 
               ref={canvasRef}
-              className="absolute bg-base-100 border-2 border-slate-700/50 rounded-2xl shadow-2xl origin-top-left"
-              style={{ 
+              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-50 border-slate-300/70' : 'bg-base-100 border-slate-700/50'}`}
+              style={{
                 width: '1100px',
                 height: '700px',
                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)', 
+                backgroundImage: canvasLight
+                  ? 'radial-gradient(rgba(0,0,0,0.06) 1px, transparent 0)'
+                  : 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)',
                 backgroundSize: '20px 20px'
               }}
             >

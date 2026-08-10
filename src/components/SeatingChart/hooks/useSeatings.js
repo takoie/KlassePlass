@@ -40,12 +40,26 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   const [editingPeriod, setEditingPeriod] = useState(null);
   const [newPeriodWeeks, setNewPeriodWeeks] = useState(4);
 
+  const [canvasLight, setCanvasLightState] = useState(false);
+
   const saveTimeoutRef = useRef(null);
   const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     loadBaseData();
   }, []);
+
+  useEffect(() => {
+    window.api?.getSettings?.().then((s) => {
+      if (s?.canvasLightMode) setCanvasLightState(true);
+    }).catch(() => {});
+  }, []);
+
+  const toggleCanvasLight = () => {
+    const next = !canvasLight;
+    setCanvasLightState(next);
+    window.api?.saveSettings?.({ canvasLightMode: next }).catch(() => {});
+  };
 
   const loadBaseData = async () => {
     try {
@@ -525,6 +539,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     editingPeriod, setEditingPeriod, newPeriodWeeks, setNewPeriodWeeks,
     getStudentByIdOrName,
     handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
-    flipRoom, syncFromRoom
+    flipRoom, syncFromRoom,
+    canvasLight, toggleCanvasLight
   };
 }

@@ -36,6 +36,7 @@ export default function Toolbar({
   startMusikkstoler,
   startMakkerbytte,
   spotlightSlotKey, startSpotlight, dismissSpotlight,
+  canvasLight, toggleCanvasLight,
 }) {
   return (
     <div className="w-64 bg-base-200 flex flex-col z-10 flex-shrink-0 border-r border-slate-800 shadow-xl relative overflow-hidden">
@@ -224,6 +225,9 @@ export default function Toolbar({
           </button>
           <button className={`btn btn-sm ${hideSensitiveInfo ? 'btn-neutral bg-slate-700 text-purple-400' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={() => setHideSensitiveInfo(!hideSensitiveInfo)}>
             <i className="fa-solid fa-eye-slash w-5"></i> {hideSensitiveInfo ? 'Vis info' : 'Skjul info'}
+          </button>
+          <button className={`btn btn-sm ${canvasLight ? 'btn-neutral bg-slate-700 text-amber-300' : 'btn-outline border-slate-700 text-slate-400'} justify-start`} onClick={toggleCanvasLight}>
+            <i className={`fa-solid ${canvasLight ? 'fa-sun' : 'fa-moon'} w-5`}></i> {canvasLight ? 'Lys flate' : 'Mørk flate'}
           </button>
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={() => setIsProjectorMode(true)}>
             <i className="fa-solid fa-expand w-5 text-fuchsia-400"></i> Prosjektor
