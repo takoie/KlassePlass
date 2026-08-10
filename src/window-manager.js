@@ -39,6 +39,14 @@ function createMainWindow() {
     },
   });
 
+  // Frameless vinduer maksimerer seg over taskbaren på Windows (kjent Electron-bug:
+  // native maximize() bruker skjermens fulle bounds i stedet for workArea når frame:false).
+  // Tving vinduet til workArea (ekskl. taskbar) hver gang det maksimeres.
+  winRef.win.on('maximize', () => {
+    const { workArea } = screen.getDisplayMatching(winRef.win.getBounds());
+    winRef.win.setBounds(workArea);
+  });
+
   // Lenker med target="_blank" (og mailto:) skal åpnes i systemets nettleser/e-postklient,
   // ikke i et nytt, uhåndtert Electron-vindu.
   winRef.win.webContents.setWindowOpenHandler(({ url }) => {

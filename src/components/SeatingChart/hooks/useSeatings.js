@@ -458,13 +458,13 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
 
   const flipRoom = () => {
     if (desks.length === 0) return;
-    const minX = Math.min(...desks.map(d => d.x));
-    const maxX = Math.max(...desks.map(d => d.x + 100));
-    const minY = Math.min(...desks.map(d => d.y));
-    const maxY = Math.max(...desks.map(d => d.y + 60));
-
-    const centerX = minX + (maxX - minX) / 2;
-    const centerY = minY + (maxY - minY) / 2;
+    // Speiles rundt canvasets faste senter (1100×700), samme referanse som
+    // RoomEditors flipLayoutData bruker. Tavlen ligger normalt utenfor
+    // pultenes bounding box, så et senter regnet ut fra kun pultene ville
+    // gitt en annen speilingsakse enn den tavlens posisjon opprinnelig var
+    // satt relativt til — og tavlen havnet skjevt i forhold til pultene.
+    const centerX = 1100 / 2;
+    const centerY = 700 / 2;
 
     setDesks(desks.map(d => ({
       ...d,
