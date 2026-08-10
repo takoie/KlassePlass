@@ -74,7 +74,8 @@ export default function RoomEditor({ onBack, initialId }) {
     genRows, setGenRows,
     inputModalRef,
     handleSelectRoom, handleOpenNewModal, handleConfirmCreateNew, handleDelete,
-    generateStructure, centerDesks, flipRoom, addDesk, clearDesks
+    generateStructure, centerDesks, flipRoom, addDesk, clearDesks,
+    canvasLight, toggleCanvasLight
   } = useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, setSelectedDesks });
 
   const isBoardAtTop = (boardObj?.y || 25) < 350;
@@ -137,6 +138,8 @@ export default function RoomEditor({ onBack, initialId }) {
                 generateStructure={generateStructure}
                 addDesk={addDesk}
                 clearDesks={clearDesks}
+                canvasLight={canvasLight}
+                toggleCanvasLight={toggleCanvasLight}
               />
             </div>
             <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden bg-base-300 relative">
@@ -146,14 +149,16 @@ export default function RoomEditor({ onBack, initialId }) {
                 onDragEnd={handleDragEnd}
                 modifiers={[snapToDesksModifier]}
               >
-                <div 
+                <div
                   ref={canvasRef}
-                  className="absolute bg-base-100 border-2 border-slate-700 rounded-2xl shadow-2xl origin-top-left" 
-                  style={{ 
+                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-50 border-slate-300' : 'bg-base-100 border-slate-700'}`}
+                  style={{
                     width: '1100px',
                     height: '700px',
                     transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                    backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 0)', 
+                    backgroundImage: canvasLight
+                      ? 'radial-gradient(rgba(0,0,0,0.06) 1px, transparent 0)'
+                      : 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 0)',
                     backgroundSize: '20px 20px'
                   }}
                   onMouseMove={handleMouseMoveCanvas}

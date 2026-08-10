@@ -19,7 +19,9 @@ export default function RoomToolsDrawer({
   showZones,
   setShowZones,
   centerDesks,
-  flipRoom
+  flipRoom,
+  canvasLight,
+  toggleCanvasLight
 }) {
   return (
     <div className="flex flex-col gap-3 w-64 text-white p-4 h-full overflow-y-auto overflow-x-hidden">
@@ -52,6 +54,14 @@ export default function RoomToolsDrawer({
           >
             <i className="fa-solid w-4 text-center fa-hashtag text-[#34d399]"></i>
             {showNumbers ? 'Viser nr.' : 'Skjuler nr.'}
+          </button>
+
+          <button
+            className={`btn btn-xs w-full justify-start ${canvasLight ? 'btn-neutral bg-slate-800 text-amber-200' : 'btn-outline border-slate-600 text-slate-400'} gap-2`}
+            onClick={toggleCanvasLight}
+          >
+            <i className={`fa-solid w-4 text-center ${canvasLight ? 'fa-sun' : 'fa-moon'}`}></i>
+            {canvasLight ? 'Lys flate' : 'Mørk flate'}
           </button>
 
           <button className="btn btn-xs w-full justify-start btn-outline border-slate-600 text-slate-300 hover:bg-slate-800 gap-2" onClick={centerDesks}>

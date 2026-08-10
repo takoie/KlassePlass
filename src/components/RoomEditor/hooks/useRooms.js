@@ -17,6 +17,7 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const [defaultBoardPosition, setDefaultBoardPosition] = useState('top');
+  const [canvasLight, setCanvasLightState] = useState(false);
 
   const [genStructure, setGenStructure] = useState('2-2-2');
   const [genRows, setGenRows] = useState(4);
@@ -30,6 +31,7 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     loadRooms();
     window.api?.getSettings?.().then((s) => {
       if (s?.boardPosition) setDefaultBoardPosition(s.boardPosition);
+      if (s?.canvasLightMode) setCanvasLightState(true);
     }).catch(() => {});
   }, []);
 
@@ -303,6 +305,12 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     setSelectedDesks([]);
   };
 
+  const toggleCanvasLight = () => {
+    const next = !canvasLight;
+    setCanvasLightState(next);
+    window.api?.saveSettings?.({ canvasLightMode: next }).catch(() => {});
+  };
+
   return {
     rooms, selectedRoom, loading,
     roomName, setRoomName,
@@ -314,6 +322,7 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     genRows, setGenRows,
     inputModalRef,
     handleSelectRoom, handleOpenNewModal, handleConfirmCreateNew, handleDelete,
-    generateStructure, centerDesks, flipRoom, addDesk, clearDesks
+    generateStructure, centerDesks, flipRoom, addDesk, clearDesks,
+    canvasLight, toggleCanvasLight
   };
 }
