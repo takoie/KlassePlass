@@ -10,7 +10,11 @@
     "dev": "concurrently \"vite\" \"wait-on http://localhost:3000 && electron .\"",
     "build": "vite build && electron-builder",
     "dist": "vite build && electron-builder",
-    "test": "node --test"
+    "test": "node --test",
+    "_comment_tauri_scripts": "Tauri and Electron builds coexist deliberately during the Fase 9 parallel-validation period (see migration plan) — do not repoint the scripts above at Tauri until Electron is formally removed.",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "license": "ISC",
   "dependencies": {
