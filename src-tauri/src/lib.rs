@@ -1,4 +1,8 @@
+pub mod db;
 pub mod pdf_export;
+
+use std::sync::Mutex;
+use tauri::Manager;
 
 // Spike-command for Task 0.2: verifiserer at printpdf kan generere en lesbar PDF,
 // kalt fra frontend via Tauri sin invoke-bro. Midlertidig - forenkles/utvides i Fase 6.
@@ -19,6 +23,12 @@ pub fn run() {
             .build(),
         )?;
       }
+
+      let user_data_dir = app.path().app_data_dir()?;
+      let db_path = db::resolve_db_path(&user_data_dir);
+      let conn = db::open_connection(&db_path);
+      app.manage(db::DbState(Mutex::new(conn)));
+
       Ok(())
     })
     .run(tauri::generate_context!())
