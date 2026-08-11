@@ -5,6 +5,7 @@ import { isTauri } from '@tauri-apps/api/core'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import tauriApi from './tauriApi.js'
+import { initExternalLinkHandler } from './externalLinks.js'
 import './index.css'
 import './styles/print.css'
 
@@ -22,6 +23,9 @@ import './styles/print.css'
 // det korrekte valget, ikke bare et alternativ.
 if (isTauri()) {
   window.api = tauriApi
+  // Se src/externalLinks.js for hvorfor dette trengs (Tauri-motstykke til
+  // Electrons setWindowOpenHandler i window-manager.js).
+  initExternalLinkHandler()
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

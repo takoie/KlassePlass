@@ -14,24 +14,35 @@
  *    parameternavn) — verifisert ved å lese kommando-signaturene direkte,
  *    ikke gjettet.
  *
- * 2. Ikke-implementerte metoder (Print: exportPrintPdf/openPath/showInFolder;
- *    Auto-update: onUpdateReady/restartApp) — disse kommandoene finnes IKKE
- *    i Rust-backend ennå (kommer i migrerings-Task 5.1/7.1). Vi kaller dem
- *    IKKE via `invoke()` (det ville gitt en kryptisk "command not found"-feil
+ * 2. Ikke-implementerte metoder (Print: exportPrintPdf; Auto-update:
+ *    onUpdateReady/restartApp) — disse kommandoene finnes IKKE i
+ *    Rust-backend ennå (kommer i migrerings-Task 6/7.1). Vi kaller dem IKKE
+ *    via `invoke()` (det ville gitt en kryptisk "command not found"-feil
  *    uten kontekst). I stedet returnerer/kaster de en tydelig, diagnostiserbar
  *    feil med referanse til hvilken fremtidig task som vil implementere dem.
  *    (Database: backupDb/restoreDb/moveDb var i denne kategorien frem til
  *    Task 4.1, som portet `src-tauri/src/commands/db_maintenance.rs` — de
- *    kaller nå de ekte `backup_db`/`restore_db`/`move_db`-kommandoene.)
+ *    kaller nå de ekte `backup_db`/`restore_db`/`move_db`-kommandoene.
+ *    Print: openPath/showInFolder var i denne kategorien frem til Task 5.1,
+ *    som portet dem til `@tauri-apps/plugin-opener` — se gruppe 4.)
  *
  * 3. Window controls (minimizeWindow/maximizeWindow/closeWindow) — disse
  *    trenger ingen egne Tauri-kommandoer. Tauri 2 sin innebygde
  *    vindushåndtering via `@tauri-apps/api/window`s `getCurrentWindow()`
  *    dekker dette direkte.
+ *
+ * 4. Shell/OS-integrasjon (openPath/showInFolder) — trenger ingen egen
+ *    `#[tauri::command]`-wrapper i det hele tatt (i motsetning til
+ *    SQL-baserte kommandoer i gruppe 1). `@tauri-apps/plugin-opener`
+ *    eksponerer sin egen JS-API (`openPath`/`revealItemInDir`) som kalles
+ *    direkte fra denne adapteren (Task 5.1). Speiler Electrons
+ *    `shell.openPath`/`shell.showItemInFolder` fra
+ *    `src/ipc-handlers.js:256-264`.
  */
 
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { openPath as pluginOpenPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 
 /** Lager en avvist Promise med en tydelig "ikke implementert ennå"-feil. */
 function notImplemented(methodName, taskRef) {
@@ -71,10 +82,25 @@ const tauriApi = {
   restoreDb: () => invoke('restore_db'),
   moveDb: () => invoke('move_db'),
 
-  // Print / PDF-eksport — kommandoer finnes ikke ennå i Rust-backend (Task 5.1/6).
-  exportPrintPdf: (data) => notImplemented('exportPrintPdf', 'Task 6'),
-  openPath: (path) => notImplemented('openPath', 'Task 5.1'),
-  showInFolder: (path) => notImplemented('showInFolder', 'Task 5.1'),
+  // Print / PDF-eksport — exportPrintPdf har ingen backend-kommando ennå
+  // (kommer i Task 6). openPath/showInFolder trenger derimot ingen egen
+  // `#[tauri::command]` — `@tauri-apps/plugin-opener` eksponerer sin egen
+  // JS-API og kalles direkte (Task 5.1). Returverdiene er formet for å
+  // matche Electron-preloadens `{ success, error }`-kontrakt, siden
+  // plugin-funksjonene selv kaster en Error ved feil i stedet for å
+  // returnere en feilstreng slik Electrons `shell.openPath` gjør.
+  openPath: async (path) => {
+    try {
+      await pluginOpenPath(path);
+      return { success: true, error: null };
+    } catch (err) {
+      return { success: false, error: err?.message ?? String(err) };
+    }
+  },
+  showInFolder: async (path) => {
+    await revealItemInDir(path);
+    return { success: true };
+  },
 
   // Auto-update — ikke implementert ennå i Tauri-backend (Task 7.1). Electrons
   // update-ready-event og restart-app-IPC har ingen Tauri-motpart ennå.
