@@ -8,8 +8,15 @@ use tauri::Manager;
 
 use commands::classes::{delete_class, get_class, get_classes, save_class};
 use commands::constraints::get_constraints;
+use commands::groups::{
+  delete_group_assignment, get_group_assignment, get_group_assignment_groups,
+  get_group_assignments, get_group_history, save_group_assignment, save_group_history,
+};
 use commands::rooms::{delete_room, get_room, get_rooms, save_room};
 use commands::seatings::{delete_seating, get_seating, get_seatings, save_seating};
+use commands::stations::{
+  delete_station_session, get_station_session, get_station_sessions, save_station_session,
+};
 
 // Spike-command for Task 0.2: verifiserer at printpdf kan generere en lesbar PDF,
 // kalt fra frontend via Tauri sin invoke-bro. Midlertidig - forenkles/utvides i Fase 6.
@@ -35,7 +42,18 @@ pub fn run() {
       get_seating,
       save_seating,
       delete_seating,
-      get_constraints
+      get_constraints,
+      get_group_assignments,
+      get_group_assignment,
+      save_group_assignment,
+      delete_group_assignment,
+      get_group_assignment_groups,
+      get_group_history,
+      save_group_history,
+      get_station_sessions,
+      get_station_session,
+      save_station_session,
+      delete_station_session
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
