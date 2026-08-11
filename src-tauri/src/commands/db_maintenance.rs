@@ -128,14 +128,35 @@ pub fn write_db_location_config(user_data_dir: &Path, db_path: &Path) -> std::io
 /// The caller keeps `guard` locked for the duration of the file operation
 /// that follows, so no other command can observe (or query) the in-memory
 /// placeholder.
+///
+/// If closing fails (in practice this is essentially unreachable through
+/// rusqlite's safe API - `Connection::close` only fails when unfinalized
+/// prepared statements are still alive, and the borrow checker prevents
+/// dropping/moving a `Connection` while a `Statement` still borrows it), the
+/// ORIGINAL connection is put back into `*guard` before returning the error,
+/// so a close failure never leaves `DbState` stuck on the in-memory
+/// placeholder.
 fn close_current_connection(guard: &mut Connection) -> Result<(), String> {
   let placeholder =
     Connection::open_in_memory().map_err(|e| format!("Kunne ikke åpne midlertidig tilkobling: {e}"))?;
   let old = std::mem::replace(guard, placeholder);
-  old
-    .close()
-    .map_err(|(_conn, e)| format!("Kunne ikke lukke databasetilkoblingen: {e}"))
+  match old.close() {
+    Ok(()) => Ok(()),
+    Err((old_conn, e)) => {
+      *guard = old_conn;
+      Err(format!("Kunne ikke lukke databasetilkoblingen: {e}"))
+    }
+  }
 }
+
+/// Marker prefix used on error messages when a restore/move operation fails
+/// AND the automatic recovery attempt also failed to leave `DbState` in a
+/// working state. The frontend/caller should treat this distinctly from an
+/// ordinary "the operation didn't go through, nothing changed" error - it
+/// means the live connection may currently be an empty in-memory placeholder
+/// and the app needs a restart to recover. Deliberately distinct wording so
+/// it can't be mistaken for a normal, fully-recoverable failure.
+const UNRECOVERABLE_PREFIX: &str = "KRITISK (krever omstart av appen)";
 
 /// Core `restore-db` logic once a validated source file has been chosen:
 /// back up the live db to `{current_path}.bak` (overwriting any previous
@@ -143,34 +164,137 @@ fn close_current_connection(guard: &mut Connection) -> Result<(), String> {
 /// safely close-copy-reopen so the live connection ends up reading the
 /// restored content at the SAME path (`current_path` never changes for a
 /// restore - only its file contents do).
+///
+/// ## Failure recovery
+///
+/// Once the live connection has been closed, `current_path` briefly has no
+/// open handle on it, and if the subsequent overwrite-copy or reopen then
+/// fails, we can no longer just propagate the error and bail: `current_path`
+/// might now hold partially-written/corrupt bytes (a failed `fs::copy` is
+/// not atomic) and `DbState` would otherwise be left on the in-memory
+/// placeholder for the rest of the session. Since the `.bak` was made
+/// *before* the close, both failure points below attempt to restore
+/// `current_path` from that `.bak` and reopen it, so `DbState` ends up back
+/// on a working connection to the ORIGINAL (pre-restore-attempt) data rather
+/// than stuck on an empty placeholder. Only if that recovery copy/reopen
+/// *also* fails (e.g. disk genuinely broken) do we give up and return an
+/// [`UNRECOVERABLE_PREFIX`]-tagged error.
 pub fn restore_db_impl(
   db_state: &DbState,
   current_path: &Path,
   source_path: &Path,
 ) -> Result<(), String> {
   let backup_path = backup_file_path(current_path);
-  fs::copy(current_path, &backup_path).map_err(|e| e.to_string())?;
 
+  // Lock DbState for the *entire* sequence, starting with the pre-restore
+  // `.bak` copy - not just from the close onward - for the same reason
+  // `backup_db` now holds the lock across its copy: without it, a
+  // concurrent write landing mid-copy could produce a torn/inconsistent
+  // `.bak` file (SQLite writes pages to the main file during a commit in
+  // rollback-journal mode).
   let mut guard = db_state
     .0
     .lock()
     .map_err(|_| "Databaselåsen er korrupt".to_string())?;
+
+  fs::copy(current_path, &backup_path).map_err(|e| e.to_string())?;
+
   close_current_connection(&mut guard)?;
 
-  fs::copy(source_path, current_path).map_err(|e| e.to_string())?;
+  if let Err(copy_err) = fs::copy(source_path, current_path) {
+    return Err(recover_from_backup_or_report(
+      &mut guard,
+      &backup_path,
+      current_path,
+      format!("Kunne ikke skrive gjenopprettet database: {copy_err}"),
+    ));
+  }
 
-  let new_conn = db::open_connection(current_path).map_err(|e| e.to_string())?;
-  *guard = new_conn;
+  match db::open_connection(current_path) {
+    Ok(new_conn) => {
+      *guard = new_conn;
+      Ok(())
+    }
+    Err(open_err) => Err(recover_from_backup_or_report(
+      &mut guard,
+      &backup_path,
+      current_path,
+      format!("Den gjenopprettede databasefilen kunne ikke åpnes: {open_err}"),
+    )),
+  }
+}
 
-  Ok(())
+/// Shared recovery step for `restore_db_impl`: after the live connection has
+/// been closed and either the overwrite-copy or the reopen of the new
+/// content failed, try to restore `current_path` from `backup_path` (the
+/// pre-restore `.bak`) and reopen a connection there, putting it back into
+/// `*guard` so the app keeps working with its ORIGINAL data. Returns an
+/// error describing what happened either way - prefixed with
+/// [`UNRECOVERABLE_PREFIX`] only if the recovery itself also failed (meaning
+/// `*guard` is left on the in-memory placeholder and a restart is needed).
+fn recover_from_backup_or_report(
+  guard: &mut Connection,
+  backup_path: &Path,
+  current_path: &Path,
+  primary_error: String,
+) -> String {
+  if let Err(restore_copy_err) = fs::copy(backup_path, current_path) {
+    return format!(
+      "{UNRECOVERABLE_PREFIX}: {primary_error}. Gjenoppretting fra sikkerhetskopi feilet også: {restore_copy_err}"
+    );
+  }
+  match db::open_connection(current_path) {
+    Ok(recovered_conn) => {
+      *guard = recovered_conn;
+      format!("{primary_error} Forrige database er gjenopprettet fra sikkerhetskopi, ingen data gikk tapt.")
+    }
+    Err(reopen_err) => {
+      format!(
+        "{UNRECOVERABLE_PREFIX}: {primary_error}. Sikkerhetskopien ble kopiert tilbake, men kunne ikke åpnes: {reopen_err}"
+      )
+    }
+  }
+}
+
+/// Outcome of a successful `move_db_impl` call. `DbState` is always left in
+/// a working state (pointing at `new_path`) whenever this is returned - the
+/// only thing that can go wrong at this point is failing to clean up the
+/// now-superseded old file, which is reported via `cleanup_warning` rather
+/// than as an `Err`, since it does NOT mean the move failed: the live app is
+/// fully functional at its new location either way. Callers MUST still
+/// treat this as a success (update `CurrentDbPathState`/`db-location.json`,
+/// report `success: true`) even when `cleanup_warning` is `Some`.
+pub struct MoveDbOutcome {
+  pub cleanup_warning: Option<String>,
 }
 
 /// Core `move-db` logic once a validated, not-yet-occupied `new_path` is
-/// known: copy the live db file there, close-and-delete the OLD file (the
-/// close is required - Windows generally refuses to delete a file with a
-/// live open handle), then reopen the live connection at `new_path`.
-pub fn move_db_impl(db_state: &DbState, current_path: &Path, new_path: &Path) -> Result<(), String> {
+/// known.
+///
+/// Ordering is deliberately: copy to `new_path` -> open AND VERIFY a fresh
+/// connection at `new_path` -> only THEN close the old connection and delete
+/// `current_path`. This is what closes the critical data-loss gap a naive
+/// "copy, close old, delete old, open new" ordering has: if opening the new
+/// connection fails (permissions, AV lock, disk hiccup on the freshly-copied
+/// file, ...), we find out BEFORE the old file is touched at all, so the old
+/// file - and the live connection to it - are simply left exactly as they
+/// were and the error propagates with zero side effects. The old file is
+/// only ever removed once we already hold a working, verified connection to
+/// its replacement - and even if THAT removal then fails (stale lock, AV,
+/// ...), the already-verified `new_conn` is installed anyway, since at that
+/// point the move has functionally succeeded and DbState must not be left
+/// stuck on the placeholder just because disk cleanup of the old file
+/// didn't go through.
+pub fn move_db_impl(
+  db_state: &DbState,
+  current_path: &Path,
+  new_path: &Path,
+) -> Result<MoveDbOutcome, String> {
   fs::copy(current_path, new_path).map_err(|e| e.to_string())?;
+
+  // Open and verify the new connection BEFORE touching DbState/the old file
+  // at all. If this fails, current_path/DbState are completely untouched.
+  let new_conn = db::open_connection(new_path).map_err(|e| e.to_string())?;
 
   let mut guard = db_state
     .0
@@ -178,12 +302,23 @@ pub fn move_db_impl(db_state: &DbState, current_path: &Path, new_path: &Path) ->
     .map_err(|_| "Databaselåsen er korrupt".to_string())?;
   close_current_connection(&mut guard)?;
 
-  fs::remove_file(current_path).map_err(|e| e.to_string())?;
-
-  let new_conn = db::open_connection(new_path).map_err(|e| e.to_string())?;
+  // We already have a verified, working `new_conn` at this point - install
+  // it regardless of whether deleting the old file below succeeds, so a
+  // stale/locked old file never leaves DbState stuck on the placeholder.
+  // Only a close_current_connection failure above (which restores the
+  // ORIGINAL connection, per its own doc comment) still exits early.
   *guard = new_conn;
-
-  Ok(())
+  match fs::remove_file(current_path) {
+    Ok(()) => Ok(MoveDbOutcome {
+      cleanup_warning: None,
+    }),
+    Err(remove_err) => Ok(MoveDbOutcome {
+      cleanup_warning: Some(format!(
+        "Databasen er flyttet og fungerer på nytt sted, men den gamle filen ({}) kunne ikke slettes automatisk og må fjernes manuelt: {remove_err}",
+        current_path.display()
+      )),
+    }),
+  }
 }
 
 // ---------------------------------------------------------------------
@@ -222,14 +357,26 @@ pub struct MoveDbResult {
   pub new_path: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub requires_restart: Option<bool>,
+  /// Non-fatal note - present only when the move itself succeeded (the app
+  /// is fully functional at `new_path`) but the old file couldn't be
+  /// cleaned up automatically. Not part of the original Electron contract;
+  /// an additive field the JS side is free to ignore.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub warning: Option<String>,
 }
 
 /// Port of `ipcMain.handle('backup-db', ...)`. Read-only w.r.t. the live
-/// connection (only copies FROM the current path), so no close/reopen
-/// dance is needed here.
+/// connection (only copies FROM the current path), so no close/reopen dance
+/// is needed - but the `DbState` mutex IS still held for the duration of the
+/// `fs::copy` below (without touching the `Connection` itself), purely to
+/// block any concurrent command from writing to the live db file while the
+/// copy is in flight. Without this, a write landing mid-copy (SQLite writes
+/// pages to the main file during a commit in rollback-journal mode) could
+/// produce a torn/inconsistent backup file.
 #[tauri::command]
 pub async fn backup_db(
   app: AppHandle,
+  db_state: State<'_, DbState>,
   db_path_state: State<'_, CurrentDbPathState>,
 ) -> Result<BackupDbResult, String> {
   let default_name = backup_default_filename(SystemTime::now());
@@ -258,7 +405,14 @@ pub async fn backup_db(
     .map_err(|_| "Databaselåsen er korrupt".to_string())?
     .clone();
 
+  // Hold the DbState lock across the copy so no concurrent command can
+  // write to the live db file mid-copy (see doc comment above).
+  let _db_guard = db_state
+    .0
+    .lock()
+    .map_err(|_| "Databaselåsen er korrupt".to_string())?;
   fs::copy(&current_path, &dest).map_err(|e| e.to_string())?;
+  drop(_db_guard);
 
   Ok(BackupDbResult {
     success: true,
@@ -336,6 +490,7 @@ pub async fn move_db(
       error: None,
       new_path: None,
       requires_restart: None,
+      warning: None,
     });
   };
 
@@ -349,6 +504,7 @@ pub async fn move_db(
       error: Some(msg),
       new_path: None,
       requires_restart: None,
+      warning: None,
     });
   }
 
@@ -358,7 +514,7 @@ pub async fn move_db(
     .map_err(|_| "Databaselåsen er korrupt".to_string())?
     .clone();
 
-  move_db_impl(&db_state, &current_path, &new_path)?;
+  let outcome = move_db_impl(&db_state, &current_path, &new_path)?;
 
   // Update the tracked current-path state IMMEDIATELY after the connection
   // swap succeeds, before attempting the (separately fallible)
@@ -369,6 +525,10 @@ pub async fn move_db(
   // CurrentDbPathState while the live connection is already at `new_path`.
   // Losing the persisted config on a write failure only affects where the
   // NEXT app launch looks for the db - it doesn't corrupt the running app.
+  //
+  // Note: `move_db_impl` returning `Ok` here (even with a `cleanup_warning`)
+  // is the ONLY signal we act on - per its contract, `Ok` always means the
+  // live connection is already installed and working at `new_path`.
   *db_path_state
     .0
     .lock()
@@ -383,6 +543,7 @@ pub async fn move_db(
     error: None,
     new_path: Some(new_path.to_string_lossy().to_string()),
     requires_restart: Some(true),
+    warning: outcome.cleanup_warning,
   })
 }
 
@@ -566,5 +727,177 @@ mod tests {
 
     let resolved = db::resolve_db_path(user_data_dir.path());
     assert_eq!(resolved, real_target);
+  }
+
+  // --- 6. Failure-recovery: DbState must never end up silently stuck on
+  // --- the in-memory placeholder after a failure mid-sequence -----------
+  //
+  // Note on what these tests do NOT cover: forcing `db::open_connection`
+  // itself to fail on an otherwise-valid, freshly-copied file is not
+  // reliably possible through rusqlite's safe API - `Connection::open` is
+  // lazy (verified empirically: it succeeds even on garbage-byte content or
+  // a read-only file; only a subsequent read/write fails with
+  // `NotADatabase`). Any path-based fault that would break `Connection::open`
+  // (missing/blocked parent dir, permissions) breaks the preceding
+  // `fs::copy` to the exact same path first, since both target the same
+  // location - so the achievable, deterministic failure points are the
+  // `fs::copy` steps. Both `restore_db_impl` and `move_db_impl` are
+  // structured so a copy failure and an open failure hit the exact same
+  // recovery/ordering logic, so exercising the copy failure exercises the
+  // same code paths the reviewer's concern is about.
+
+  #[test]
+  fn move_db_impl_failed_copy_leaves_db_state_and_old_file_completely_untouched() {
+    let dir = tempdir().unwrap();
+    let current_path = dir.path().join("klassekart_database.db");
+
+    {
+      let conn = Connection::open(&current_path).unwrap();
+      conn
+        .execute_batch("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('original');")
+        .unwrap();
+    }
+    let live_conn = Connection::open(&current_path).unwrap();
+    let db_state = DbState(Mutex::new(live_conn));
+
+    // A new_path whose parent directory does not exist: fs::copy fails
+    // immediately, before DbState or the old file are touched at all.
+    let new_path = dir
+      .path()
+      .join("this_subdir_does_not_exist")
+      .join("klassekart_database.db");
+
+    let result = move_db_impl(&db_state, &current_path, &new_path);
+    assert!(result.is_err());
+
+    // Old file must be completely untouched.
+    assert!(current_path.exists());
+    // Nothing was ever created at the destination.
+    assert!(!new_path.exists());
+
+    // DbState must still hold a WORKING connection to the ORIGINAL data -
+    // not the in-memory placeholder, not corrupted.
+    let guard = db_state.0.lock().unwrap();
+    let v: String = guard
+      .query_row("SELECT v FROM t", [], |r| r.get(0))
+      .expect("DbState must still be a working connection, not a stuck in-memory placeholder");
+    assert_eq!(v, "original");
+  }
+
+  #[test]
+  fn move_db_impl_cleanup_failure_still_installs_the_new_connection() {
+    // Exercises the "copy+open succeeded, but deleting the old file failed"
+    // branch: DbState must still end up on the NEW, working connection
+    // (the move functionally succeeded) rather than being left on the
+    // placeholder just because disk cleanup of the superseded file failed.
+    let dir = tempdir().unwrap();
+    let current_path = dir.path().join("klassekart_database.db");
+    let new_dir = tempdir().unwrap();
+    let new_path = new_dir.path().join("klassekart_database.db");
+
+    {
+      let conn = Connection::open(&current_path).unwrap();
+      conn
+        .execute_batch("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('moved');")
+        .unwrap();
+    }
+    let live_conn = Connection::open(&current_path).unwrap();
+    let db_state = DbState(Mutex::new(live_conn));
+
+    // Hold a second live Connection open on current_path so fs::remove_file
+    // hits a real sharing violation - this is the exact scenario the
+    // review flagged (Windows refuses to delete a file with an open
+    // handle). Empirically confirmed via manual run: this reliably
+    // produces `os error 32` ("The process cannot access the file because
+    // it is being used by another process.") on Windows, this project's
+    // only target platform (see package.json's `build.win` config - no
+    // mac/linux targets are shipped). Kept as an `if` below rather than a
+    // hard assertion purely so the test doesn't become flaky if ever run
+    // on a non-Windows dev machine, where deleting an open file is allowed.
+    let _blocker = Connection::open(&current_path).ok();
+
+    let result = move_db_impl(&db_state, &current_path, &new_path);
+    let outcome = result.expect("move_db_impl must return Ok - a cleanup failure is non-fatal");
+
+    // Whether or not cleanup_warning is Some (platform-dependent), DbState
+    // must always be reading from the NEW path's data now.
+    let guard = db_state.0.lock().unwrap();
+    let v: String = guard
+      .query_row("SELECT v FROM t", [], |r| r.get(0))
+      .expect("DbState must hold the new, working connection");
+    assert_eq!(v, "moved");
+
+    if outcome.cleanup_warning.is_some() {
+      // If cleanup really did fail on this platform, the old file is still
+      // there (orphaned, not lost) rather than the app being broken.
+      assert!(current_path.exists());
+    }
+  }
+
+  #[test]
+  fn restore_db_impl_recovers_original_data_when_overwrite_copy_fails() {
+    let dir = tempdir().unwrap();
+    let current_path = dir.path().join("klassekart_database.db");
+
+    {
+      let conn = Connection::open(&current_path).unwrap();
+      conn
+        .execute_batch("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('original');")
+        .unwrap();
+    }
+    let live_conn = Connection::open(&current_path).unwrap();
+    let db_state = DbState(Mutex::new(live_conn));
+
+    // A source path that doesn't exist: the internal fs::copy(source,
+    // current_path) fails AFTER the live connection has already been
+    // closed and the pre-restore .bak already made - exactly the failure
+    // window the fix targets.
+    let missing_source = dir.path().join("does_not_exist.db");
+
+    let result = restore_db_impl(&db_state, &current_path, &missing_source);
+    let err = result.expect_err("restore must fail: source file doesn't exist");
+
+    // Must NOT be tagged unrecoverable - the .bak-based recovery must have
+    // succeeded.
+    assert!(
+      !err.contains(UNRECOVERABLE_PREFIX),
+      "expected a recoverable error, got: {err}"
+    );
+
+    // DbState must be back on a WORKING connection reading the ORIGINAL
+    // (pre-restore-attempt) data - not the in-memory placeholder.
+    let guard = db_state.0.lock().unwrap();
+    let v: String = guard
+      .query_row("SELECT v FROM t", [], |r| r.get(0))
+      .expect("DbState must be recovered to a working connection, not a stuck placeholder");
+    assert_eq!(v, "original");
+    drop(guard);
+
+    // The file on disk must also have been restored, not left corrupt.
+    let reopened = Connection::open(&current_path).unwrap();
+    let v: String = reopened
+      .query_row("SELECT v FROM t", [], |r| r.get(0))
+      .unwrap();
+    assert_eq!(v, "original");
+  }
+
+  #[test]
+  fn close_current_connection_restores_original_on_success_path_sanity_check() {
+    // Not a failure-injection test (see module note above on why forcing an
+    // actual Connection::close() failure isn't reachable through the safe
+    // API) - this just pins down the happy-path contract close_current_connection
+    // relies on: after a successful close, the guard holds a placeholder
+    // that must be overwritten by the caller before the mutex is released.
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("klassekart_database.db");
+    let conn = Connection::open(&db_path).unwrap();
+    let mut guard = conn;
+
+    close_current_connection(&mut guard).unwrap();
+
+    // The placeholder is a valid, working in-memory connection (not left
+    // in some half-initialized state) - callers rely on this to always be
+    // safely overwritable.
+    guard.execute_batch("CREATE TABLE t(x);").unwrap();
   }
 }
