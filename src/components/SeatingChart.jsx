@@ -18,12 +18,12 @@ const GROUP_COLORS = [
 ];
 
 const getFontSizeClass = (name) => {
-  if (!name) return 'text-xs font-extrabold';
+  if (!name) return 'text-sm font-extrabold';
   const len = name.length;
-  if (len > 20) return 'text-[9px] font-bold leading-tight';
-  if (len > 15) return 'text-[10px] font-bold leading-tight';
-  if (len > 10) return 'text-[11px] font-bold leading-tight';
-  return 'text-xs font-extrabold';
+  if (len > 20) return 'text-[10px] font-bold leading-tight';
+  if (len > 15) return 'text-[11px] font-bold leading-tight';
+  if (len > 10) return 'text-xs font-bold leading-tight';
+  return 'text-sm font-extrabold';
 };
 
 export default function SeatingChart({ onBack, initialId }) {
@@ -33,6 +33,10 @@ export default function SeatingChart({ onBack, initialId }) {
 
   // UI State
   const [isProjectorMode, setIsProjectorMode] = useState(false);
+  const [projectorZoom, setProjectorZoom] = useState(1);
+  const [projectorPan, setProjectorPan] = useState({ x: 0, y: 0 });
+  const [isProjectorPanning, setIsProjectorPanning] = useState(false);
+  const projectorPanLastPosRef = useRef({ x: 0, y: 0 });
   const [hideSensitiveInfo, setHideSensitiveInfo] = useState(false);
   const [showNumbers, setShowNumbers] = useState(true);
   const [showZones, setShowZones] = useState(false);
@@ -70,7 +74,7 @@ export default function SeatingChart({ onBack, initialId }) {
     allStudents, unplacedStudents, setUnplacedStudents,
     showHistory, setShowHistory, historyConflicts,
     editingPeriod, setEditingPeriod, newPeriodWeeks, setNewPeriodWeeks,
-    getStudentByIdOrName,
+    getStudentByIdOrName, getRecentPartners,
     handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
     flipRoom, syncFromRoom,
     canvasLight, toggleCanvasLight
@@ -82,6 +86,52 @@ export default function SeatingChart({ onBack, initialId }) {
     return () => window.dispatchEvent(new CustomEvent('toggle-projector', { detail: false }));
   }, [isProjectorMode]);
 
+  // Start alltid med full oversikt hver gang prosjektorvisningen åpnes, uansett
+  // hvilken zoom/pan-posisjon som var aktiv sist gang den var åpen.
+  useEffect(() => {
+    if (isProjectorMode) {
+      setProjectorZoom(1);
+      setProjectorPan({ x: 0, y: 0 });
+    }
+  }, [isProjectorMode]);
+
+  const PROJECTOR_ZOOM_MIN = 1;
+  const PROJECTOR_ZOOM_MAX = 4;
+
+  const handleProjectorWheel = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    setProjectorZoom(z => Math.min(PROJECTOR_ZOOM_MAX, Math.max(PROJECTOR_ZOOM_MIN, z + delta)));
+  };
+
+  const handleProjectorZoomButton = (delta) => {
+    setProjectorZoom(z => Math.min(PROJECTOR_ZOOM_MAX, Math.max(PROJECTOR_ZOOM_MIN, z + delta)));
+  };
+
+  const handleProjectorZoomReset = () => {
+    setProjectorZoom(1);
+    setProjectorPan({ x: 0, y: 0 });
+  };
+
+  const handleProjectorPanStart = (e) => {
+    if (projectorZoom <= PROJECTOR_ZOOM_MIN) return;
+    setIsProjectorPanning(true);
+    projectorPanLastPosRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handleProjectorPanMove = (e) => {
+    if (!isProjectorPanning) return;
+    const last = projectorPanLastPosRef.current;
+    const dx = e.clientX - last.x;
+    const dy = e.clientY - last.y;
+    projectorPanLastPosRef.current = { x: e.clientX, y: e.clientY };
+    setProjectorPan(p => ({ x: p.x + dx, y: p.y + dy }));
+  };
+
+  const handleProjectorPanEnd = () => {
+    setIsProjectorPanning(false);
+  };
+
   useEffect(() => {
     if (localStorage.getItem('print_on_mount') === 'true') {
       localStorage.removeItem('print_on_mount');
@@ -90,9 +140,9 @@ export default function SeatingChart({ onBack, initialId }) {
   }, []);
 
 
-  const handleDeskContextMenu = (e, desk) => {
+  const handleDeskContextMenu = (e, desk, student = null) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, desk });
+    setContextMenu({ x: e.clientX, y: e.clientY, desk, student });
   };
 
   const {
@@ -195,9 +245,18 @@ export default function SeatingChart({ onBack, initialId }) {
     }
   });
 
+  // Numrene følger seteplasser, ikke bord — et 2-seters bord opptar to numre,
+  // ett per sete, slik at neste bord fortsetter fra riktig sete-nummer, ikke bord-nummer.
   const deskNumberMap = {};
-  sortedDesks.forEach((d, idx) => {
-    deskNumberMap[d.id] = idx + 1;
+  let seatCounter = 0;
+  sortedDesks.forEach((d) => {
+    const cap = d.capacity || 1;
+    const nums = [];
+    for (let i = 0; i < cap; i++) {
+      seatCounter += 1;
+      nums.push(seatCounter);
+    }
+    deskNumberMap[d.id] = nums;
   });
 
   const zoneMeta = {
@@ -260,7 +319,15 @@ export default function SeatingChart({ onBack, initialId }) {
         )}
 
         {/* 5. Main Canvas Area */}
-        <div className="flex-1 flex flex-col overflow-hidden relative bg-base-300" onMouseDown={startCanvasAction} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onClick={() => setContextMenu(null)}>
+        <div
+          className={`flex-1 flex flex-col overflow-hidden relative bg-base-300 ${isProjectorMode && projectorZoom > PROJECTOR_ZOOM_MIN ? (isProjectorPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+          onMouseDown={isProjectorMode ? handleProjectorPanStart : startCanvasAction}
+          onMouseMove={isProjectorMode ? handleProjectorPanMove : handleMouseMove}
+          onMouseUp={isProjectorMode ? handleProjectorPanEnd : handleMouseUp}
+          onMouseLeave={isProjectorMode ? handleProjectorPanEnd : handleMouseUp}
+          onWheel={isProjectorMode ? handleProjectorWheel : undefined}
+          onClick={() => setContextMenu(null)}
+        >
           {activeFunMode === 'randombomb' && (
             <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
               <div className={`text-[10rem] font-black drop-shadow-[0_0_30px_rgba(244,63,94,0.8)] transition-transform ${bombBoom ? 'text-emerald-400 scale-125' : 'text-rose-500 animate-bounce'}`}>
@@ -270,22 +337,40 @@ export default function SeatingChart({ onBack, initialId }) {
           )}
 
           {isProjectorMode && (
-            <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onClick={() => setIsProjectorMode(false)}>
-              Avslutt prosjektorvisning
-            </button>
+            <>
+              <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onClick={() => setIsProjectorMode(false)}>
+                Avslutt prosjektorvisning
+              </button>
+              <div className="fixed top-4 left-4 z-[9999] flex items-center gap-1.5 bg-base-200/95 border border-slate-700 rounded-xl shadow-2xl p-1.5">
+                <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Zoom ut" onClick={() => handleProjectorZoomButton(-0.25)} disabled={projectorZoom <= PROJECTOR_ZOOM_MIN}>
+                  <i className="fa-solid fa-magnifying-glass-minus"></i>
+                </button>
+                <span className="text-xs font-bold text-slate-300 w-10 text-center">{Math.round(projectorZoom * 100)}%</span>
+                <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Zoom inn" onClick={() => handleProjectorZoomButton(0.25)} disabled={projectorZoom >= PROJECTOR_ZOOM_MAX}>
+                  <i className="fa-solid fa-magnifying-glass-plus"></i>
+                </button>
+                <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Nullstill visning" onClick={handleProjectorZoomReset} disabled={projectorZoom === PROJECTOR_ZOOM_MIN && projectorPan.x === 0 && projectorPan.y === 0}>
+                  <i className="fa-solid fa-compress"></i>
+                </button>
+              </div>
+            </>
           )}
 
           {/* Container for zooming/skalering */}
-          <div ref={containerRef} className="flex-1 w-full h-full overflow-hidden bg-base-300 relative">
-            <div 
+          <div
+            className="flex-1 w-full h-full overflow-hidden bg-base-300 relative"
+            style={isProjectorMode ? { transform: `translate(${projectorPan.x}px, ${projectorPan.y}px) scale(${projectorZoom})`, transformOrigin: 'center center' } : undefined}
+          >
+          <div ref={containerRef} className="w-full h-full relative">
+            <div
               ref={canvasRef}
-              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-50 border-slate-300/70' : 'bg-base-100 border-slate-700/50'}`}
+              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400/70' : 'bg-base-100 border-slate-700/50'}`}
               style={{
                 width: '1100px',
                 height: '700px',
                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
                 backgroundImage: canvasLight
-                  ? 'radial-gradient(rgba(0,0,0,0.06) 1px, transparent 0)'
+                  ? 'radial-gradient(rgba(0,0,0,0.14) 1px, transparent 0)'
                   : 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)',
                 backgroundSize: '20px 20px'
               }}
@@ -310,7 +395,7 @@ export default function SeatingChart({ onBack, initialId }) {
                       
                       const gId = groupOverrides[d.id] || d.groupId;
                       const groupColor = (gId && !hideGroups) ? GROUP_COLORS[(gId - 1) % GROUP_COLORS.length] : null;
-                      const deskNumber = deskNumberMap[d.id] || '';
+                      const seatNumbers = deskNumberMap[d.id] || [];
                       
                       let borderStyle = groupColor ? { borderWidth: '3px', borderColor: groupColor } : {};
                       
@@ -332,14 +417,6 @@ export default function SeatingChart({ onBack, initialId }) {
                           className={`absolute h-[60px] rounded-xl bg-base-200 flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-slate-700/70 z-10`}
                           style={{ left: d.x - offsetX, top: d.y, width: `${visualWidth}px`, ...borderStyle }}
                         >
-                          {showNumbers && (
-                            <div className="absolute -top-3 -left-2.5 z-20 pointer-events-none">
-                              <span className="w-6 h-6 rounded-full bg-base-300 border-2 border-slate-600 text-slate-300 font-black text-xs flex items-center justify-center shadow-lg">
-                                {deskNumber}
-                              </span>
-                            </div>
-                          )}
-
                           {gId && !hideGroups && (
                             <div className="absolute -top-2.5 right-2 z-20 pointer-events-none">
                               <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded text-slate-950 shadow tracking-wider" style={{ backgroundColor: groupColor }}>
@@ -383,12 +460,22 @@ export default function SeatingChart({ onBack, initialId }) {
                               }
 
                               return (
-                                <div 
+                                <div
                                   key={slotIdx}
                                   className={`flex-1 h-full rounded-lg flex items-center justify-center relative transition-colors ${bgClass}`}
+                                  onContextMenu={(e) => { if (studentObj) { e.preventDefault(); e.stopPropagation(); handleDeskContextMenu(e, d, studentObj); } }}
                                 >
+                                  {showNumbers && seatNumbers[slotIdx] !== undefined && (
+                                    <div className="absolute -top-3 -left-2 z-20 pointer-events-none">
+                                      <span className="min-w-[20px] h-5 px-1 rounded-full bg-base-300 border-2 border-slate-600 text-slate-300 font-black text-[10px] flex items-center justify-center shadow-lg whitespace-nowrap">
+                                        {seatNumbers[slotIdx]}
+                                      </span>
+                                    </div>
+                                  )}
                                   {isHoverTarget && !studentObj && (
-                                    <span className="text-[10px] font-black text-emerald-300 uppercase tracking-widest pointer-events-none animate-bounce">Slipp her</span>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                      <span className="text-[10px] font-black text-emerald-300 uppercase tracking-widest animate-bounce">Slipp her</span>
+                                    </div>
                                   )}
                                   {!hideSensitiveInfo && (
                                     <button 
@@ -419,9 +506,9 @@ export default function SeatingChart({ onBack, initialId }) {
                                       {!hideSensitiveInfo && role && <span className="text-[10px]">{role}</span>}
                                       <span className={`truncate ${fontSizeClass} tracking-wide`}>{studentObj.name}</span>
                                     </div>
-                                  ) : (
+                                  ) : !isHoverTarget ? (
                                     <span className="text-[10px] uppercase tracking-widest opacity-30 font-bold">Ledig</span>
-                                  )}
+                                  ) : null}
                                 </div>
                               );
                             })}
@@ -471,6 +558,7 @@ export default function SeatingChart({ onBack, initialId }) {
                 </div>
               </div>
             </div>
+          </div>
 
       {/* Modals and Context Menus */}
       <Modals
@@ -494,6 +582,7 @@ export default function SeatingChart({ onBack, initialId }) {
         setContextMenu={setContextMenu}
         handleSetGroupContextMenu={handleSetGroupContextMenu}
         GROUP_COLORS={GROUP_COLORS}
+        getRecentPartners={getRecentPartners}
       />
 
       {showPrintPreview && (

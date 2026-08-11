@@ -232,16 +232,19 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
     <PageLayout title="Mine rom" icon="fa-solid fa-school" onAdd={onAdd}>
       {rooms.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen rom opprettet enda.</p> : null}
       {rooms.map(rm => {
-        let deskCount = 0;
-        try { deskCount = (JSON.parse(rm.layout_data || '{}').desks || []).length; } catch(e){}
+        let seatCount = 0;
+        try {
+          const desks = JSON.parse(rm.layout_data || '{}').desks || [];
+          seatCount = desks.reduce((sum, d) => sum + (d.capacity || 1), 0);
+        } catch(e){}
         return (
-          <Card 
+          <Card
             key={rm.id}
             title={rm.name}
             badgeText="ROM-OPPSETT"
             badgeColor="bg-purple-950/60 text-purple-400 border-purple-500/30"
             infoList={[
-              { icon: 'fa-solid fa-chair', text: `${deskCount} plasser` }
+              { icon: 'fa-solid fa-chair', text: `${seatCount} plasser` }
             ]}
             icon="fa-solid fa-school"
             onClick={() => onEdit(rm.id)}

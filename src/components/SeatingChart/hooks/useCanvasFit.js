@@ -13,8 +13,8 @@ export function useCanvasFit() {
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
-        const availW = width - 60;
-        const availH = height - 60;
+        const availW = width - 24;
+        const availH = height - 24;
         const sX = availW / 1100;
         const sY = availH / 700;
         // Skaler både ned OG opp for å fylle det tilgjengelige vinduet — ikke
@@ -26,8 +26,8 @@ export function useCanvasFit() {
         const scaledW = 1100 * s;
         const scaledH = 700 * s;
         setOffset({
-          x: Math.max(30, (width - scaledW) / 2),
-          y: Math.max(30, (height - scaledH) / 2)
+          x: Math.max(12, (width - scaledW) / 2),
+          y: Math.max(12, (height - scaledH) / 2)
         });
       }
     });

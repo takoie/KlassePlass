@@ -201,26 +201,67 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
                const d1 = desks.find(d => String(d.id) === String(p1.deskId));
                const d2 = desks.find(d => String(d.id) === String(p2.deskId));
                if (d1 && d2) {
-                   if (d1.groupId && d2.groupId && d1.groupId === d2.groupId) {
-                       isNeighbor = true; // Samme makkergruppe
-                   } else {
-                       // Enkel avstandssjekk (ved siden av hverandre)
-                       const d1Right = d1.x + (d1.capacity * 95);
-                       const d2Right = d2.x + (d2.capacity * 95);
-                       const d1Bottom = d1.y + 65;
-                       const d2Bottom = d2.y + 65;
+                   // Kun fysisk snappede pulter (0px mellomrom) teller som "sitter sammen" —
+                   // makkergruppe (fargekode, ikke fysisk plassering) og løs nærhet (f.eks.
+                   // raden foran/bak uten at pultene faktisk er snappet) skal IKKE telle.
+                   // Snappede pulter har eksakt 0px mellomrom (se computeMagneticSnap i
+                   // RoomEditor/geometry.mjs) — GAP_TOLERANCE gir kun litt slingringsmonn
+                   // for avrunding, ikke nok til å dekke normal rad-/gruppeavstand (24-35px).
+                   const DESK_UNIT_W = 100;
+                   const DESK_H = 60;
+                   const GAP_TOLERANCE = 4;
+                   const ROW_ALIGN_TOLERANCE = 14;
 
-                       const isAdjacentHorizontal = Math.abs(d1.y - d2.y) < 20 && (Math.abs(d1.x - d2Right) < 40 || Math.abs(d1Right - d2.x) < 40);
-                       const isAdjacentVertical = Math.abs(d1.x - d2.x) < 20 && (Math.abs(d1.y - d2Bottom) < 40 || Math.abs(d1Bottom - d2.y) < 40);
+                   const d1Width = (d1.capacity || 1) * DESK_UNIT_W;
+                   const d2Width = (d2.capacity || 1) * DESK_UNIT_W;
+                   const d1Right = d1.x + d1Width;
+                   const d2Right = d2.x + d2Width;
+                   const d1Bottom = d1.y + DESK_H;
+                   const d2Bottom = d2.y + DESK_H;
 
-                       if (isAdjacentHorizontal || isAdjacentVertical) isNeighbor = true;
-                   }
+                   const isSnappedHorizontal = Math.abs(d1.y - d2.y) < ROW_ALIGN_TOLERANCE &&
+                       (Math.abs(d1.x - d2Right) <= GAP_TOLERANCE || Math.abs(d1Right - d2.x) <= GAP_TOLERANCE);
+                   const isSnappedVertical = Math.abs(d1.x - d2.x) < ROW_ALIGN_TOLERANCE &&
+                       (Math.abs(d1.y - d2Bottom) <= GAP_TOLERANCE || Math.abs(d1Bottom - d2.y) <= GAP_TOLERANCE);
+
+                   if (isSnappedHorizontal || isSnappedVertical) isNeighbor = true;
                }
            }
            if (isNeighbor) pairs.push([p1.studentId, p2.studentId]);
        }
     }
     return pairs;
+  };
+
+  // Går bakover gjennom klassekart-historikken (nyeste først) og samler de `maxCount`
+  // siste ULIKE elevene denne eleven satt ved siden av (samme bord/snappet, se
+  // getNeighbors), på tvers av så mange tidligere kart som nødvendig for å fylle opp.
+  const getRecentPartners = (studentId, maxCount = 2) => {
+    if (!studentId) return [];
+    const pastCharts = seatings
+      .filter(s => s.class_id === selectedClass && s.id !== Number(selectedSeatingId))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    const foundIds = [];
+    for (const c of pastCharts) {
+      if (foundIds.length >= maxCount) break;
+      let chartPlacements;
+      try {
+        const p = JSON.parse(c.placements || '{}');
+        chartPlacements = p.placements || p;
+      } catch (e) { continue; }
+
+      const neighbors = getNeighbors(chartPlacements);
+      for (const [s1, s2] of neighbors) {
+        if (foundIds.length >= maxCount) break;
+        let partnerId = null;
+        if (s1 === studentId) partnerId = s2;
+        else if (s2 === studentId) partnerId = s1;
+        if (partnerId && !foundIds.includes(partnerId)) foundIds.push(partnerId);
+      }
+    }
+
+    return foundIds.map(id => getStudentByIdOrName(id)).filter(Boolean).map(s => s.name);
   };
 
   useEffect(() => {
@@ -462,11 +503,20 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     if (!selectedSeatingId) return;
     try {
       await window.api.deleteSeating(selectedSeatingId);
-      setSelectedSeatingId('');
-      setPlacements({});
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
-      if (newSeatings.length > 0) handleSelectSeating(newSeatings[0].id, newSeatings);
+
+      // Alltid gjennom handleSelectSeating (aldri hopp over den) — den er stedet som
+      // friskt regner ut allStudents/unplacedStudents fra klasselisten. Hopper vi over
+      // den (som før, når ingen kart var igjen) forblir "uplassert"-lista den gamle,
+      // nesten tomme verdien fra det slettede kartet i stedet for full klasseliste,
+      // og elevene så ut som de forsvant fra administrer-skuffen.
+      const sameClassSeatings = newSeatings.filter(s => s.class_id === selectedClass);
+      if (sameClassSeatings.length > 0) {
+        handleSelectSeating(sameClassSeatings[0].id, newSeatings);
+      } else {
+        handleSelectSeating('', newSeatings);
+      }
     } catch (e) {}
   };
 
@@ -537,7 +587,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     allStudents, unplacedStudents, setUnplacedStudents,
     showHistory, setShowHistory, historyConflicts,
     editingPeriod, setEditingPeriod, newPeriodWeeks, setNewPeriodWeeks,
-    getStudentByIdOrName,
+    getStudentByIdOrName, getRecentPartners,
     handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
     flipRoom, syncFromRoom,
     canvasLight, toggleCanvasLight

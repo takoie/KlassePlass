@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 
-/** Høyreklikk-meny på et bord: lås/lås opp, sett/fjern makkergruppe. */
-export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDesk, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS }) {
+/** Høyreklikk-meny på et bord: lås/lås opp, sett/fjern makkergruppe, sist sammen med (per elev). */
+export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDesk, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS, getRecentPartners }) {
   const menuRef = useRef(null);
   const [pos, setPos] = useState(null);
 
@@ -25,6 +25,8 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDe
     ? { left: pos.left, top: pos.top }
     : { left: contextMenu.x, top: contextMenu.y, visibility: 'hidden' };
 
+  const recentPartners = contextMenu.student ? getRecentPartners(contextMenu.student.id) : [];
+
   return (
     <>
       <div className="fixed inset-0 z-[9998]" onClick={() => setContextMenu(null)}></div>
@@ -34,6 +36,18 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDe
         style={style}
         onClick={(e) => e.stopPropagation()}
       >
+        {contextMenu.student && (
+          <div className="px-3 py-2.5 bg-surface-raised border-b border-slate-700 text-xs">
+            <div className="font-bold text-slate-200 truncate mb-1">{contextMenu.student.name}</div>
+            <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-0.5">Sist sammen med</div>
+            {recentPartners.length > 0 ? (
+              <div className="text-slate-300 font-semibold">{recentPartners.join(', ')}</div>
+            ) : (
+              <div className="text-slate-500 italic">Ingen historikk funnet</div>
+            )}
+          </div>
+        )}
+
         <div className="px-3 py-2 bg-base-100 border-b border-slate-700 text-xs font-bold text-slate-300 flex justify-between items-center">
           Bord-valg
           {isLocked && <i className="fa-solid fa-lock text-red-400"></i>}

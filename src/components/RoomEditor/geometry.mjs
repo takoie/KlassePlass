@@ -12,6 +12,12 @@ export const WALL_LEFT = 15;
 export const WALL_TOP = 60;
 export const WALL_RIGHT_MARGIN = 15;
 export const WALL_BOTTOM_MARGIN = 15;
+export const BOARD_W = 256;
+export const BOARD_H = 36;
+
+export function centerBoardX() {
+  return CANVAS_W / 2 - BOARD_W / 2;
+}
 
 export function deskWidth(desk) {
   return (desk.capacity || 1) * DESK_UNIT_W;
@@ -90,7 +96,7 @@ export function findFreeGroupOffset({ desks, existingDesks, startDx = 20, startD
   return null;
 }
 
-const SNAP_THRESHOLD = 20;
+export const SNAP_THRESHOLD = 20;
 const ADJACENCY_TOLERANCE = 14;
 // Når to nabo-pulter konkurrerer om snapping med nesten lik "pull" (f.eks. flere pulter
 // på rad i et generert oppsett), gir vi den pulten som allerede var snap-mål forrige frame

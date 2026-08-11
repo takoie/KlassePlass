@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndContext } from '@dnd-kit/core';
 import DeskItem from './RoomEditor/DeskItem';
 import RoomToolsDrawer from './RoomEditor/RoomToolsDrawer';
 import BoardItem from './RoomEditor/BoardItem';
 import HeaderBar from './RoomEditor/HeaderBar';
 import DeskContextMenu from './RoomEditor/DeskContextMenu';
+import BoardContextMenu from './RoomEditor/BoardContextMenu';
 import Modals from './RoomEditor/Modals';
 import { useCanvasFit } from './RoomEditor/hooks/useCanvasFit';
 import { useDeskDragAndDrop } from './RoomEditor/hooks/useDeskDragAndDrop';
 import { useDeskSelection } from './RoomEditor/hooks/useDeskSelection';
 import { useRooms } from './RoomEditor/hooks/useRooms';
+import { centerBoardX as computeCenterBoardX } from './RoomEditor/geometry';
 
 export default function RoomEditor({ onBack, initialId }) {
   const [desks, setDesks] = useState([]); // [{ id, x, y, capacity: 1|2|3|4, zones: [], groupId: null }]
   const [boardObj, setBoardObj] = useState({ x: 405, y: 25 });
+  const [boardContextMenu, setBoardContextMenu] = useState(null);
 
   // UI & Display state
   const [showNumbers, setShowNumbers] = useState(true);
@@ -52,6 +55,10 @@ export default function RoomEditor({ onBack, initialId }) {
     }));
   };
 
+  const clearAllZones = () => {
+    setDesks(desks.map(d => ({ ...d, zones: [] })));
+  };
+
   const {
     selectedDesks, setSelectedDesks,
     selectionBox, contextMenu, setContextMenu,
@@ -61,8 +68,24 @@ export default function RoomEditor({ onBack, initialId }) {
   } = useDeskSelection({ desks, setDesks, canvasRef, scale, createGroupForSelected });
 
   const { sensors, snapToDesksModifier, handleDragStart, handleDragEnd } = useDeskDragAndDrop({
-    desks, setDesks, selectedDesks, setBoardObj, scale
+    desks, setDesks, selectedDesks, boardObj, setBoardObj, scale
   });
+
+  useEffect(() => {
+    const handleClickOutside = () => setBoardContextMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const handleBoardContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setBoardContextMenu({ mouseX: e.clientX, mouseY: e.clientY });
+  };
+
+  const centerBoardX = () => {
+    setBoardObj(prev => ({ ...prev, x: computeCenterBoardX() }));
+  };
 
   const {
     rooms, selectedRoom,
@@ -92,9 +115,18 @@ export default function RoomEditor({ onBack, initialId }) {
     }
   });
 
+  // Numrene følger seteplasser, ikke bord — et 2-seters bord opptar to numre,
+  // ett per sete, slik at neste bord fortsetter fra riktig sete-nummer, ikke bord-nummer.
   const deskNumberMap = {};
-  sortedDesks.forEach((d, idx) => {
-    deskNumberMap[d.id] = idx + 1;
+  let seatCounter = 0;
+  sortedDesks.forEach((d) => {
+    const cap = d.capacity || 1;
+    const nums = [];
+    for (let i = 0; i < cap; i++) {
+      seatCounter += 1;
+      nums.push(seatCounter);
+    }
+    deskNumberMap[d.id] = nums;
   });
 
   const presetsList = [
@@ -131,6 +163,7 @@ export default function RoomEditor({ onBack, initialId }) {
                 clearGroupForSelected={clearGroupForSelected}
                 setDeskCapacity={setDeskCapacity}
                 toggleZoneOnSelected={toggleZoneOnSelected}
+                clearAllZones={clearAllZones}
                 genStructure={genStructure}
                 setGenStructure={setGenStructure}
                 genRows={genRows}
@@ -151,13 +184,13 @@ export default function RoomEditor({ onBack, initialId }) {
               >
                 <div
                   ref={canvasRef}
-                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-50 border-slate-300' : 'bg-base-100 border-slate-700'}`}
+                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400' : 'bg-base-100 border-slate-700'}`}
                   style={{
                     width: '1100px',
                     height: '700px',
                     transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
                     backgroundImage: canvasLight
-                      ? 'radial-gradient(rgba(0,0,0,0.06) 1px, transparent 0)'
+                      ? 'radial-gradient(rgba(0,0,0,0.14) 1px, transparent 0)'
                       : 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 0)',
                     backgroundSize: '20px 20px'
                   }}
@@ -166,7 +199,7 @@ export default function RoomEditor({ onBack, initialId }) {
                 >
                 {!isCreatingRoom && (
                   <>
-                    <BoardItem boardObj={boardObj} />
+                    <BoardItem boardObj={boardObj} onContextMenu={handleBoardContextMenu} />
 
                     {desks.map((d) => (
                         <DeskItem
@@ -175,7 +208,7 @@ export default function RoomEditor({ onBack, initialId }) {
                           isSelected={selectedDesks.includes(d.id)}
                           showNumbers={showNumbers}
                           showZones={showZones}
-                          deskNumber={deskNumberMap[d.id] || ''}
+                          seatNumbers={deskNumberMap[d.id] || []}
                           onContextMenu={handleContextMenu}
                           onClick={handleDeskClick}
                         />
@@ -224,6 +257,11 @@ export default function RoomEditor({ onBack, initialId }) {
         createGroupForSelected={createGroupForSelected} clearGroupForSelected={clearGroupForSelected}
         setDeskCapacity={setDeskCapacity} toggleZoneOnSelected={toggleZoneOnSelected}
         handleDuplicateSelected={handleDuplicateSelected} handleDeleteSelected={handleDeleteSelected}
+      />
+
+      <BoardContextMenu
+        contextMenu={boardContextMenu} setContextMenu={setBoardContextMenu}
+        centerBoardX={centerBoardX}
       />
 
       <Modals

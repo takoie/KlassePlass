@@ -1,21 +1,24 @@
 import { useRef, useEffect } from 'react';
 import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { computeBoundedDelta, findOverlappingDeskIds } from '../geometry';
+import { computeBoundedDelta, findOverlappingDeskIds, CANVAS_W, BOARD_W, BOARD_H, SNAP_THRESHOLD } from '../geometry';
 
 // All drag-and-drop-/magnetisk snapping-logikk for pulter og tavle på
 // RoomEditor-canvaset: dnd-kit-modifier for live-forhåndsvisning under drag,
 // og commit av sluttposisjon ved slipp.
-export function useDeskDragAndDrop({ desks, setDesks, selectedDesks, setBoardObj, scale }) {
+export function useDeskDragAndDrop({ desks, setDesks, selectedDesks, boardObj, setBoardObj, scale }) {
   const desksRef = useRef(desks);
   const selectedDesksRef = useRef(selectedDesks);
+  const boardObjRef = useRef(boardObj);
   const isDraggingRef = useRef(false);
   const preOverlappingIdsRef = useRef([]);
   const altKeyRef = useRef(false);
   const lastDeskDragResultRef = useRef(null);
   const lastSnapTargetIdRef = useRef(null);
+  const lastBoardDragResultRef = useRef(null);
 
   useEffect(() => { desksRef.current = desks; }, [desks]);
   useEffect(() => { selectedDesksRef.current = selectedDesks; }, [selectedDesks]);
+  useEffect(() => { boardObjRef.current = boardObj; }, [boardObj]);
 
   useEffect(() => {
     const onAltDown = (e) => { if (e.key === 'Alt') altKeyRef.current = true; };
@@ -53,11 +56,30 @@ export function useDeskDragAndDrop({ desks, setDesks, selectedDesks, setBoardObj
     const rawDy = transform.y / scale;
 
     if (active.data.current.type !== 'desk') {
-       return {
-         ...transform,
-         x: Math.round(rawDx / 10) * 10,
-         y: Math.round(rawDy / 10) * 10
-       };
+      const xGuide = document.getElementById('guide-line-x');
+      const boardCenterX = boardObjRef.current.x + rawDx + BOARD_W / 2;
+      const canvasCenterX = CANVAS_W / 2;
+      let finalX;
+
+      if (Math.abs(boardCenterX - canvasCenterX) < SNAP_THRESHOLD) {
+        finalX = canvasCenterX - BOARD_W / 2 - boardObjRef.current.x;
+        if (xGuide) {
+          xGuide.style.left = `${canvasCenterX}px`;
+          xGuide.style.display = 'block';
+        }
+      } else {
+        finalX = Math.round(rawDx / 10) * 10;
+        if (xGuide) xGuide.style.display = 'none';
+      }
+
+      const finalY = Math.round(rawDy / 10) * 10;
+      lastBoardDragResultRef.current = { x: finalX, y: finalY };
+
+      return {
+        ...transform,
+        x: finalX,
+        y: finalY
+      };
     }
 
     const draggedDeskId = active.id;
@@ -147,6 +169,7 @@ export function useDeskDragAndDrop({ desks, setDesks, selectedDesks, setBoardObj
     isDraggingRef.current = true;
     lastDeskDragResultRef.current = null;
     lastSnapTargetIdRef.current = null;
+    lastBoardDragResultRef.current = null;
     const { active } = event;
     if (!active || active.data.current?.type !== 'desk') return;
 
@@ -196,10 +219,18 @@ export function useDeskDragAndDrop({ desks, setDesks, selectedDesks, setBoardObj
     if (!active || !active.data.current) return;
 
     if (active.data.current.type === 'board') {
+      // Gjenbruk resultatet fra siste live-frame (samme snap som ble vist under
+      // draget) i stedet for å regne ut på nytt her — se kommentar i
+      // snapToDesksModifier / handleDragEnd for pulter.
+      const cached = lastBoardDragResultRef.current;
+      const boardDx = cached ? cached.x : delta.x / scale;
+      const boardDy = cached ? cached.y : delta.y / scale;
+
       setBoardObj(prev => ({
-        x: Math.max(10, Math.min(1100 - 256 - 10, prev.x + delta.x / scale)),
-        y: Math.max(10, Math.min(700 - 36 - 10, prev.y + delta.y / scale))
+        x: Math.max(10, Math.min(1100 - BOARD_W - 10, prev.x + boardDx)),
+        y: Math.max(10, Math.min(700 - BOARD_H - 10, prev.y + boardDy))
       }));
+      lastBoardDragResultRef.current = null;
     } else if (active.data.current.type === 'desk') {
       const draggedDeskId = active.id;
       const isPartOftMultiSelection = selectedDesks.includes(draggedDeskId);

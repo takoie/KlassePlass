@@ -149,6 +149,26 @@ export default function Settings() {
               </div>
             </div>
 
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+              <h4 className="font-bold text-sm text-slate-200 mb-1">Canvas-bakgrunn</h4>
+              <p className="text-xs text-slate-400 mb-4">Velg mørk eller lys bakgrunn for tegneflaten i rombygger og klassekart.</p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  className={`btn btn-sm gap-2 ${!settings.canvasLightMode ? 'btn-neutral bg-slate-700 text-emerald-300' : 'btn-outline border-slate-700 text-slate-400'}`}
+                  onClick={() => handleSaveSetting('canvasLightMode', false)}
+                >
+                  <i className="fa-solid fa-moon"></i> Mørk
+                </button>
+                <button
+                  className={`btn btn-sm gap-2 ${settings.canvasLightMode ? 'btn-neutral bg-slate-700 text-amber-300' : 'btn-outline border-slate-700 text-slate-400'}`}
+                  onClick={() => handleSaveSetting('canvasLightMode', true)}
+                >
+                  <i className="fa-solid fa-sun"></i> Lys
+                </button>
+              </div>
+            </div>
+
             <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-slate-200 mb-1">Fargetema</h4>
               <p className="text-xs text-slate-400 mb-4">Velg fargeprofilen som passer deg best. Gjelder for hele appen.</p>

@@ -21,7 +21,7 @@ export default function DeskItem({
   isSelected,
   showNumbers,
   showZones,
-  deskNumber,
+  seatNumbers,
   onContextMenu,
   onClick
 }) {
@@ -36,7 +36,7 @@ export default function DeskItem({
   const groupColor = desk.groupId ? GROUP_COLORS[(desk.groupId - 1) % GROUP_COLORS.length] : null;
 
   let borderStyle = groupColor ? { borderWidth: '3px', borderColor: groupColor } : {};
-  let borderClass = 'border border-slate-700/70 bg-base-200 hover:border-[#34d399]';
+  let borderClass = 'border-2 border-slate-500 bg-base-200 hover:border-[#34d399]';
   
   if (isSelected) {
     borderClass = 'border-2 border-indigo-500 bg-indigo-950/50 shadow-[0_0_16px_rgba(99,102,241,0.6)] z-20 scale-105';
@@ -65,14 +65,6 @@ export default function DeskItem({
       onContextMenu={(e) => onContextMenu(e, desk)}
       onClick={(e) => onClick(e, desk)}
     >
-      {showNumbers && (
-        <div className="absolute top-1 left-1.5 z-20">
-          <span className="px-1.5 py-0.5 min-w-[20px] rounded bg-base-300/90 border border-slate-700/50 text-slate-300 font-extrabold text-[10px] flex items-center justify-center shadow-sm">
-            {deskNumber}
-          </span>
-        </div>
-      )}
-
       {desk.groupId && (
         <div className="absolute -top-2.5 right-2 z-20">
           <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded text-slate-950 shadow" style={{ backgroundColor: groupColor }}>
@@ -83,7 +75,12 @@ export default function DeskItem({
 
       <div className="flex gap-1 w-full flex-1 items-center justify-center">
         {Array.from({ length: cap }).map((_, slotIdx) => (
-          <div key={slotIdx} className="flex-1 h-full bg-surface-field rounded-lg flex items-center justify-center text-xs font-bold text-slate-400">
+          <div key={slotIdx} className="relative flex-1 h-full bg-surface-field rounded-lg flex items-center justify-center text-xs font-bold text-slate-400">
+            {showNumbers && seatNumbers?.[slotIdx] !== undefined && (
+              <span className="absolute -top-1.5 -left-0.5 z-20 px-1.5 py-0.5 min-w-[18px] rounded bg-base-300/90 border border-slate-700/50 text-slate-300 font-extrabold text-[10px] flex items-center justify-center shadow-sm">
+                {seatNumbers[slotIdx]}
+              </span>
+            )}
           </div>
         ))}
       </div>
