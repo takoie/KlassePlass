@@ -21,7 +21,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
     <div className="flex h-full w-full app-shell-bg p-3 gap-3 relative">
       {/* Global Titlebar (Always on top) */}
       {!isFullscreen && (
-        <div className="titlebar flex items-center justify-end pr-3 pt-3 flex-shrink-0 bg-transparent absolute top-0 right-0 w-full z-[100] pointer-events-none" data-tauri-drag-region style={{ WebkitAppRegion: 'drag', height: '40px' }}>
+        <div className="titlebar flex items-center justify-end pr-3 pt-3 flex-shrink-0 bg-transparent absolute top-0 right-0 w-full z-[100] pointer-events-auto" data-tauri-drag-region style={{ WebkitAppRegion: 'drag', height: '40px' }}>
           {(currentView === 'seating' || currentView === 'rooms') && (
             <div className="absolute left-1/2 top-5 h-7 flex items-center -translate-x-1/2 select-none" data-tauri-drag-region style={{ WebkitAppRegion: 'drag' }}>
               <span className="font-extrabold text-white text-lg tracking-wider">KLASSE<span className="text-[#f59e0b] tracking-wider drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]">PLASS</span></span>
