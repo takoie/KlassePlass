@@ -26,7 +26,7 @@ pub fn run() {
 
       let user_data_dir = app.path().app_data_dir()?;
       let db_path = db::resolve_db_path(&user_data_dir);
-      let conn = db::open_connection(&db_path);
+      let conn = db::open_connection(&db_path)?;
       app.manage(db::DbState(Mutex::new(conn)));
 
       Ok(())

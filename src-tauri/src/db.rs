@@ -38,11 +38,18 @@ pub fn resolve_db_path(user_data_dir: &Path) -> PathBuf {
 }
 
 /// Opens (creating parent directories if needed) a rusqlite connection at `path`.
-pub fn open_connection(path: &Path) -> Connection {
+///
+/// Returns an error instead of panicking so callers (e.g. lib.rs's `.setup()`)
+/// can propagate recoverable failures (disk full, permission denied, etc.)
+/// with `?` instead of crashing the app.
+pub fn open_connection(path: &Path) -> rusqlite::Result<Connection> {
   if let Some(parent) = path.parent() {
+    // Errors here are intentionally swallowed: if directory creation fails,
+    // the subsequent Connection::open call below will fail too and surface
+    // a proper error to the caller.
     std::fs::create_dir_all(parent).ok();
   }
-  Connection::open(path).expect("kunne ikke åpne databasefil")
+  Connection::open(path)
 }
 
 #[cfg(test)]
@@ -123,12 +130,26 @@ mod tests {
     let dir = tempdir().unwrap();
     let nested_path = dir.path().join("nested").join("sub").join("test.db");
 
-    let conn = open_connection(&nested_path);
+    let conn = open_connection(&nested_path).unwrap();
     assert!(nested_path.exists());
 
     // Sanity check the connection is actually usable.
     conn
       .execute_batch("CREATE TABLE t (id INTEGER PRIMARY KEY);")
       .unwrap();
+  }
+
+  #[test]
+  fn open_connection_returns_err_instead_of_panicking_on_failure() {
+    // Passing a path whose parent cannot be a directory (a file, not a dir)
+    // makes create_dir_all fail silently and Connection::open fail loudly,
+    // which should surface as an Err rather than a panic.
+    let dir = tempdir().unwrap();
+    let blocking_file = dir.path().join("not_a_dir");
+    fs::write(&blocking_file, b"i am a file, not a directory").unwrap();
+
+    let bad_path = blocking_file.join("nested").join("test.db");
+    let result = open_connection(&bad_path);
+    assert!(result.is_err());
   }
 }
