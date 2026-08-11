@@ -98,8 +98,12 @@ const tauriApi = {
     }
   },
   showInFolder: async (path) => {
-    await revealItemInDir(path);
-    return { success: true };
+    try {
+      await revealItemInDir(path);
+      return { success: true, error: null };
+    } catch (err) {
+      return { success: false, error: err?.message ?? String(err) };
+    }
   },
 
   // Auto-update — ikke implementert ennå i Tauri-backend (Task 7.1). Electrons

@@ -71,6 +71,15 @@ function opensNewContext(link) {
  * Kalles kun når `isTauri()` er sann (se `src/main.jsx`), slik at
  * Electron-bygget er upåvirket — der dekkes dette allerede av
  * `window-manager.js` sin `setWindowOpenHandler`.
+ *
+ * Kjente begrensninger (lav risiko for en desktop-app, ikke fikset):
+ * - Lytter kun på `click`, ikke `auxclick` — et midtklikk på en
+ *   target="_blank"-lenke (Chromium/WebView2 fyrer `auxclick`, ikke
+ *   `click`, for det) omgår derfor denne håndteringen.
+ * - `preventDefault()` kalles kun når URL-en består `isExternalLinkUrl`
+ *   (i motsetning til Electrons handler, som nekter ALL target="_blank"-
+ *   navigasjon uansett skjema). Alle fire faktiske lenkene i appen i dag
+ *   er http(s)/mailto, så dette er ikke reachable ennå.
  */
 export function initExternalLinkHandler() {
   document.addEventListener('click', (event) => {
