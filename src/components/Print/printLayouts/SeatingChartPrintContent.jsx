@@ -1,32 +1,7 @@
 import React from 'react';
+import { BOARD_W, BOARD_H, DESK_H, CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX, computeCenteringOffset } from './printGeometry';
 
-export const CONTENT_WIDTH_PX = 1100;
-export const CONTENT_HEIGHT_PX = 700;
-
-const BOARD_W = 256;
-const BOARD_H = 36;
-const DESK_H = 60;
-
-// Rommet i klasseromsbyggeren fyller ikke nødvendigvis hele det faste
-// 1100×700-canvaset (f.eks. et smalt eller lite rom) — uten dette havner
-// pultene der de en gang ble plassert på canvaset, som ofte er forskjøvet
-// fra midten av papirarket. Vi regner derfor ut den faktiske bounding-boksen
-// til tavle+pulter og sentrerer DEN i print-arealet, slik at utskriften alltid
-// er sentrert uten at læreren må justere zoom/pan manuelt.
-function computeCenteringOffset(boardObj, desks) {
-  const rects = [
-    { x: boardObj.x, y: boardObj.y, w: BOARD_W, h: BOARD_H },
-    ...desks.map((d) => ({ x: d.x, y: d.y, w: (d.capacity || 1) * 100, h: DESK_H })),
-  ];
-  const minX = Math.min(...rects.map((r) => r.x));
-  const minY = Math.min(...rects.map((r) => r.y));
-  const maxX = Math.max(...rects.map((r) => r.x + r.w));
-  const maxY = Math.max(...rects.map((r) => r.y + r.h));
-  return {
-    x: (CONTENT_WIDTH_PX - (maxX - minX)) / 2 - minX,
-    y: (CONTENT_HEIGHT_PX - (maxY - minY)) / 2 - minY,
-  };
-}
+export { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX };
 
 export default function SeatingChartPrintContent({
   boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
@@ -49,6 +24,9 @@ export default function SeatingChartPrintContent({
         const cap = d.capacity || 1;
         const deskW = cap * 100;
         const seatNumbers = deskNumberMap[d.id] || [];
+        // NB: denne gruppefarge-oppløsningen (groupOverrides-fallback + palett-indeksering)
+        // er duplisert i buildSeatingChartPrintPayload.js for PDF-eksport, siden Rust ikke
+        // kan kjøre JS-domenelogikk. Endres logikken her, må den speiles der også.
         const gId = (groupOverrides && groupOverrides[d.id]) || d.groupId;
         const groupColor = (gId && showGroups) ? groupColors[(gId - 1) % groupColors.length] : null;
         const activeZones = showZones ? (d.zones || []) : [];
@@ -92,6 +70,9 @@ export default function SeatingChartPrintContent({
                 }}
               >
                 {activeZones.map((zKey) => {
+                  // NB: samme sone-oppløsning (zoneMeta-oppslag + showColors/'#555'-fallback)
+                  // er duplisert i buildSeatingChartPrintPayload.js for PDF-eksport — se NB
+                  // over ved gruppefargen for hvorfor (Rust har ingen domenelogikk).
                   const zm = zoneMeta[zKey];
                   if (!zm) return null;
                   const color = (showColors && zm.printColor) ? zm.printColor : '#555';
