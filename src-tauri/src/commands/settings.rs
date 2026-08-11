@@ -44,7 +44,12 @@ fn default_settings() -> Value {
 
 /// Resolves stien til settings.json: `<user_data_dir>/settings.json`.
 /// Speiler JS sin `getSettingsPath()`.
-fn settings_path(user_data_dir: &Path) -> PathBuf {
+///
+/// `pub(crate)` (ikke privat): `print_export.rs` (Task 6.3) trenger å lese
+/// OG oppdatere `lastPrintExportDir` i settings via samme sti/helpers som
+/// `get_settings`/`save_settings` bruker, i stedet for å duplisere
+/// stien-oppbyggingen selv.
+pub(crate) fn settings_path(user_data_dir: &Path) -> PathBuf {
   user_data_dir.join("settings.json")
 }
 

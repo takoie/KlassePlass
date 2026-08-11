@@ -4,6 +4,7 @@ pub mod constraints;
 pub mod db_maintenance;
 pub mod groups;
 pub mod json_field;
+pub mod print_export;
 pub mod rooms;
 pub mod seatings;
 pub mod settings;

@@ -5,6 +5,7 @@ import { usePrintSettings } from './usePrintSettings';
 import { buildPrintFilename } from './printFilename';
 import RoomViewport from './RoomViewport';
 import SeatingChartPrintContent, { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX } from './printLayouts/SeatingChartPrintContent';
+import buildSeatingChartPrintPayload from './printLayouts/buildSeatingChartPrintPayload';
 import StationPrintContent, { paginateStationRotations, getStationPageWidthPx, estimateStationPageHeight } from './printLayouts/StationPrintContent';
 import GroupPrintContent, { paginateGroups, GROUP_CONTENT_WIDTH_PX, estimateGroupsPageHeight } from './printLayouts/GroupPrintContent';
 
@@ -179,8 +180,22 @@ export default function PrintPreviewModal({
   const handleExportPdf = async () => {
     setExportState({ status: 'working' });
     const suggestedName = buildPrintFilename({ className, chartName, prefix: filenamePrefix });
+    // Rust-native PDF-rendering (Task 6.2/6.3) dekker KUN klassekart —
+    // stasjonsplan/gruppeinndeling har ingen payload-bygger på Rust-siden
+    // ennå (se buildSeatingChartPrintPayload.js sin modul-doc), så vi bygger
+    // bevisst IKKE noen payload for dem her. tauriApi.js sin exportPrintPdf
+    // avviser kallet med en tydelig, ikke-krasjende feilmelding når payload
+    // mangler, som fanges av catch-blokken under og vises i den eksisterende
+    // feil-alerten — "Skriv ut" (window.print()) er upåvirket og fungerer
+    // som før for disse typene.
+    const payload = isSeatingChart
+      ? buildSeatingChartPrintPayload({
+          boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
+          groupColors, zoneMeta, groupOverrides, settings, chartName, periodText,
+        })
+      : null;
     try {
-      const result = await window.api.exportPrintPdf({ suggestedName });
+      const result = await window.api.exportPrintPdf({ suggestedName, contentType, payload });
       if (result.canceled) { setExportState({ status: 'idle' }); return; }
       if (!result.success) { setExportState({ status: 'error', message: result.error }); return; }
       setExportState({ status: 'done', filePath: result.filePath });

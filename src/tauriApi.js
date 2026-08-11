@@ -14,17 +14,21 @@
  *    parameternavn) — verifisert ved å lese kommando-signaturene direkte,
  *    ikke gjettet.
  *
- * 2. Ikke-implementerte metoder (Print: exportPrintPdf; Auto-update:
- *    onUpdateReady/restartApp) — disse kommandoene finnes IKKE i
- *    Rust-backend ennå (kommer i migrerings-Task 6/7.1). Vi kaller dem IKKE
- *    via `invoke()` (det ville gitt en kryptisk "command not found"-feil
- *    uten kontekst). I stedet returnerer/kaster de en tydelig, diagnostiserbar
- *    feil med referanse til hvilken fremtidig task som vil implementere dem.
+ * 2. Ikke-implementerte metoder (Auto-update: onUpdateReady/restartApp) —
+ *    disse kommandoene finnes IKKE i Rust-backend ennå (kommer i
+ *    migrerings-Task 7.1). Vi kaller dem IKKE via `invoke()` (det ville gitt
+ *    en kryptisk "command not found"-feil uten kontekst). I stedet
+ *    returnerer/kaster de en tydelig, diagnostiserbar feil med referanse til
+ *    hvilken fremtidig task som vil implementere dem.
  *    (Database: backupDb/restoreDb/moveDb var i denne kategorien frem til
  *    Task 4.1, som portet `src-tauri/src/commands/db_maintenance.rs` — de
  *    kaller nå de ekte `backup_db`/`restore_db`/`move_db`-kommandoene.
  *    Print: openPath/showInFolder var i denne kategorien frem til Task 5.1,
- *    som portet dem til `@tauri-apps/plugin-opener` — se gruppe 4.)
+ *    som portet dem til `@tauri-apps/plugin-opener` — se gruppe 4. exportPrintPdf
+ *    var i denne kategorien frem til Task 6.3, som portet den ekte
+ *    seatingChart-veien til `export_seating_chart_pdf` — station/groupWork
+ *    har fortsatt ingen Rust-payload og får en tydelig avvist Promise, se
+ *    `exportPrintPdf` under gruppe 4 for detaljer.)
  *
  * 3. Window controls (minimizeWindow/maximizeWindow/closeWindow) — disse
  *    trenger ingen egne Tauri-kommandoer. Tauri 2 sin innebygde
@@ -82,13 +86,35 @@ const tauriApi = {
   restoreDb: () => invoke('restore_db'),
   moveDb: () => invoke('move_db'),
 
-  // Print / PDF-eksport — exportPrintPdf har ingen backend-kommando ennå
-  // (kommer i Task 6). openPath/showInFolder trenger derimot ingen egen
-  // `#[tauri::command]` — `@tauri-apps/plugin-opener` eksponerer sin egen
-  // JS-API og kalles direkte (Task 5.1). Returverdiene er formet for å
-  // matche Electron-preloadens `{ success, error }`-kontrakt, siden
-  // plugin-funksjonene selv kaster en Error ved feil i stedet for å
-  // returnere en feilstreng slik Electrons `shell.openPath` gjør.
+  // Print / PDF-eksport (Task 6.3) — `exportPrintPdf` kaller den ekte
+  // `export_seating_chart_pdf`-kommandoen (Task 6.3, src-tauri/src/commands/
+  // print_export.rs) NÅR `data.contentType === 'seatingChart'` OG
+  // `data.payload` faktisk følger med (bygget av `buildSeatingChartPrintPayload`
+  // i PrintPreviewModal.jsx sin handleExportPdf). For station/groupWork finnes
+  // det INGEN Rust-payload-bygger ennå (se pdf_export.rs sin modul-doc) — de
+  // må ALDRI kalle den ekte kommandoen med søppel-/manglende data, så vi
+  // returnerer i stedet en avvist Promise med en tydelig, ikke-krasjende
+  // feilmelding. PrintPreviewModal.jsx sin handleExportPdf fanger denne og
+  // viser den i den allerede eksisterende feil-alerten — "Skriv ut" (window.print())
+  // fortsetter å fungere uendret for disse typene uansett.
+  //
+  // openPath/showInFolder trenger derimot ingen egen `#[tauri::command]` —
+  // `@tauri-apps/plugin-opener` eksponerer sin egen JS-API og kalles direkte
+  // (Task 5.1). Returverdiene er formet for å matche Electron-preloadens
+  // `{ success, error }`-kontrakt, siden plugin-funksjonene selv kaster en
+  // Error ved feil i stedet for å returnere en feilstreng slik Electrons
+  // `shell.openPath` gjør.
+  exportPrintPdf: (data) => {
+    if (data?.contentType === 'seatingChart' && data?.payload) {
+      return invoke('export_seating_chart_pdf', {
+        payload: data.payload,
+        suggestedName: data.suggestedName,
+      });
+    }
+    return Promise.reject(
+      new Error('PDF-eksport er foreløpig kun tilgjengelig for klassekart — bruk «Skriv ut» i mellomtiden.'),
+    );
+  },
   openPath: async (path) => {
     try {
       await pluginOpenPath(path);

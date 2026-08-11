@@ -14,6 +14,7 @@ use commands::groups::{
   delete_group_assignment, get_group_assignment, get_group_assignment_groups,
   get_group_assignments, get_group_history, save_group_assignment, save_group_history,
 };
+use commands::print_export::export_seating_chart_pdf;
 use commands::rooms::{delete_room, get_room, get_rooms, save_room};
 use commands::seatings::{delete_seating, get_seating, get_seatings, save_seating};
 use commands::settings::{get_settings, save_settings};
@@ -63,7 +64,8 @@ pub fn run() {
       get_migration_info,
       backup_db,
       restore_db,
-      move_db
+      move_db,
+      export_seating_chart_pdf
     ])
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
