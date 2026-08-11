@@ -7,6 +7,9 @@ use std::sync::Mutex;
 use tauri::Manager;
 
 use commands::classes::{delete_class, get_class, get_classes, save_class};
+use commands::constraints::get_constraints;
+use commands::rooms::{delete_room, get_room, get_rooms, save_room};
+use commands::seatings::{delete_seating, get_seating, get_seatings, save_seating};
 
 // Spike-command for Task 0.2: verifiserer at printpdf kan generere en lesbar PDF,
 // kalt fra frontend via Tauri sin invoke-bro. Midlertidig - forenkles/utvides i Fase 6.
@@ -23,7 +26,16 @@ pub fn run() {
       get_classes,
       get_class,
       save_class,
-      delete_class
+      delete_class,
+      get_rooms,
+      get_room,
+      save_room,
+      delete_room,
+      get_seatings,
+      get_seating,
+      save_seating,
+      delete_seating,
+      get_constraints
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
