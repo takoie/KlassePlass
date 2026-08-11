@@ -14,12 +14,15 @@
  *    parameternavn) — verifisert ved å lese kommando-signaturene direkte,
  *    ikke gjettet.
  *
- * 2. Ikke-implementerte metoder (Auto-update: onUpdateReady/restartApp) —
- *    disse kommandoene finnes IKKE i Rust-backend ennå (kommer i
- *    migrerings-Task 7.1). Vi kaller dem IKKE via `invoke()` (det ville gitt
- *    en kryptisk "command not found"-feil uten kontekst). I stedet
- *    returnerer/kaster de en tydelig, diagnostiserbar feil med referanse til
- *    hvilken fremtidig task som vil implementere dem.
+ * 2. Auto-update (onUpdateReady/restartApp) — portet i Task 7.1 til
+ *    `@tauri-apps/plugin-updater` (pull-basert `check()`/
+ *    `downloadAndInstall()`, se `src/tauriUpdater.js`) og
+ *    `@tauri-apps/plugin-process` (`relaunch()`). `onUpdateReady` her
+ *    delegerer til `tauriUpdater.js` sin callback-registrering, som kalles
+ *    når `initAutoUpdateCheck()` (kjørt fra `main.jsx` ved oppstart) har
+ *    fullført en vellykket nedlasting+installasjon — samme "registrer og
+ *    glem"-kontrakt som Electron-preloadens `onUpdateReady`, så
+ *    `UpdateBanner.jsx` er uendret.
  *    (Database: backupDb/restoreDb/moveDb var i denne kategorien frem til
  *    Task 4.1, som portet `src-tauri/src/commands/db_maintenance.rs` — de
  *    kaller nå de ekte `backup_db`/`restore_db`/`move_db`-kommandoene.
@@ -47,13 +50,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { openPath as pluginOpenPath, revealItemInDir } from '@tauri-apps/plugin-opener';
-
-/** Lager en avvist Promise med en tydelig "ikke implementert ennå"-feil. */
-function notImplemented(methodName, taskRef) {
-  return Promise.reject(
-    new Error(`${methodName}: ikke implementert ennå i Tauri-backend (kommer i migrerings-${taskRef})`),
-  );
-}
+import { relaunch } from '@tauri-apps/plugin-process';
+import { onUpdateReady as onUpdateReadyImpl } from './tauriUpdater.js';
 
 const tauriApi = {
   // Klasser
@@ -132,17 +130,15 @@ const tauriApi = {
     }
   },
 
-  // Auto-update — ikke implementert ennå i Tauri-backend (Task 7.1). Electrons
-  // update-ready-event og restart-app-IPC har ingen Tauri-motpart ennå.
-  onUpdateReady: (cb) => {
-    // Bevisst no-op fremfor å kaste: preload sin onUpdateReady abonnerer bare
-    // på en fremtidig hendelse og forventer ingen returverdi/synkron effekt,
-    // så en kastet feil her ville krasjet oppstart av komponenter som bare
-    // "abonnerer og glemmer". Ikke implementert ennå (Task 7.1).
-    console.warn('onUpdateReady: ikke implementert ennå i Tauri-backend (kommer i migrerings-Task 7.1)');
-    return () => {};
-  },
-  restartApp: () => notImplemented('restartApp', 'Task 7.1'),
+  // Auto-update (Task 7.1) — se src/tauriUpdater.js for pull->push-broen som
+  // gjør at denne callback-kontrakten kan speile Electrons push-baserte
+  // `onUpdateReady` 1:1.
+  onUpdateReady: (cb) => onUpdateReadyImpl(cb),
+  // `@tauri-apps/plugin-process`s `relaunch()` er Tauri-motstykket til
+  // Electrons `autoUpdater.quitAndInstall()`/`app.relaunch()` — avslutter og
+  // starter appen på nytt, slik at den nylig installerte oppdateringen tas i
+  // bruk.
+  restartApp: () => relaunch(),
 
   // Gruppearbeid
   getGroupAssignments: (cid) => invoke('get_group_assignments', { classId: cid }),

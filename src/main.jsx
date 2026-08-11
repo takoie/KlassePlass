@@ -6,6 +6,7 @@ import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import tauriApi from './tauriApi.js'
 import { initExternalLinkHandler } from './externalLinks.js'
+import { initAutoUpdateCheck } from './tauriUpdater.js'
 import './index.css'
 import './styles/print.css'
 
@@ -26,6 +27,10 @@ if (isTauri()) {
   // Se src/externalLinks.js for hvorfor dette trengs (Tauri-motstykke til
   // Electrons setWindowOpenHandler i window-manager.js).
   initExternalLinkHandler()
+  // Tauri-motstykke til Electrons setupUpdater(winRef) i src/updater.js —
+  // se src/tauriUpdater.js for detaljer om pull->push-broen som lar
+  // UpdateBanner.jsx forbli uendret.
+  initAutoUpdateCheck()
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
