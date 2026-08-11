@@ -12,6 +12,17 @@ use std::sync::Mutex;
 /// Shared app state wrapping the single rusqlite connection.
 pub struct DbState(pub Mutex<Connection>);
 
+/// Shared app state tracking the CURRENT on-disk path of the live database
+/// connection held in `DbState`. Kept as separate managed state (rather than
+/// bolted onto `DbState`) so the ~30 existing commands that only need the
+/// `Connection` don't have to change shape.
+///
+/// Needed by the `backup-db`/`restore-db`/`move-db` commands (Task 4.1):
+/// `backup-db` copies FROM this path, `restore-db` overwrites the file AT
+/// this path (path itself doesn't change), and `move-db` copies the file to
+/// a new location and then updates this state to point at it.
+pub struct CurrentDbPathState(pub Mutex<PathBuf>);
+
 /// Info about a backup made during startup because the on-disk schema was
 /// older than `schema::CURRENT_VERSION`. Recorded so a later task (the
 /// `get-migration-info` IPC command, Fase 2) can surface it to the frontend.

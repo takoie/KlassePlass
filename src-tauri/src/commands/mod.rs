@@ -1,6 +1,7 @@
 pub mod app_info;
 pub mod classes;
 pub mod constraints;
+pub mod db_maintenance;
 pub mod groups;
 pub mod json_field;
 pub mod rooms;

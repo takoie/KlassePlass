@@ -14,13 +14,15 @@
  *    parameternavn) — verifisert ved å lese kommando-signaturene direkte,
  *    ikke gjettet.
  *
- * 2. Ikke-implementerte metoder (Database: backupDb/restoreDb/moveDb;
- *    Print: exportPrintPdf/openPath/showInFolder; Auto-update: onUpdateReady/
- *    restartApp) — disse kommandoene finnes IKKE i Rust-backend ennå
- *    (kommer i migrerings-Task 4.1/5.1/7.1). Vi kaller dem IKKE via
- *    `invoke()` (det ville gitt en kryptisk "command not found"-feil uten
- *    kontekst). I stedet returnerer/kaster de en tydelig, diagnostiserbar
+ * 2. Ikke-implementerte metoder (Print: exportPrintPdf/openPath/showInFolder;
+ *    Auto-update: onUpdateReady/restartApp) — disse kommandoene finnes IKKE
+ *    i Rust-backend ennå (kommer i migrerings-Task 5.1/7.1). Vi kaller dem
+ *    IKKE via `invoke()` (det ville gitt en kryptisk "command not found"-feil
+ *    uten kontekst). I stedet returnerer/kaster de en tydelig, diagnostiserbar
  *    feil med referanse til hvilken fremtidig task som vil implementere dem.
+ *    (Database: backupDb/restoreDb/moveDb var i denne kategorien frem til
+ *    Task 4.1, som portet `src-tauri/src/commands/db_maintenance.rs` — de
+ *    kaller nå de ekte `backup_db`/`restore_db`/`move_db`-kommandoene.)
  *
  * 3. Window controls (minimizeWindow/maximizeWindow/closeWindow) — disse
  *    trenger ingen egne Tauri-kommandoer. Tauri 2 sin innebygde
@@ -64,10 +66,10 @@ const tauriApi = {
   getSettings: () => invoke('get_settings'),
   saveSettings: (data) => invoke('save_settings', { update: data }),
 
-  // Database — kommandoer finnes ikke ennå i Rust-backend (Task 4.1).
-  backupDb: () => notImplemented('backupDb', 'Task 4.1'),
-  restoreDb: () => notImplemented('restoreDb', 'Task 4.1'),
-  moveDb: () => notImplemented('moveDb', 'Task 4.1'),
+  // Database
+  backupDb: () => invoke('backup_db'),
+  restoreDb: () => invoke('restore_db'),
+  moveDb: () => invoke('move_db'),
 
   // Print / PDF-eksport — kommandoer finnes ikke ennå i Rust-backend (Task 5.1/6).
   exportPrintPdf: (data) => notImplemented('exportPrintPdf', 'Task 6'),
