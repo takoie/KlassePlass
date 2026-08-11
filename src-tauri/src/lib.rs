@@ -1,9 +1,12 @@
+pub mod commands;
 pub mod db;
 pub mod pdf_export;
 pub mod schema;
 
 use std::sync::Mutex;
 use tauri::Manager;
+
+use commands::classes::{delete_class, get_class, get_classes, save_class};
 
 // Spike-command for Task 0.2: verifiserer at printpdf kan generere en lesbar PDF,
 // kalt fra frontend via Tauri sin invoke-bro. Midlertidig - forenkles/utvides i Fase 6.
@@ -15,7 +18,13 @@ fn spike_pdf(path: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![spike_pdf])
+    .invoke_handler(tauri::generate_handler![
+      spike_pdf,
+      get_classes,
+      get_class,
+      save_class,
+      delete_class
+    ])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
