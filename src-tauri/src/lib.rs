@@ -28,6 +28,24 @@ pub fn run() {
       let user_data_dir = app.path().app_data_dir()?;
       let db_path = db::resolve_db_path(&user_data_dir);
       let conn = db::open_connection(&db_path)?;
+
+      // Back up the on-disk file BEFORE running any migrations, since those
+      // mutate the file in place. See db::backup_before_migrate_if_needed
+      // for the exact "from_version > 0 && from_version < target" guard.
+      let from_version = db::get_schema_version(&conn);
+      let backup_path =
+        db::backup_before_migrate_if_needed(&db_path, from_version, schema::CURRENT_VERSION)?;
+
+      let migration_info = backup_path.map(|backup_path| db::MigrationInfo {
+        from_version,
+        to_version: schema::CURRENT_VERSION,
+        backup_path,
+      });
+      app.manage(db::MigrationInfoState(Mutex::new(migration_info)));
+
+      schema::run_migrations(&conn)?;
+      schema::migrate_room_layouts(&conn)?;
+
       app.manage(db::DbState(Mutex::new(conn)));
 
       Ok(())
