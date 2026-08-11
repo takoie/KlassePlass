@@ -1,5 +1,6 @@
 pub mod db;
 pub mod pdf_export;
+pub mod schema;
 
 use std::sync::Mutex;
 use tauri::Manager;
