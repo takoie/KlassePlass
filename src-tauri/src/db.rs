@@ -15,7 +15,13 @@ pub struct DbState(pub Mutex<Connection>);
 /// Info about a backup made during startup because the on-disk schema was
 /// older than `schema::CURRENT_VERSION`. Recorded so a later task (the
 /// `get-migration-info` IPC command, Fase 2) can surface it to the frontend.
-#[derive(Debug, Clone)]
+///
+/// `Serialize` with `rename_all = "camelCase"` so the JSON shape sent to the
+/// frontend matches what the JS side expects (`fromVersion`, `toVersion`,
+/// `backupPath`) - mirroring the shape `getMigrationInfo()` produced in
+/// src/db.js.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MigrationInfo {
   pub from_version: i32,
   pub to_version: i32,

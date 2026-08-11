@@ -1,7 +1,9 @@
+pub mod app_info;
 pub mod classes;
 pub mod constraints;
 pub mod groups;
 pub mod json_field;
 pub mod rooms;
 pub mod seatings;
+pub mod settings;
 pub mod stations;

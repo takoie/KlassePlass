@@ -6,6 +6,7 @@ pub mod schema;
 use std::sync::Mutex;
 use tauri::Manager;
 
+use commands::app_info::{get_migration_info, get_version};
 use commands::classes::{delete_class, get_class, get_classes, save_class};
 use commands::constraints::get_constraints;
 use commands::groups::{
@@ -14,6 +15,7 @@ use commands::groups::{
 };
 use commands::rooms::{delete_room, get_room, get_rooms, save_room};
 use commands::seatings::{delete_seating, get_seating, get_seatings, save_seating};
+use commands::settings::{get_settings, save_settings};
 use commands::stations::{
   delete_station_session, get_station_session, get_station_sessions, save_station_session,
 };
@@ -53,7 +55,11 @@ pub fn run() {
       get_station_sessions,
       get_station_session,
       save_station_session,
-      delete_station_session
+      delete_station_session,
+      get_settings,
+      save_settings,
+      get_version,
+      get_migration_info
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
