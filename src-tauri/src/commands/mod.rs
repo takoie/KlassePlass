@@ -6,6 +6,7 @@ pub mod groups;
 pub mod json_field;
 pub mod print_export;
 pub mod rooms;
+pub mod save_result;
 pub mod seatings;
 pub mod settings;
 pub mod stations;

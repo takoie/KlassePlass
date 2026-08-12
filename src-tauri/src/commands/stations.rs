@@ -33,6 +33,7 @@ use serde_json::Value;
 use tauri::State;
 
 use super::json_field::{decode_json_field, encode_json_field};
+use super::save_result::SaveResult;
 use crate::db::DbState;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -263,9 +264,11 @@ pub fn get_station_session(
 pub fn save_station_session(
   state: State<DbState>,
   input: StationSessionInput,
-) -> Result<i64, String> {
+) -> Result<SaveResult, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
-  save_station_session_impl(&conn, &input).map_err(|e| e.to_string())
+  save_station_session_impl(&conn, &input)
+    .map(SaveResult::new)
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -341,6 +344,17 @@ mod tests {
     assert_eq!(fetched.minutes_per_station, Some(15));
     assert_eq!(fetched.seconds_per_station, Some(30));
     assert_eq!(fetched.no_timer, 1);
+  }
+
+  #[test]
+  fn save_station_session_command_return_shape_serializes_as_last_id_and_changes() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let id = save_station_session_impl(&conn, &base_input(class_id)).unwrap();
+    let wrapped = SaveResult::new(id);
+
+    let json = serde_json::to_value(wrapped).unwrap();
+    assert_eq!(json, serde_json::json!({"lastID": id, "changes": 1}));
   }
 
   #[test]

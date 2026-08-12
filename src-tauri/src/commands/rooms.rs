@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::State;
 
+use super::save_result::SaveResult;
 use crate::db::DbState;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -120,9 +121,11 @@ pub fn get_room(state: State<DbState>, id: i64) -> Result<Option<RoomRecord>, St
 }
 
 #[tauri::command]
-pub fn save_room(state: State<DbState>, record: RoomRecord) -> Result<i64, String> {
+pub fn save_room(state: State<DbState>, record: RoomRecord) -> Result<SaveResult, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
-  save_room_impl(&conn, &record).map_err(|e| e.to_string())
+  save_room_impl(&conn, &record)
+    .map(SaveResult::new)
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -262,6 +265,21 @@ mod tests {
 
     let missing = get_room_impl(&conn, id + 9999).unwrap();
     assert!(missing.is_none());
+  }
+
+  #[test]
+  fn save_room_command_return_shape_serializes_as_last_id_and_changes() {
+    let conn = setup();
+    let record = RoomRecord {
+      id: None,
+      name: "Wrapped".to_string(),
+      layout_data: serde_json::json!([]),
+    };
+    let id = save_room_impl(&conn, &record).unwrap();
+    let wrapped = SaveResult::new(id);
+
+    let json = serde_json::to_value(wrapped).unwrap();
+    assert_eq!(json, serde_json::json!({"lastID": id, "changes": 1}));
   }
 
   #[test]

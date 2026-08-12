@@ -41,6 +41,7 @@ use serde_json::Value;
 use tauri::State;
 
 use super::json_field::{decode_json_field, encode_json_field};
+use super::save_result::SaveResult;
 use crate::db::DbState;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -407,9 +408,11 @@ pub fn get_group_assignment(
 pub fn save_group_assignment(
   state: State<DbState>,
   input: GroupAssignmentInput,
-) -> Result<i64, String> {
+) -> Result<SaveResult, String> {
   let mut conn = state.0.lock().map_err(|e| e.to_string())?;
-  save_group_assignment_impl(&mut conn, &input).map_err(|e| e.to_string())
+  save_group_assignment_impl(&mut conn, &input)
+    .map(SaveResult::new)
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -510,6 +513,17 @@ mod tests {
     assert_eq!(children[0].group_name, Some("Gruppe 1".to_string()));
     assert_eq!(children[1].group_number, 2);
     assert_eq!(children[1].group_name, None);
+  }
+
+  #[test]
+  fn save_group_assignment_command_return_shape_serializes_as_last_id_and_changes() {
+    let mut conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let id = save_group_assignment_impl(&mut conn, &base_input(class_id)).unwrap();
+    let wrapped = SaveResult::new(id);
+
+    let json = serde_json::to_value(wrapped).unwrap();
+    assert_eq!(json, serde_json::json!({"lastID": id, "changes": 1}));
   }
 
   #[test]
