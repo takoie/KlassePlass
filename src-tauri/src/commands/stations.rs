@@ -53,8 +53,11 @@ use crate::db::DbState;
 /// TEXT-kolonneverdiene (eller `None` for SQL NULL), IKKE parset til en
 /// `serde_json::Value`. Se modul-doc for full begrunnelse (samme bug-klasse
 /// som classes.rs::ClassReadRecord/groups.rs::GroupAssignmentRecord).
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se rooms.rs::RoomReadRecord
+/// for full begrunnelse (samme bug-klasse, samme fiks): frontend leser
+/// `class_id`/`created_at`/`teacher_station_id`/`group_leaders`/`no_timer`/
+/// osv. (snake_case) rått fra respons-objektet.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct StationSessionRecord {
   pub id: i64,
   pub name: String,
@@ -74,8 +77,8 @@ pub struct StationSessionRecord {
 /// LEFT JOIN-et `class_name`, som ikke finnes på `get_station_session`
 /// (SINGULAR-visningen). `stations`/`groups`/`rotation_plan`/`group_leaders`
 /// er rå TEXT-passthrough, se `StationSessionRecord`.
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se `StationSessionRecord` over.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct StationSessionListItem {
   pub id: i64,
   pub name: String,

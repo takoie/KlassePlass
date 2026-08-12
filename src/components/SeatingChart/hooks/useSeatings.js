@@ -239,7 +239,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   const getRecentPartners = (studentId, maxCount = 2) => {
     if (!studentId) return [];
     const pastCharts = seatings
-      .filter(s => s.class_id === selectedClass && s.id !== Number(selectedSeatingId))
+      .filter(s => s.class_id === Number(selectedClass) && s.id !== Number(selectedSeatingId))
       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     const foundIds = [];
@@ -277,7 +277,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     }
 
     const pastCharts = seatings
-       .filter(s => s.class_id === selectedClass && s.id !== Number(selectedSeatingId))
+       .filter(s => s.class_id === Number(selectedClass) && s.id !== Number(selectedSeatingId))
        .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
        .slice(0, 5);
 
@@ -418,8 +418,8 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       const result = await window.api.saveSeating({
         id: selectedSeatingId || null,
         name: chartName.trim(),
-        classId: selectedClass,
-        roomId: selectedRoom,
+        classId: Number(selectedClass),
+        roomId: Number(selectedRoom),
         placements: savePayload,
         comment: chartComment
       });
@@ -462,8 +462,8 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       const result = await window.api.saveSeating({
         id: null,
         name: newName,
-        classId: selectedClass,
-        roomId: selectedRoom,
+        classId: Number(selectedClass),
+        roomId: Number(selectedRoom),
         placements: savePayload,
         comment: newComment
       });
@@ -511,7 +511,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       // den (som før, når ingen kart var igjen) forblir "uplassert"-lista den gamle,
       // nesten tomme verdien fra det slettede kartet i stedet for full klasseliste,
       // og elevene så ut som de forsvant fra administrer-skuffen.
-      const sameClassSeatings = newSeatings.filter(s => s.class_id === selectedClass);
+      const sameClassSeatings = newSeatings.filter(s => s.class_id === Number(selectedClass));
       if (sameClassSeatings.length > 0) {
         handleSelectSeating(sameClassSeatings[0].id, newSeatings);
       } else {

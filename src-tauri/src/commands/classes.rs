@@ -30,6 +30,14 @@ use crate::db::DbState;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ClassRecord {
+  /// `#[serde(default)]`: en IPC-payload som ikke inkluderer "id"-nøkkelen i
+  /// det hele tatt (til forskjell fra å eksplisitt sende `id: null`) skal
+  /// fortsatt deserialisere til `None`, ikke feile. Uten dette attributtet
+  /// krever serde at nøkkelen er TIL STEDE (selv om verdien er null) - en
+  /// frontend-kallsted som glemmer å inkludere "id" ved oppretting av en ny
+  /// klasse fikk IPC-kallet til å feile med en uklar deserialiserings-feil
+  /// som frontend viste som "Kunne ikke opprette ny klasse".
+  #[serde(default)]
   pub id: Option<i64>,
   pub name: String,
   pub students: Value,
@@ -248,6 +256,20 @@ mod tests {
     let classes = get_classes_impl(&conn).unwrap();
     let names: Vec<&str> = classes.iter().map(|c| c.name.as_str()).collect();
     assert_eq!(names, vec!["Alice", "Bob", "Charlie"]);
+  }
+
+  #[test]
+  fn class_record_deserializes_when_id_key_is_entirely_absent_from_payload() {
+    // Regresjonstest for bug: frontend sin "Opprett ny klasse"-payload
+    // inkluderte ikke "id"-nøkkelen i det hele tatt (til forskjell fra
+    // `{"id": null, ...}` som resten av appens create-kall bruker), noe som
+    // uten `#[serde(default)]` på `ClassRecord.id` fikk Tauri sin IPC-
+    // deserialisering til å feile med "missing field `id`" - vist til
+    // brukeren som "Kunne ikke opprette ny klasse".
+    let json = r#"{"name":"Ny klasse","students":"{\"students\":[],\"rules\":[]}"}"#;
+    let record: ClassRecord = serde_json::from_str(json).unwrap();
+    assert_eq!(record.id, None);
+    assert_eq!(record.name, "Ny klasse");
   }
 
   #[test]

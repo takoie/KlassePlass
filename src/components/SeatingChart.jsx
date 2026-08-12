@@ -140,9 +140,9 @@ export default function SeatingChart({ onBack, initialId }) {
   }, []);
 
 
-  const handleDeskContextMenu = (e, desk, student = null) => {
+  const handleDeskContextMenu = (e, desk, student = null, slotKey = null) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, desk, student });
+    setContextMenu({ x: e.clientX, y: e.clientY, desk, student, slotKey });
   };
 
   const {
@@ -192,6 +192,13 @@ export default function SeatingChart({ onBack, initialId }) {
       }
       return next;
     });
+  };
+
+  // Låser/åpner KUN den ene setet en elev sitter i - til forskjell fra
+  // toggleLockDesk over, som låser/åpner alle seter ved bordet samlet.
+  const toggleLockStudent = (slotKey) => {
+    if (!slotKey) return;
+    setLockedSeats(prev => ({ ...prev, [slotKey]: !prev[slotKey] }));
   };
 
   const openNoteModal = (studentObj) => {
@@ -463,7 +470,7 @@ export default function SeatingChart({ onBack, initialId }) {
                                 <div
                                   key={slotIdx}
                                   className={`flex-1 h-full rounded-lg flex items-center justify-center relative transition-colors ${bgClass}`}
-                                  onContextMenu={(e) => { if (studentObj) { e.preventDefault(); e.stopPropagation(); handleDeskContextMenu(e, d, studentObj); } }}
+                                  onContextMenu={(e) => { if (studentObj) { e.preventDefault(); e.stopPropagation(); handleDeskContextMenu(e, d, studentObj, slotKey); } }}
                                 >
                                   {showNumbers && seatNumbers[slotIdx] !== undefined && (
                                     <div className="absolute -top-3 -left-2 z-20 pointer-events-none">
@@ -479,9 +486,9 @@ export default function SeatingChart({ onBack, initialId }) {
                                   )}
                                   {!hideSensitiveInfo && (
                                     <button 
-                                      className={`absolute top-0.5 right-0.5 text-[9px] ${isLocked ? 'text-amber-400 opacity-100 z-40' : 'opacity-0 hover:opacity-100 text-slate-400 z-40'}`} 
-                                      onClick={(e) => { e.stopPropagation(); toggleLockDesk(d.id); }}
-                                      title="Lås/Lås opp hele bordet"
+                                      className={`absolute top-0.5 right-0.5 text-[9px] ${isLocked ? 'text-amber-400 opacity-100 z-40' : 'opacity-0 hover:opacity-100 text-slate-400 z-40'}`}
+                                      onClick={(e) => { e.stopPropagation(); toggleLockStudent(slotKey); }}
+                                      title="Lås/Lås opp elev"
                                     >
                                       <i className={`fa-solid ${isLocked ? 'fa-lock drop-shadow-[0_0_2px_rgba(251,191,36,0.8)]' : 'fa-lock-open'}`}></i>
                                     </button>
@@ -579,6 +586,7 @@ export default function SeatingChart({ onBack, initialId }) {
         contextMenu={contextMenu}
         lockedSeats={lockedSeats}
         toggleLockDesk={toggleLockDesk}
+        toggleLockStudent={toggleLockStudent}
         setContextMenu={setContextMenu}
         handleSetGroupContextMenu={handleSetGroupContextMenu}
         GROUP_COLORS={GROUP_COLORS}

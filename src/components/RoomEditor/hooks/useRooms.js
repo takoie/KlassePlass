@@ -105,6 +105,16 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     }
   };
 
+  // Antall rader som gir flest hele rader uten å overskride maxSeats, uten å
+  // endre selve gruppestrukturen (ingen ekstra bord lagt til for å tette
+  // gapet opp til maxSeats - kun antall rader varierer).
+  const computePresetRowCount = (structurePattern, maxSeats = 30) => {
+    if (structurePattern === 'blank') return 0;
+    const seatsPerRow = structurePattern.split('-').map(Number).reduce((sum, g) => sum + (isNaN(g) ? 0 : g), 0);
+    if (seatsPerRow <= 0) return 0;
+    return Math.max(1, Math.floor(maxSeats / seatsPerRow));
+  };
+
   const buildPresetDesks = (structurePattern, numRows = 4) => {
     if (structurePattern === 'blank') return [];
     const groups = structurePattern.split('-').map(Number);
@@ -150,7 +160,7 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     isInitialLoadRef.current = true;
     const nameToSave = newRoomModalName.trim();
 
-    const initialDesks = buildPresetDesks(selectedPreset, 4);
+    const initialDesks = buildPresetDesks(selectedPreset, computePresetRowCount(selectedPreset));
     let initialBoard = { x: 422, y: 15 };
     let finalDesks = initialDesks;
 

@@ -13,3 +13,6 @@ out/
 .claude/
 .agent/
 docs/
+
+CLAUDE.md
+graphify-out/*

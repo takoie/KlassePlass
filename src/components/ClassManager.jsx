@@ -8,6 +8,22 @@ const normalizeStudent = (s) => {
   return s && s.id && s.name ? s : { id: `stu-${Math.random().toString(36).substr(2, 9)}`, name: String(s || '') };
 };
 
+// Fornavn = første token, etternavn = siste token, mellomnavn = alt i mellom.
+// Brukes av masseimport for å la lærere velge bort mellomnavn og/eller
+// forkorte/fjerne etternavn ved import (uten å røre navn som allerede står
+// i klasselisten fra før).
+const transformImportedName = (rawName, { stripMiddleNames, lastNameMode }) => {
+  const parts = rawName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts.join(' ');
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  const middle = stripMiddleNames ? [] : parts.slice(1, -1);
+  let lastPart = last;
+  if (lastNameMode === 'remove') lastPart = null;
+  else if (lastNameMode === 'initial') lastPart = `${last.charAt(0).toUpperCase()}.`;
+  return [first, ...middle, ...(lastPart ? [lastPart] : [])].join(' ');
+};
+
 export default function ClassManager({ onBack, initialId }) {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
@@ -19,6 +35,8 @@ export default function ClassManager({ onBack, initialId }) {
   const [rules, setRules] = useState([]);
   const [newStudentName, setNewStudentName] = useState('');
   const [importData, setImportData] = useState('');
+  const [importStripMiddleNames, setImportStripMiddleNames] = useState(false);
+  const [importLastNameMode, setImportLastNameMode] = useState('keep'); // 'keep' | 'initial' | 'remove'
   const [saveState, setSaveState] = useState('saved');
 
   // Rule Form States
@@ -95,7 +113,7 @@ export default function ClassManager({ onBack, initialId }) {
     isInitialLoadRef.current = true;
     try {
       const payload = JSON.stringify({ students: [], rules: [] });
-      const result = await window.api.saveClass({ name: 'Ny klasse', students: payload });
+      const result = await window.api.saveClass({ id: null, name: 'Ny klasse', students: payload });
       const newCls = { id: result.lastID, name: 'Ny klasse', students: payload };
       setSelectedClass(newCls);
       setClassName('Ny klasse');
@@ -199,7 +217,7 @@ export default function ClassManager({ onBack, initialId }) {
     const imported = importData.split(/[\n,\t]+/).map(s => s.trim()).filter(s => s !== '');
     const newObjects = imported.map(name => ({
       id: `stu-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      name
+      name: transformImportedName(name, { stripMiddleNames: importStripMiddleNames, lastNameMode: importLastNameMode })
     }));
     setStudents([...students, ...newObjects]);
     setImportData('');
@@ -461,12 +479,35 @@ export default function ClassManager({ onBack, initialId }) {
             <i className="fa-solid fa-file-import text-indigo-400"></i> Masseimport av elever
           </h3>
           <p className="text-xs text-slate-400 mb-2">Lim inn navn fra Excel, Word eller CSV. Skill med linjeskift eller komma.</p>
-          <textarea 
-            className="textarea textarea-bordered w-full h-48 bg-surface-field border-slate-700 font-mono text-sm text-white" 
-            placeholder="Kari Nordmann&#10;Ola Nordmann&#10;Per P..."
+          <textarea
+            className="textarea textarea-bordered w-full h-48 bg-surface-field border-slate-700 font-mono text-sm text-white"
+            placeholder="Kari Anne Nordmann&#10;Ola Nordmann&#10;Per P..."
             value={importData}
             onChange={(e) => setImportData(e.target.value)}
           ></textarea>
+          <div className="flex flex-wrap items-center gap-4 mt-3">
+            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-xs"
+                checked={importStripMiddleNames}
+                onChange={(e) => setImportStripMiddleNames(e.target.checked)}
+              />
+              Fjern mellomnavn
+            </label>
+            <label className="flex items-center gap-2 text-xs text-slate-300">
+              Etternavn
+              <select
+                className="select select-bordered select-xs bg-surface-field border-slate-700 text-white"
+                value={importLastNameMode}
+                onChange={(e) => setImportLastNameMode(e.target.value)}
+              >
+                <option value="keep">Behold fullt</option>
+                <option value="initial">Vis kun forbokstav</option>
+                <option value="remove">Fjern</option>
+              </select>
+            </label>
+          </div>
           <div className="modal-action">
             <form method="dialog">
               <button className="btn btn-ghost text-slate-400 mr-2" onClick={() => setImportData('')}>Avbryt</button>

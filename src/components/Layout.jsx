@@ -2,11 +2,19 @@ import React, { useState, useEffect } from 'react';
 
 export default function Layout({ currentView, setCurrentView, onOpenOnboarding, children }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
     const handler = (e) => setIsFullscreen(e.detail);
     window.addEventListener('toggle-projector', handler);
     return () => window.removeEventListener('toggle-projector', handler);
+  }, []);
+
+  useEffect(() => {
+    let unlisten;
+    window.api?.isWindowMaximized?.().then(setIsMaximized);
+    window.api?.onWindowMaximizeChange?.(setIsMaximized)?.then((fn) => { unlisten = fn; });
+    return () => unlisten?.();
   }, []);
 
   const mainTabs = [
@@ -31,8 +39,8 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.minimizeWindow()} title="Minimer">
               <i className="fa-solid fa-minus text-xs"></i>
             </button>
-            <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.maximizeWindow()} title="Maksimer">
-              <i className="fa-regular fa-square text-xs"></i>
+            <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.maximizeWindow()} title={isMaximized ? 'Gjenopprett' : 'Maksimer'}>
+              <i className={isMaximized ? 'fa-solid fa-window-restore text-xs' : 'fa-regular fa-square text-xs'}></i>
             </button>
             <button className="w-9 h-7 flex items-center justify-center rounded bg-[#ef4444] text-white hover:bg-red-600 transition-colors shadow" onClick={() => window.api?.closeWindow()} title="Lukk">
               <i className="fa-solid fa-xmark text-sm font-bold"></i>

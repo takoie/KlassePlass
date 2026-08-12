@@ -4,6 +4,8 @@
   "version": "../package.json",
   "identifier": "com.klasseplass.app",
   "build": {
+    "beforeDevCommand": "npm run vite",
+    "beforeBuildCommand": "npm run vite -- build",
     "frontendDist": "../dist-react",
     "devUrl": "http://localhost:3000"
   },

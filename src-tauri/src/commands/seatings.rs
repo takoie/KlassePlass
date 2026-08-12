@@ -45,8 +45,11 @@ pub struct SeatingRecord {
 /// TEXT-kolonneverdien (eller `None` for SQL NULL), IKKE parset til en
 /// `serde_json::Value` - se classes.rs::ClassReadRecord for den fulle
 /// begrunnelsen (samme bug, samme fiks).
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se rooms.rs::RoomReadRecord
+/// for full begrunnelse (samme bug-klasse, samme fiks): frontend leser
+/// `class_id`/`room_id`/`class_name`/`room_name`/`created_at`/`placements`
+/// (snake_case) rått fra respons-objektet.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct SeatingListItem {
   pub id: i64,
   pub name: Option<String>,
@@ -62,8 +65,8 @@ pub struct SeatingListItem {
 /// Rad returnert av `get_seating` - se `SeatingListItem` over for
 /// begrunnelsen for `Option<String>` fremfor `Value`. `SeatingRecord` (over)
 /// beholdes uendret for `save_seating`-inputen.
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se `SeatingListItem` over.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct SeatingReadRecord {
   pub id: Option<i64>,
   pub name: Option<String>,
@@ -241,6 +244,23 @@ mod tests {
       .execute("INSERT INTO rooms (name, layout_data) VALUES (?1, '[]')", [name])
       .unwrap();
     conn.last_insert_rowid()
+  }
+
+  #[test]
+  fn class_id_and_room_id_must_be_numeric_not_string() {
+    // Regresjonstest for bug: frontend sendte tidligere classId/roomId rett
+    // fra <select>-elementenes value (alltid en JS-streng, f.eks. "3") uten
+    // å wrappe med Number(...) ved oppretting av klassekart. IPC-laget
+    // deserialiserer `class_id`/`room_id: Option<i64>` og godtar IKKE en
+    // JSON-streng der - kallet feilet med "invalid type: string, expected
+    // i64", vist til brukeren som "Kunne ikke opprette klassekartet".
+    let json_with_string_ids = r#"{"id":null,"name":"Test","classId":"3","roomId":"5","placements":"{}","comment":"Uke 1-4"}"#;
+    let result: Result<SeatingRecord, _> = serde_json::from_str(json_with_string_ids);
+    assert!(result.is_err(), "forventet at streng-IDer feiler deserialisering mot Option<i64>");
+
+    let json_with_numeric_ids = r#"{"id":null,"name":"Test","classId":3,"roomId":5,"placements":"{}","comment":"Uke 1-4"}"#;
+    let numeric_result: Result<SeatingRecord, _> = serde_json::from_str(json_with_numeric_ids);
+    assert!(numeric_result.is_ok(), "numeriske IDer skal deserialisere greit");
   }
 
   fn insert_seating_with_timestamp(

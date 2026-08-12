@@ -13,8 +13,10 @@ use tauri::State;
 
 use crate::db::DbState;
 
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se rooms.rs::RoomReadRecord
+/// for full begrunnelse (samme bug-klasse, samme fiks): frontend leser
+/// `class_id`/`student_a`/`student_b` (snake_case) rått fra respons-objektet.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct ConstraintRecord {
   pub id: i64,
   pub class_id: i64,

@@ -62,8 +62,11 @@ use crate::db::DbState;
 /// og `locked_ids` er de RÅ TEXT-kolonneverdiene (eller `None` for SQL NULL),
 /// IKKE parset til en `serde_json::Value`. Se modul-doc for full begrunnelse
 /// (samme bug-klasse som classes.rs::ClassReadRecord).
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se rooms.rs::RoomReadRecord
+/// for full begrunnelse (samme bug-klasse, samme fiks): frontend leser
+/// `class_id`/`source_seating_id`/`leader_ids`/`locked_ids`/`created_at`/osv.
+/// (snake_case) rått fra respons-objektet.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct GroupAssignmentRecord {
   pub id: i64,
   pub name: String,
@@ -82,8 +85,8 @@ pub struct GroupAssignmentRecord {
 /// LEFT JOIN-et `class_name` og en beregnet `group_count`-subquery-kolonne
 /// som ikke finnes på `get_group_assignment` (SINGULAR-visningen).
 /// `leader_ids`/`locked_ids` er rå TEXT-passthrough, se `GroupAssignmentRecord`.
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se `GroupAssignmentRecord` over.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct GroupAssignmentListItem {
   pub id: i64,
   pub name: String,
@@ -102,8 +105,8 @@ pub struct GroupAssignmentListItem {
 
 /// Rad returnert av `get_group_assignment_groups` - `student_ids` er rå
 /// TEXT-passthrough, se `GroupAssignmentRecord`.
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se `GroupAssignmentRecord` over.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct GroupAssignmentGroupRecord {
   pub id: i64,
   pub assignment_id: i64,
@@ -114,8 +117,8 @@ pub struct GroupAssignmentGroupRecord {
 
 /// Rad returnert av `get_group_history` - `pairs` er rå TEXT-passthrough, se
 /// `GroupAssignmentRecord`.
+/// INGEN `#[serde(rename_all = "camelCase")]` her - se `GroupAssignmentRecord` over.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct GroupHistoryRecord {
   pub id: i64,
   pub class_id: i64,

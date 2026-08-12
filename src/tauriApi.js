@@ -48,10 +48,50 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { getCurrentWindow, currentMonitor } from '@tauri-apps/api/window';
 import { openPath as pluginOpenPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { onUpdateReady as onUpdateReadyImpl } from './tauriUpdater.js';
+
+// --- Egendefinert maksimer/gjenopprett-tilstand ------------------------
+// Tauris native isMaximized() på Windows avgjøres ved å sammenligne
+// vindusstørrelsen mot FULL skjermstørrelse (ikke workArea). Et manuelt
+// setPosition/setSize-kall til workArea (nødvendig for å unngå at
+// rammeløse vinduer maksimerer seg over taskbaren - samme kjente bug som
+// den gamle Electron-fiksen i window-manager.js løste) gjør derfor at
+// isMaximized() ALDRI igjen kan gjenkjenne vinduet som maksimert, siden
+// størrelsen etter korreksjonen aldri matcher full skjermstørrelse. Native
+// maximize()/unmaximize()/isMaximized() kan følgelig ikke brukes som
+// sannhetskilde her i det hele tatt - vi holder derfor helt selv styr på
+// "er maksimert" + de opprinnelige (ikke-maksimerte) bounds, og bruker
+// UTELUKKENDE setPosition/setSize for både å maksimere og gjenopprette.
+let restoreBounds = null; // { position: PhysicalPosition, size: PhysicalSize } | null - satt når "maksimert"
+let lastKnownNormalBounds = null; // cache av siste kjente ikke-maksimerte bounds - dekker at vinduet kan bli native maksimert via dobbeltklikk på tittellinjen/Windows-snap, som omgår knappen (og dermed restoreBounds-fangsten i applyMaximize)
+const maximizeListeners = new Set();
+const notifyMaximizeListeners = (maximized) => maximizeListeners.forEach((cb) => cb(maximized));
+
+const applyMaximize = async (win) => {
+  const monitor = await currentMonitor();
+  if (!monitor) return;
+  if (!restoreBounds) {
+    restoreBounds = lastKnownNormalBounds || {
+      position: await win.outerPosition(),
+      size: await win.outerSize(),
+    };
+  }
+  await win.setPosition(monitor.workArea.position);
+  await win.setSize(monitor.workArea.size);
+  notifyMaximizeListeners(true);
+};
+
+const applyRestore = async (win) => {
+  if (!restoreBounds) return;
+  const bounds = restoreBounds;
+  restoreBounds = null;
+  await win.setPosition(bounds.position);
+  await win.setSize(bounds.size);
+  notifyMaximizeListeners(false);
+};
 
 const tauriApi = {
   // Klasser
@@ -159,19 +199,54 @@ const tauriApi = {
   getVersion: () => invoke('get_version'),
   getMigrationInfo: () => invoke('get_migration_info'),
 
-  // Window controls — Tauri 2 sin innebygde vindushåndtering, ingen egne
-  // kommandoer nødvendig.
+  // Window controls — minimer/lukk bruker Tauri 2 sin native
+  // vindushåndtering direkte. Maksimer/gjenopprett gjør IKKE det - se
+  // modul-doc ved `restoreBounds` over.
   minimizeWindow: () => getCurrentWindow().minimize(),
   maximizeWindow: async () => {
     const win = getCurrentWindow();
-    // Speiler Electrons window-maximize-handler, som toggler mellom
-    // maximize/unmaximize basert på gjeldende tilstand.
-    if (await win.isMaximized()) {
-      return win.unmaximize();
+    // IKKE native win.maximize()/unmaximize() - se modul-doc over
+    // (applyMaximize/applyRestore) for hvorfor. `restoreBounds` er vår egen
+    // sannhetskilde: satt = "maksimert" (av OSS), null = "normal".
+    if (restoreBounds) {
+      return applyRestore(win);
     }
-    return win.maximize();
+    return applyMaximize(win);
   },
   closeWindow: () => getCurrentWindow().close(),
+  isWindowMaximized: () => Promise.resolve(restoreBounds !== null),
+  // Callback får gjeldende maksimert-tilstand hver gang den endres - enten
+  // via knappen (applyMaximize/applyRestore over) eller via native
+  // dobbeltklikk-på-tittellinje/Windows-snap (fanget opp av
+  // resize-lytteren under, som holder `lastKnownNormalBounds` oppdatert
+  // mens vi IKKE selv tror vinduet er maksimert, og korrigerer til
+  // workArea + registrerer det i vårt system idet OS-et sier isMaximized()
+  // uten at VI initierte det). Returnerer en Promise for unlisten-funksjonen.
+  onWindowMaximizeChange: (callback) => {
+    maximizeListeners.add(callback);
+    const win = getCurrentWindow();
+    let checking = false;
+    const unlistenPromise = win.onResized(async () => {
+      if (checking || restoreBounds) return; // vi styrer allerede denne overgangen (knapp ELLER en tidligere iterasjon av denne korreksjonen)
+      checking = true;
+      try {
+        const nativeMaximized = await win.isMaximized();
+        if (nativeMaximized) {
+          await applyMaximize(win);
+        } else {
+          lastKnownNormalBounds = {
+            position: await win.outerPosition(),
+            size: await win.outerSize(),
+          };
+        }
+      } catch (e) { /* best effort */ }
+      finally { checking = false; }
+    });
+    return unlistenPromise.then((unlistenResize) => () => {
+      maximizeListeners.delete(callback);
+      unlistenResize();
+    });
+  },
 };
 
 export default tauriApi;

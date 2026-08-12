@@ -127,7 +127,7 @@ export const ClassesOverview = ({ onEdit }) => {
     const name = newClassName.trim() || 'Ny klasse';
     try {
       const payload = JSON.stringify({ students: [], rules: [] });
-      const result = await window.api.saveClass({ name, students: payload });
+      const result = await window.api.saveClass({ id: null, name, students: payload });
       document.getElementById('modal_create_class')?.close();
       await loadClasses();
       if (result?.lastID) onEdit(result.lastID);
@@ -347,8 +347,8 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       const result = await window.api.saveSeating({
         id: null,
         name,
-        classId: selectedClass,
-        roomId: selectedRoom,
+        classId: Number(selectedClass),
+        roomId: Number(selectedRoom),
         placements: '{}',
         comment
       });
@@ -370,8 +370,11 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
     }
   };
 
-  let modalDeskCount = 0;
-  try { modalDeskCount = (JSON.parse(rooms.find(r => r.id === Number(selectedRoom))?.layout_data || '{}').desks || []).length; } catch(e){}
+  let modalSeatCount = 0;
+  try {
+    const roomDesks = JSON.parse(rooms.find(r => r.id === Number(selectedRoom))?.layout_data || '{}').desks || [];
+    modalSeatCount = roomDesks.reduce((sum, d) => sum + (d.capacity || 1), 0);
+  } catch(e){}
   let modalStudentCount = 0;
   try {
     const parsed = JSON.parse(classes.find(c => c.id === Number(selectedClass))?.students || '[]');
@@ -524,7 +527,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                 </select>
                 {selectedRoom && (
                   <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
-                    <i className="fa-solid fa-chair w-3 text-purple-400"></i> {modalDeskCount} bord-plasser
+                    <i className="fa-solid fa-chair w-3 text-purple-400"></i> {modalSeatCount} elevplasser
                   </p>
                 )}
               </div>

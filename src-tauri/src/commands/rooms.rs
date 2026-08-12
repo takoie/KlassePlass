@@ -39,8 +39,16 @@ pub struct RoomRecord {
 /// den til å kaste og falle tilbake til et tomt layout ved navigering).
 ///
 /// `RoomRecord` (over) beholdes uendret for `save_room`-inputen.
+///
+/// INGEN `#[serde(rename_all = "camelCase")]` her (til forskjell fra
+/// `RoomRecord`): frontend leser `layout_data` (snake_case) rått fra
+/// respons-objektet flere steder (RoomEditor/OverviewViews/useSeatings), akkurat
+/// som den gamle Electron/sql.js-kontrakten alltid ga snake_case
+/// kolonnenavn tilbake. Med `rename_all = "camelCase"` her ville JSON-nøkkelen
+/// blitt `layoutData`, og `r.layout_data` på frontend ville alltid vært
+/// `undefined` - `JSON.parse(undefined || '{}')` gir tomt layout, som gjorde
+/// at nyopprettede rom (med valgt preset) alltid viste et blankt canvas.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct RoomReadRecord {
   pub id: Option<i64>,
   pub name: String,
