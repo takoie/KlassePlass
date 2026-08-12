@@ -81,8 +81,11 @@ export default function Toolbar({
                 <i className="fa-solid fa-eraser mr-2"></i> Fjern gruppe
               </button>
               {activeGroupId !== null && (
-                <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={() => setActiveGroupId(null)}>
-                  <i className="fa-solid fa-check mr-1"></i> Avslutt makkergruppe-modus
+                <button
+                  className="h-8 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold bg-amber-500/15 border-2 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 hover:border-amber-400 transition-all"
+                  onClick={() => setActiveGroupId(null)}
+                >
+                  <i className="fa-solid fa-xmark"></i> Avslutt modus
                 </button>
               )}
             </div>

@@ -2,10 +2,11 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 
+// Speiler GROUP_COLORS i SeatingChart.jsx (samme desk.groupId-felt, samme
+// begrunnelse for fargevalget - se kommentaren der).
 const GROUP_COLORS = [
-  '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
-  '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#84cc16',
-  '#06b6d4', '#d946ef', '#e11d48', '#22c55e', '#64748b'
+  '#f59e0b', '#2563eb', '#16a34a', '#dc2626',
+  '#7c3aed', '#db2777', '#0891b2', '#65a30d'
 ];
 
 const zoneMeta = {

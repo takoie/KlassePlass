@@ -11,10 +11,16 @@ import { useGroupLasso } from './SeatingChart/hooks/useGroupLasso';
 import { useStudentDragAndDrop } from './SeatingChart/hooks/useStudentDragAndDrop';
 import { useSeatings } from './SeatingChart/hooks/useSeatings';
 
+// Makkergruppe-fargene 1-8 (kun disse 8 er faktisk valgbare - se
+// [1,2,3,4,5,6,7,8]-gridet i DeskContextMenu.jsx/Toolbar.jsx). Valgt for
+// maksimal parvis avstand i fargesirkelen PLUSS ulik lyshet/metning, ikke
+// bare ulik nyanse - de gamle fargene hadde tre nyanse-klynger som lå for
+// tett (fiolett/indigo/blå, rosa/rød, turkis/smaragd), noe som ble enda
+// vanskeligere å skille på papir siden bordene der KUN markeres med en tynn
+// kantfarge - ingen tall/etikett attåt (se SeatingChartPrintContent.jsx).
 const GROUP_COLORS = [
-  '#f59e0b', '#8b5cf6', '#ec4899', '#3b82f6', '#10b981',
-  '#ef4444', '#6366f1', '#14b8a6', '#f97316', '#84cc16',
-  '#06b6d4', '#d946ef', '#e11d48', '#22c55e', '#64748b'
+  '#f59e0b', '#2563eb', '#16a34a', '#dc2626',
+  '#7c3aed', '#db2777', '#0891b2', '#65a30d'
 ];
 
 const getFontSizeClass = (name) => {
