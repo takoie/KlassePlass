@@ -9,11 +9,23 @@
 // (`get-station-sessions`) mer direkte.
 //
 // VIKTIG (stations/groups/group_leaders/rotation_plan - IKKE
-// streng-passthrough): Samme regel som leader_ids/locked_ids i groups.rs -
-// JS-originalen kjører ALLTID `JSON.stringify(value ?? [])` ubetinget for
-// disse feltene, ALDRI en `typeof x === 'string'`-sjekk. Vi speiler dette med
-// `json_field::encode_json_field`. Se json_field.rs og groups.rs for full
-// begrunnelse.
+// streng-passthrough PÅ SKRIVE-VEIEN): Samme regel som leader_ids/locked_ids
+// i groups.rs - JS-originalen kjører ALLTID `JSON.stringify(value ?? [])`
+// ubetinget for disse feltene, ALDRI en `typeof x === 'string'`-sjekk på
+// SKRIVE-veien. Vi speiler dette med `json_field::encode_json_field`. Se
+// json_field.rs og groups.rs for full begrunnelse.
+//
+// VIKTIG (LESE-veien ER rå streng-passthrough, samme bug-klasse som
+// classes.rs/rooms.rs/seatings.rs/groups.rs): Frontend gjør derimot ALLTID
+// selv `JSON.parse(...)` på disse feltene når den LESER dem tilbake (f.eks.
+// `JSON.parse(s.stations || '[]')` i StationPresenter.jsx/StationSetup.jsx/
+// StationOverview.jsx). Disse feltene var tidligere typet `Value` og PARSET
+// via `decode_json_field` på lese-veien - det fikk `JSON.parse` på frontend
+// til å kaste en TypeError på et allerede-parset objekt, fanget av
+// try/catch og stille erstattet med en tom liste/array. `StationSessionRecord`/
+// `StationSessionListItem` (LESE-strukturene under) har derfor feltene typet
+// `Option<String>` og lest rått via `row.get(...)` - INGEN decode-wrapper.
+// `StationSessionInput` (SKRIVE-strukturen) er UENDRET av denne fiksen.
 //
 // VIKTIG (save-station-session - BEVART QUIRK, samme som seatings.rs):
 // UPDATE-grenen (id er Some) setter KUN name/stations/groups/group_leaders/
@@ -32,43 +44,49 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::State;
 
-use super::json_field::{decode_json_field, encode_json_field};
+use super::json_field::encode_json_field;
 use super::save_result::SaveResult;
 use crate::db::DbState;
 
+/// Rad returnert av `get_station_session` (SINGULAR-visningen) -
+/// `stations`/`groups`/`rotation_plan`/`group_leaders` er de RÅ
+/// TEXT-kolonneverdiene (eller `None` for SQL NULL), IKKE parset til en
+/// `serde_json::Value`. Se modul-doc for full begrunnelse (samme bug-klasse
+/// som classes.rs::ClassReadRecord/groups.rs::GroupAssignmentRecord).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct StationSessionRecord {
   pub id: i64,
   pub name: String,
   pub class_id: i64,
-  pub stations: Value,
-  pub groups: Value,
-  pub rotation_plan: Value,
+  pub stations: Option<String>,
+  pub groups: Option<String>,
+  pub rotation_plan: Option<String>,
   pub minutes_per_station: Option<i64>,
   pub created_at: Option<String>,
   pub teacher_station_id: Option<i64>,
-  pub group_leaders: Value,
+  pub group_leaders: Option<String>,
   pub seconds_per_station: Option<i64>,
   pub no_timer: i64,
 }
 
 /// Rad returnert av `get_station_sessions` (LIST-visningen) - inkluderer
 /// LEFT JOIN-et `class_name`, som ikke finnes på `get_station_session`
-/// (SINGULAR-visningen).
+/// (SINGULAR-visningen). `stations`/`groups`/`rotation_plan`/`group_leaders`
+/// er rå TEXT-passthrough, se `StationSessionRecord`.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct StationSessionListItem {
   pub id: i64,
   pub name: String,
   pub class_id: i64,
-  pub stations: Value,
-  pub groups: Value,
-  pub rotation_plan: Value,
+  pub stations: Option<String>,
+  pub groups: Option<String>,
+  pub rotation_plan: Option<String>,
   pub minutes_per_station: Option<i64>,
   pub created_at: Option<String>,
   pub teacher_station_id: Option<i64>,
-  pub group_leaders: Value,
+  pub group_leaders: Option<String>,
   pub seconds_per_station: Option<i64>,
   pub no_timer: i64,
   pub class_name: Option<String>,
@@ -104,13 +122,13 @@ fn row_to_station_session(row: &rusqlite::Row) -> rusqlite::Result<StationSessio
     id: row.get(0)?,
     name: row.get(1)?,
     class_id: row.get(2)?,
-    stations: decode_json_field(row.get(3)?),
-    groups: decode_json_field(row.get(4)?),
-    rotation_plan: decode_json_field(row.get(5)?),
+    stations: row.get(3)?,
+    groups: row.get(4)?,
+    rotation_plan: row.get(5)?,
     minutes_per_station: row.get(6)?,
     created_at: row.get(7)?,
     teacher_station_id: row.get(8)?,
-    group_leaders: decode_json_field(row.get(9)?),
+    group_leaders: row.get(9)?,
     seconds_per_station: row.get(10)?,
     no_timer: row.get(11)?,
   })
@@ -121,13 +139,13 @@ fn row_to_station_session_list_item(row: &rusqlite::Row) -> rusqlite::Result<Sta
     id: row.get(0)?,
     name: row.get(1)?,
     class_id: row.get(2)?,
-    stations: decode_json_field(row.get(3)?),
-    groups: decode_json_field(row.get(4)?),
-    rotation_plan: decode_json_field(row.get(5)?),
+    stations: row.get(3)?,
+    groups: row.get(4)?,
+    rotation_plan: row.get(5)?,
     minutes_per_station: row.get(6)?,
     created_at: row.get(7)?,
     teacher_station_id: row.get(8)?,
-    group_leaders: decode_json_field(row.get(9)?),
+    group_leaders: row.get(9)?,
     seconds_per_station: row.get(10)?,
     no_timer: row.get(11)?,
     class_name: row.get(12)?,
@@ -334,16 +352,25 @@ mod tests {
     let id = save_station_session_impl(&conn, &input).unwrap();
     assert!(id > 0);
 
+    // READ path returns the raw stored strings as-is (not re-parsed into
+    // objects) - this is the fix for the bug where the frontend's
+    // `JSON.parse(s.stations || '[]')` etc. threw on an already-parsed
+    // object.
     let fetched = get_station_session_impl(&conn, id).unwrap().unwrap();
     assert_eq!(fetched.name, "Session");
     assert_eq!(fetched.class_id, class_id);
-    assert_eq!(fetched.stations, serde_json::json!([{"id": 1, "name": "Station 1"}]));
-    assert_eq!(fetched.groups, serde_json::json!([["s1", "s2"]]));
-    assert_eq!(fetched.group_leaders, serde_json::json!(["s1"]));
-    assert_eq!(fetched.rotation_plan, serde_json::json!([[1, 2]]));
+    assert_eq!(fetched.stations, Some(r#"[{"id":1,"name":"Station 1"}]"#.to_string()));
+    assert_eq!(fetched.groups, Some(r#"[["s1","s2"]]"#.to_string()));
+    assert_eq!(fetched.group_leaders, Some(r#"["s1"]"#.to_string()));
+    assert_eq!(fetched.rotation_plan, Some(r#"[[1,2]]"#.to_string()));
     assert_eq!(fetched.minutes_per_station, Some(15));
     assert_eq!(fetched.seconds_per_station, Some(30));
     assert_eq!(fetched.no_timer, 1);
+    // Round-trip: the returned strings actually parse back to the saved data.
+    let reparsed_stations: Value = serde_json::from_str(fetched.stations.as_ref().unwrap()).unwrap();
+    assert_eq!(reparsed_stations, serde_json::json!([{"id": 1, "name": "Station 1"}]));
+    let reparsed_groups: Value = serde_json::from_str(fetched.groups.as_ref().unwrap()).unwrap();
+    assert_eq!(reparsed_groups, serde_json::json!([["s1", "s2"]]));
   }
 
   #[test]
@@ -378,10 +405,65 @@ mod tests {
 
     let id = save_station_session_impl(&conn, &input).unwrap();
     let fetched = get_station_session_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(fetched.stations, serde_json::json!([]));
-    assert_eq!(fetched.groups, serde_json::json!([]));
-    assert_eq!(fetched.group_leaders, serde_json::json!([]));
-    assert_eq!(fetched.rotation_plan, serde_json::json!([]));
+    assert_eq!(fetched.stations, Some("[]".to_string()));
+    assert_eq!(fetched.groups, Some("[]".to_string()));
+    assert_eq!(fetched.group_leaders, Some("[]".to_string()));
+    assert_eq!(fetched.rotation_plan, Some("[]".to_string()));
+  }
+
+  #[test]
+  fn get_station_session_with_null_group_leaders_decodes_to_none() {
+    // NB: `stations`/`groups`/`rotation_plan` are `TEXT NOT NULL DEFAULT '[]'`
+    // in the schema (can never actually be SQL NULL), but `group_leaders` was
+    // added later via a plain `ADD COLUMN ... TEXT DEFAULT '[]'` (nullable) -
+    // see schema.rs. So this is the only one of the four JSON-blob fields
+    // that can genuinely be NULL in the database.
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    conn
+      .execute(
+        "INSERT INTO station_sessions (name, class_id, group_leaders) VALUES ('NullFields', ?1, NULL)",
+        [class_id],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_station_session_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.group_leaders, None);
+    let json = serde_json::to_value(&fetched).unwrap();
+    assert_eq!(json["groupLeaders"], serde_json::Value::Null);
+  }
+
+  #[test]
+  fn get_station_session_with_malformed_json_fields_passes_through_as_is() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    conn
+      .execute(
+        "INSERT INTO station_sessions (name, class_id, stations, groups, group_leaders, rotation_plan) \
+         VALUES ('Malformed', ?1, 'not valid json{{{', '[]', '[]', '[]')",
+        [class_id],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_station_session_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.stations, Some("not valid json{{{".to_string()));
+  }
+
+  #[test]
+  fn get_station_sessions_list_returns_raw_json_field_strings_not_parsed_values() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let mut input = base_input(class_id);
+    input.stations = Some(serde_json::json!([{"id": 1}]));
+    input.groups = Some(serde_json::json!([["s1"]]));
+    save_station_session_impl(&conn, &input).unwrap();
+
+    let list = get_station_sessions_impl(&conn, None).unwrap();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].stations, Some(r#"[{"id":1}]"#.to_string()));
+    assert_eq!(list[0].groups, Some(r#"[["s1"]]"#.to_string()));
   }
 
   #[test]
@@ -426,10 +508,10 @@ mod tests {
 
     let fetched = get_station_session_impl(&conn, id).unwrap().unwrap();
     assert_eq!(fetched.name, "Updated");
-    assert_eq!(fetched.stations, serde_json::json!(["a"]));
-    assert_eq!(fetched.groups, serde_json::json!(["b"]));
-    assert_eq!(fetched.group_leaders, serde_json::json!(["c"]));
-    assert_eq!(fetched.rotation_plan, serde_json::json!(["d"]));
+    assert_eq!(fetched.stations, Some(r#"["a"]"#.to_string()));
+    assert_eq!(fetched.groups, Some(r#"["b"]"#.to_string()));
+    assert_eq!(fetched.group_leaders, Some(r#"["c"]"#.to_string()));
+    assert_eq!(fetched.rotation_plan, Some(r#"["d"]"#.to_string()));
     assert_eq!(fetched.minutes_per_station, Some(20));
     assert_eq!(fetched.seconds_per_station, Some(45));
     assert_eq!(fetched.no_timer, 1);

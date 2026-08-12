@@ -18,7 +18,22 @@
 // til å bruke denne er bevisst IKKE gjort her - de er allerede
 // gjennomgått/committet, og churn uten funksjonell gevinst der veies ikke opp
 // mot risikoen. Nytt kode i dette og fremtidige batches bør bruke denne.
-
+//
+// VIKTIG (decode_json_field FJERNET): Denne modulen hadde tidligere en
+// `decode_json_field`-funksjon som PARSET den lagrede TEXT-kolonnen til en
+// `serde_json::Value` på LESE-veien (get_group_assignment(s)/
+// get_group_assignment_groups/get_group_history/get_station_session(s) i
+// groups.rs/stations.rs). Det var samme bug-klasse som ble fikset for
+// `students`/`layout_data`/`placements` i classes.rs/rooms.rs/seatings.rs:
+// frontend kaller ubetinget `JSON.parse(...)` på disse feltene (f.eks.
+// `JSON.parse(assignment.leader_ids || '[]')` i GroupEditor.jsx,
+// `JSON.parse(s.stations || '[]')` i StationPresenter.jsx), og et allerede
+// parset objekt/array fikk `JSON.parse` til å kaste en TypeError - fanget av
+// frontendens egen try/catch og stille erstattet med en tom liste, selv om
+// dataen lå trygt lagret i databasen. Lese-veien i groups.rs/stations.rs
+// bruker nå rå `Option<String>` direkte fra `row.get(...)`, uten noen
+// decode-wrapper. `encode_json_field` (under) er en SEPARAT, korrekt
+// SKRIVE-vei-funksjon og er UENDRET av denne fiksen.
 use serde_json::Value;
 
 /// Speiler JS sin ubetingede `JSON.stringify(value ?? [])`: `None` (feltet var
@@ -35,22 +50,6 @@ pub fn encode_json_field(value: Option<&Value>) -> String {
     }
   };
   serde_json::to_string(v).expect("serialisering av serde_json::Value kan ikke feile")
-}
-
-/// Leser en JSON-array-TEXT-kolonne tilbake til en `serde_json::Value`, med
-/// tomt array (`[]`) som fallback for `NULL`/manglende rad ELLER ugyldig
-/// lagret JSON. Brukes for felt som semantisk alltid er arrays (leader_ids,
-/// locked_ids, student_ids, pairs, stations, groups, group_leaders,
-/// rotation_plan) - alle har enten et `DEFAULT '[]'`-skjema eller blir alltid
-/// skrevet via `encode_json_field` over, så et tomt array er den korrekte
-/// "ingenting her ennå"-tilstanden (i motsetning til `Value::Null`, som
-/// classes.rs/rooms.rs/seatings.rs sine felt bruker som fallback siden de
-/// IKKE alltid er arrays).
-pub fn decode_json_field(raw: Option<String>) -> Value {
-  match raw {
-    None => Value::Array(Vec::new()),
-    Some(s) => serde_json::from_str(&s).unwrap_or_else(|_| Value::Array(Vec::new())),
-  }
 }
 
 #[cfg(test)]
@@ -75,26 +74,5 @@ mod tests {
     // escaping), ALDRI brukes som streng-innhold direkte.
     let v = Value::String(r#"["Alice","Bob"]"#.to_string());
     assert_eq!(encode_json_field(Some(&v)), r#""[\"Alice\",\"Bob\"]""#);
-  }
-
-  #[test]
-  fn decode_none_defaults_to_empty_array() {
-    assert_eq!(decode_json_field(None), Value::Array(Vec::new()));
-  }
-
-  #[test]
-  fn decode_valid_json_parses_to_value() {
-    assert_eq!(
-      decode_json_field(Some("[1,2,3]".to_string())),
-      serde_json::json!([1, 2, 3])
-    );
-  }
-
-  #[test]
-  fn decode_invalid_json_defaults_to_empty_array() {
-    assert_eq!(
-      decode_json_field(Some("not json".to_string())),
-      Value::Array(Vec::new())
-    );
   }
 }

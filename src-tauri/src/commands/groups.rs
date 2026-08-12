@@ -6,12 +6,26 @@
 // get-group-history/save-group-history IPC-handlere (linje 131-183). Følger
 // mønsteret etablert i classes.rs (Task 2.1)/rooms.rs/seatings.rs.
 //
-// VIKTIG (leader_ids/locked_ids/student_ids/pairs - IKKE streng-passthrough):
-// I motsetning til `students`/`layout_data`/`placements` (classes.rs/rooms.rs/
-// seatings.rs), gjør JS-originalen ALDRI en `typeof x === 'string'`-sjekk for
-// disse feltene. Den kjører ubetinget `JSON.stringify(value ?? [])`. Vi
-// speiler dette med `json_field::encode_json_field`, IKKE med et
-// passthrough-mønster. Se json_field.rs for full begrunnelse.
+// VIKTIG (leader_ids/locked_ids/student_ids/pairs - IKKE streng-passthrough
+// PÅ SKRIVE-VEIEN): I motsetning til `students`/`layout_data`/`placements`
+// (classes.rs/rooms.rs/seatings.rs), gjør JS-originalen ALDRI en
+// `typeof x === 'string'`-sjekk for disse feltene på SKRIVE-veien. Den
+// kjører ubetinget `JSON.stringify(value ?? [])`. Vi speiler dette med
+// `json_field::encode_json_field`, IKKE med et passthrough-mønster. Se
+// json_field.rs for full begrunnelse.
+//
+// VIKTIG (LESE-veien ER rå streng-passthrough, samme bug-klasse som
+// classes.rs/rooms.rs/seatings.rs): Frontend gjør derimot ALLTID selv
+// `JSON.parse(...)` på disse feltene når den LESER dem tilbake (f.eks.
+// `JSON.parse(assignment.leader_ids || '[]')` i GroupEditor.jsx). Disse
+// feltene var tidligere typet `Value` og PARSET via `decode_json_field` på
+// lese-veien - det fikk `JSON.parse` på frontend til å kaste en TypeError på
+// et allerede-parset objekt, fanget av try/catch og stille erstattet med en
+// tom liste. `GroupAssignmentRecord`/`GroupAssignmentListItem`/
+// `GroupAssignmentGroupRecord`/`GroupHistoryRecord` (LESE-strukturene under)
+// har derfor feltene typet `Option<String>` og lest rått via `row.get(...)`
+// - INGEN decode-wrapper. `GroupAssignmentInput`/`GroupHistoryInput`
+// (SKRIVE-strukturene) er UENDRET av denne fiksen.
 //
 // VIKTIG (save-group-assignment - parent+children i ÉN transaksjon):
 // JS-originalen gjør et upsert av parent-raden (`group_assignments`) PLUSS et
@@ -40,10 +54,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::State;
 
-use super::json_field::{decode_json_field, encode_json_field};
+use super::json_field::encode_json_field;
 use super::save_result::SaveResult;
 use crate::db::DbState;
 
+/// Rad returnert av `get_group_assignment` (SINGULAR-visningen) - `leader_ids`
+/// og `locked_ids` er de RÅ TEXT-kolonneverdiene (eller `None` for SQL NULL),
+/// IKKE parset til en `serde_json::Value`. Se modul-doc for full begrunnelse
+/// (samme bug-klasse som classes.rs::ClassReadRecord).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GroupAssignmentRecord {
@@ -54,15 +72,16 @@ pub struct GroupAssignmentRecord {
   pub use_constraints: i64,
   pub avoid_last_n: Option<i64>,
   pub require_leaders: i64,
-  pub leader_ids: Value,
+  pub leader_ids: Option<String>,
   pub created_at: Option<String>,
-  pub locked_ids: Value,
+  pub locked_ids: Option<String>,
   pub use_custom_names: i64,
 }
 
 /// Rad returnert av `get_group_assignments` (LIST-visningen) - inkluderer
 /// LEFT JOIN-et `class_name` og en beregnet `group_count`-subquery-kolonne
 /// som ikke finnes på `get_group_assignment` (SINGULAR-visningen).
+/// `leader_ids`/`locked_ids` er rå TEXT-passthrough, se `GroupAssignmentRecord`.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GroupAssignmentListItem {
@@ -73,31 +92,35 @@ pub struct GroupAssignmentListItem {
   pub use_constraints: i64,
   pub avoid_last_n: Option<i64>,
   pub require_leaders: i64,
-  pub leader_ids: Value,
+  pub leader_ids: Option<String>,
   pub created_at: Option<String>,
-  pub locked_ids: Value,
+  pub locked_ids: Option<String>,
   pub use_custom_names: i64,
   pub class_name: Option<String>,
   pub group_count: i64,
 }
 
+/// Rad returnert av `get_group_assignment_groups` - `student_ids` er rå
+/// TEXT-passthrough, se `GroupAssignmentRecord`.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GroupAssignmentGroupRecord {
   pub id: i64,
   pub assignment_id: i64,
   pub group_number: i64,
-  pub student_ids: Value,
+  pub student_ids: Option<String>,
   pub group_name: Option<String>,
 }
 
+/// Rad returnert av `get_group_history` - `pairs` er rå TEXT-passthrough, se
+/// `GroupAssignmentRecord`.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GroupHistoryRecord {
   pub id: i64,
   pub class_id: i64,
   pub assignment_id: Option<i64>,
-  pub pairs: Value,
+  pub pairs: Option<String>,
   pub created_at: Option<String>,
 }
 
@@ -158,9 +181,9 @@ fn row_to_group_assignment(row: &rusqlite::Row) -> rusqlite::Result<GroupAssignm
     use_constraints: row.get(4)?,
     avoid_last_n: row.get(5)?,
     require_leaders: row.get(6)?,
-    leader_ids: decode_json_field(row.get(7)?),
+    leader_ids: row.get(7)?,
     created_at: row.get(8)?,
-    locked_ids: decode_json_field(row.get(9)?),
+    locked_ids: row.get(9)?,
     use_custom_names: row.get(10)?,
   })
 }
@@ -174,9 +197,9 @@ fn row_to_group_assignment_list_item(row: &rusqlite::Row) -> rusqlite::Result<Gr
     use_constraints: row.get(4)?,
     avoid_last_n: row.get(5)?,
     require_leaders: row.get(6)?,
-    leader_ids: decode_json_field(row.get(7)?),
+    leader_ids: row.get(7)?,
     created_at: row.get(8)?,
-    locked_ids: decode_json_field(row.get(9)?),
+    locked_ids: row.get(9)?,
     use_custom_names: row.get(10)?,
     class_name: row.get(11)?,
     group_count: row.get(12)?,
@@ -188,7 +211,7 @@ fn row_to_group_assignment_group(row: &rusqlite::Row) -> rusqlite::Result<GroupA
     id: row.get(0)?,
     assignment_id: row.get(1)?,
     group_number: row.get(2)?,
-    student_ids: decode_json_field(row.get(3)?),
+    student_ids: row.get(3)?,
     group_name: row.get(4)?,
   })
 }
@@ -198,7 +221,7 @@ fn row_to_group_history(row: &rusqlite::Row) -> rusqlite::Result<GroupHistoryRec
     id: row.get(0)?,
     class_id: row.get(1)?,
     assignment_id: row.get(2)?,
-    pairs: decode_json_field(row.get(3)?),
+    pairs: row.get(3)?,
     created_at: row.get(4)?,
   })
 }
@@ -509,7 +532,8 @@ mod tests {
     let children = get_group_assignment_groups_impl(&conn, id).unwrap();
     assert_eq!(children.len(), 2);
     assert_eq!(children[0].group_number, 1);
-    assert_eq!(children[0].student_ids, serde_json::json!(["s1", "s2"]));
+    // READ path returns the raw stored string, not a re-parsed Value.
+    assert_eq!(children[0].student_ids, Some(r#"["s1","s2"]"#.to_string()));
     assert_eq!(children[0].group_name, Some("Gruppe 1".to_string()));
     assert_eq!(children[1].group_number, 2);
     assert_eq!(children[1].group_name, None);
@@ -572,13 +596,13 @@ mod tests {
 
     let children = get_group_assignment_groups_impl(&conn, id).unwrap();
     assert_eq!(children.len(), 3);
-    let student_ids: Vec<Value> = children.iter().map(|c| c.student_ids.clone()).collect();
+    let student_ids: Vec<Option<String>> = children.iter().map(|c| c.student_ids.clone()).collect();
     assert_eq!(
       student_ids,
       vec![
-        serde_json::json!(["a"]),
-        serde_json::json!(["b"]),
-        serde_json::json!(["c"])
+        Some(r#"["a"]"#.to_string()),
+        Some(r#"["b"]"#.to_string()),
+        Some(r#"["c"]"#.to_string())
       ]
     );
 
@@ -633,9 +657,18 @@ mod tests {
       .unwrap();
     assert_eq!(raw_leader_ids, r#"["leader-1","leader-2"]"#);
 
+    // READ path returns the raw stored string as-is (not re-parsed into an
+    // object) - this is the fix for the bug where the frontend's
+    // `JSON.parse(assignment.leader_ids || '[]')` threw on an already-parsed
+    // object.
     let parent = get_group_assignment_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(parent.leader_ids, serde_json::json!(["leader-1", "leader-2"]));
-    assert_eq!(parent.locked_ids, serde_json::json!(["locked-1"]));
+    assert_eq!(parent.leader_ids, Some(r#"["leader-1","leader-2"]"#.to_string()));
+    assert_eq!(parent.locked_ids, Some(r#"["locked-1"]"#.to_string()));
+    // Round-trip: the returned strings actually parse back to the saved data.
+    let reparsed_leaders: Value = serde_json::from_str(&parent.leader_ids.unwrap()).unwrap();
+    assert_eq!(reparsed_leaders, serde_json::json!(["leader-1", "leader-2"]));
+    let reparsed_locked: Value = serde_json::from_str(&parent.locked_ids.unwrap()).unwrap();
+    assert_eq!(reparsed_locked, serde_json::json!(["locked-1"]));
   }
 
   #[test]
@@ -646,8 +679,61 @@ mod tests {
     let id = save_group_assignment_impl(&mut conn, &input).unwrap();
 
     let parent = get_group_assignment_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(parent.leader_ids, serde_json::json!([]));
-    assert_eq!(parent.locked_ids, serde_json::json!([]));
+    assert_eq!(parent.leader_ids, Some("[]".to_string()));
+    assert_eq!(parent.locked_ids, Some("[]".to_string()));
+  }
+
+  #[test]
+  fn get_group_assignment_with_null_leader_ids_and_locked_ids_decodes_to_none() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    conn
+      .execute(
+        "INSERT INTO group_assignments (name, class_id, leader_ids, locked_ids) \
+         VALUES ('NullFields', ?1, NULL, NULL)",
+        [class_id],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_group_assignment_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.leader_ids, None);
+    assert_eq!(fetched.locked_ids, None);
+    let json = serde_json::to_value(&fetched).unwrap();
+    assert_eq!(json["leaderIds"], serde_json::Value::Null);
+    assert_eq!(json["lockedIds"], serde_json::Value::Null);
+  }
+
+  #[test]
+  fn get_group_assignment_with_malformed_leader_ids_json_passes_through_as_is() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    conn
+      .execute(
+        "INSERT INTO group_assignments (name, class_id, leader_ids, locked_ids) \
+         VALUES ('Malformed', ?1, 'not valid json{{{', '[]')",
+        [class_id],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_group_assignment_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.leader_ids, Some("not valid json{{{".to_string()));
+  }
+
+  #[test]
+  fn get_group_assignments_list_returns_raw_leader_ids_and_locked_ids_string_not_parsed_value() {
+    let mut conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let mut input = base_input(class_id);
+    input.leader_ids = Some(serde_json::json!(["leader-1"]));
+    input.locked_ids = Some(serde_json::json!(["locked-1"]));
+    save_group_assignment_impl(&mut conn, &input).unwrap();
+
+    let list = get_group_assignments_impl(&conn, None).unwrap();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].leader_ids, Some(r#"["leader-1"]"#.to_string()));
+    assert_eq!(list[0].locked_ids, Some(r#"["locked-1"]"#.to_string()));
   }
 
   #[test]
@@ -771,6 +857,76 @@ mod tests {
       })
       .unwrap();
     assert_eq!(raw, r#"[["a","b"],["c","d"]]"#);
+
+    // READ path returns the raw stored string as-is (not re-parsed into an
+    // object) - fix for the bug where frontend's `JSON.parse(row.pairs)`
+    // threw on an already-parsed object.
+    let fetched = get_group_history_impl(&conn, class_id, None).unwrap();
+    assert_eq!(fetched.len(), 1);
+    assert_eq!(fetched[0].pairs, Some(r#"[["a","b"],["c","d"]]"#.to_string()));
+    // Round-trip: the returned string actually parses back to the saved data.
+    let reparsed: Value = serde_json::from_str(fetched[0].pairs.as_ref().unwrap()).unwrap();
+    assert_eq!(reparsed, serde_json::json!([["a", "b"], ["c", "d"]]));
+  }
+
+  #[test]
+  fn get_group_history_with_malformed_pairs_json_passes_through_as_is() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    conn
+      .execute(
+        "INSERT INTO group_history (class_id, pairs) VALUES (?1, 'not valid json{{{')",
+        [class_id],
+      )
+      .unwrap();
+
+    let fetched = get_group_history_impl(&conn, class_id, None).unwrap();
+    assert_eq!(fetched.len(), 1);
+    assert_eq!(fetched[0].pairs, Some("not valid json{{{".to_string()));
+  }
+
+  #[test]
+  fn get_group_assignment_groups_returns_raw_student_ids_string_not_parsed_value() {
+    let mut conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let mut input = base_input(class_id);
+    input.groups = Some(vec![GroupInput {
+      group_number: 1,
+      student_ids: serde_json::json!(["s1", "s2"]),
+      group_name: None,
+    }]);
+    let id = save_group_assignment_impl(&mut conn, &input).unwrap();
+
+    let children = get_group_assignment_groups_impl(&conn, id).unwrap();
+    assert_eq!(children.len(), 1);
+    assert_eq!(children[0].student_ids, Some(r#"["s1","s2"]"#.to_string()));
+    // Round-trip: the returned string actually parses back to the saved data.
+    let reparsed: Value = serde_json::from_str(children[0].student_ids.as_ref().unwrap()).unwrap();
+    assert_eq!(reparsed, serde_json::json!(["s1", "s2"]));
+  }
+
+  #[test]
+  fn get_group_assignment_groups_with_malformed_student_ids_json_passes_through_as_is() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let assignment_id = conn
+      .execute(
+        "INSERT INTO group_assignments (name, class_id) VALUES ('A', ?1)",
+        [class_id],
+      )
+      .map(|_| conn.last_insert_rowid())
+      .unwrap();
+    conn
+      .execute(
+        "INSERT INTO group_assignment_groups (assignment_id, group_number, student_ids) \
+         VALUES (?1, 1, 'not valid json{{{')",
+        [assignment_id],
+      )
+      .unwrap();
+
+    let children = get_group_assignment_groups_impl(&conn, assignment_id).unwrap();
+    assert_eq!(children.len(), 1);
+    assert_eq!(children[0].student_ids, Some("not valid json{{{".to_string()));
   }
 
   #[test]
