@@ -41,7 +41,10 @@ pub struct SeatingRecord {
 }
 
 /// Rad returnert av `get_seatings` - inkluderer LEFT JOIN-ede visningsnavn
-/// som ikke finnes i `seatings`-tabellen selv.
+/// som ikke finnes i `seatings`-tabellen selv. `placements` er den RÅ
+/// TEXT-kolonneverdien (eller `None` for SQL NULL), IKKE parset til en
+/// `serde_json::Value` - se classes.rs::ClassReadRecord for den fulle
+/// begrunnelsen (samme bug, samme fiks).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SeatingListItem {
@@ -49,11 +52,25 @@ pub struct SeatingListItem {
   pub name: Option<String>,
   pub class_id: Option<i64>,
   pub room_id: Option<i64>,
-  pub placements: Value,
+  pub placements: Option<String>,
   pub comment: Option<String>,
   pub created_at: Option<String>,
   pub class_name: Option<String>,
   pub room_name: Option<String>,
+}
+
+/// Rad returnert av `get_seating` - se `SeatingListItem` over for
+/// begrunnelsen for `Option<String>` fremfor `Value`. `SeatingRecord` (over)
+/// beholdes uendret for `save_seating`-inputen.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SeatingReadRecord {
+  pub id: Option<i64>,
+  pub name: Option<String>,
+  pub class_id: Option<i64>,
+  pub room_id: Option<i64>,
+  pub placements: Option<String>,
+  pub comment: Option<String>,
 }
 
 /// Speiler JS sin `typeof placements === 'string' ? placements : JSON.stringify(placements)`.
@@ -65,17 +82,14 @@ fn encode_placements(placements: &Value) -> String {
   }
 }
 
-/// Leser `placements`-TEXT-kolonnen tilbake til en `serde_json::Value`.
-/// Se classes.rs::decode_students for den fulle begrunnelsen.
-fn decode_placements(raw: Option<String>) -> Value {
-  match raw {
-    None => Value::Null,
-    Some(s) => serde_json::from_str(&s).unwrap_or(Value::Null),
-  }
+/// Leser `placements`-TEXT-kolonnen tilbake for READ-veien - rent
+/// pass-through, ingen parsing/validering. Se classes.rs::decode_students.
+fn decode_placements(raw: Option<String>) -> Option<String> {
+  raw
 }
 
-fn row_to_seating(row: &rusqlite::Row) -> rusqlite::Result<SeatingRecord> {
-  Ok(SeatingRecord {
+fn row_to_seating(row: &rusqlite::Row) -> rusqlite::Result<SeatingReadRecord> {
+  Ok(SeatingReadRecord {
     id: row.get(0)?,
     name: row.get(1)?,
     class_id: row.get(2)?,
@@ -127,7 +141,7 @@ pub fn get_seatings_impl(
   }
 }
 
-pub fn get_seating_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<SeatingRecord>> {
+pub fn get_seating_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<SeatingReadRecord>> {
   conn
     .query_row(
       "SELECT id, name, class_id, room_id, placements, comment FROM seatings WHERE id = ?1",
@@ -185,7 +199,7 @@ pub fn get_seatings(
 }
 
 #[tauri::command]
-pub fn get_seating(state: State<DbState>, id: i64) -> Result<Option<SeatingRecord>, String> {
+pub fn get_seating(state: State<DbState>, id: i64) -> Result<Option<SeatingReadRecord>, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
   get_seating_impl(&conn, id).map_err(|e| e.to_string())
 }
@@ -352,7 +366,7 @@ mod tests {
     let fetched = get_seating_impl(&conn, id).unwrap().unwrap();
     // name/placements/comment DID change:
     assert_eq!(fetched.name, Some("Renamed".to_string()));
-    assert_eq!(fetched.placements, serde_json::json!(["p1"]));
+    assert_eq!(fetched.placements, Some(r#"["p1"]"#.to_string()));
     assert_eq!(fetched.comment, Some("new comment".to_string()));
     // class_id/room_id did NOT change - still pointing at the originals:
     assert_eq!(fetched.class_id, Some(class_1));
@@ -379,11 +393,17 @@ mod tests {
       .unwrap();
     assert_eq!(raw, r#"[{"deskId":1,"studentId":"s1"}]"#);
 
+    // READ path returns the raw stored string as-is (not re-parsed into an
+    // object) - fix for the bug where frontend's `JSON.parse(placements)`
+    // threw on an already-parsed object and silently dropped placements.
     let fetched = get_seating_impl(&conn, id).unwrap().unwrap();
     assert_eq!(
       fetched.placements,
-      serde_json::json!([{"deskId": 1, "studentId": "s1"}])
+      Some(r#"[{"deskId":1,"studentId":"s1"}]"#.to_string())
     );
+    // Round-trip: the returned string actually parses back to the saved data.
+    let reparsed: Value = serde_json::from_str(&fetched.placements.unwrap()).unwrap();
+    assert_eq!(reparsed, serde_json::json!([{"deskId": 1, "studentId": "s1"}]));
   }
 
   #[test]
@@ -444,6 +464,55 @@ mod tests {
 
     let missing = get_seating_impl(&conn, id + 9999).unwrap();
     assert!(missing.is_none());
+  }
+
+  #[test]
+  fn get_seating_with_null_placements_decodes_to_none() {
+    let conn = setup();
+    conn
+      .execute(
+        "INSERT INTO seatings (name, placements) VALUES ('NullPlacements', NULL)",
+        [],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_seating_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.placements, None);
+    let json = serde_json::to_value(&fetched).unwrap();
+    assert_eq!(json["placements"], serde_json::Value::Null);
+  }
+
+  #[test]
+  fn get_seating_with_malformed_placements_json_passes_through_as_is() {
+    let conn = setup();
+    conn
+      .execute(
+        "INSERT INTO seatings (name, placements) VALUES ('Malformed', 'not valid json{{{')",
+        [],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_seating_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.placements, Some("not valid json{{{".to_string()));
+  }
+
+  #[test]
+  fn get_seatings_list_returns_raw_placements_string_not_parsed_value() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let room_id = insert_room(&conn, "Room 1");
+    conn
+      .execute(
+        "INSERT INTO seatings (name, class_id, room_id, placements) VALUES ('S', ?1, ?2, '[{\"deskId\":1}]')",
+        rusqlite::params![class_id, room_id],
+      )
+      .unwrap();
+
+    let all = get_seatings_impl(&conn, None).unwrap();
+    assert_eq!(all.len(), 1);
+    assert_eq!(all[0].placements, Some(r#"[{"deskId":1}]"#.to_string()));
   }
 
   #[test]

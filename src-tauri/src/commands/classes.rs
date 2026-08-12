@@ -35,6 +35,30 @@ pub struct ClassRecord {
   pub students: Value,
 }
 
+/// Rad returnert av `get_class`/`get_classes` - `students` er den RÅ
+/// TEXT-kolonneverdien (eller `None` for SQL NULL), IKKE parset til en
+/// `serde_json::Value`. Dette speiler den gamle Electron/sql.js-kontrakten:
+/// backend håndterer aldri innholdet, bare returnerer strengen som ble
+/// lagret, og frontend gjør selv `JSON.parse(cls.students)`.
+///
+/// VIKTIG BUG DETTE FIKSER: da `students` var typet `Value` og
+/// `decode_students` PARSET kolonneteksten til et objekt/array, serialiserte
+/// Tauri responsen som et ekte JS-objekt - ikke en streng. Frontend sitt
+/// `JSON.parse(cls.students)` kastet da en TypeError (kan ikke parse et
+/// objekt), som ble fanget av try/catch-blokker og falt stille tilbake til
+/// en tom liste. Resultat: elevnavn "forsvant" ved navigering bort og
+/// tilbake, selv om lagringen i seg selv fungerte fint.
+///
+/// `ClassRecord` (over) beholdes uendret for `save_class`-inputen, siden
+/// frontend fortsatt kan sende `students` som et ekte array/objekt (ikke
+/// bare streng) når den lagrer - se `encode_students`.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ClassReadRecord {
+  pub id: Option<i64>,
+  pub name: String,
+  pub students: Option<String>,
+}
+
 /// Speiler JS sin `typeof students === 'string' ? students : JSON.stringify(students)`.
 ///
 /// Hvis `students` allerede ER en JSON-streng-verdi, brukes strengens
@@ -49,35 +73,38 @@ fn encode_students(students: &Value) -> String {
   }
 }
 
-/// Leser `students`-TEXT-kolonnen tilbake til en `serde_json::Value`.
+/// Leser `students`-TEXT-kolonnen tilbake for READ-veien (`get_class(es)`).
 ///
-/// - `NULL` i databasen -> `Value::Null` (speiler hva en NULL SQL-verdi ville
-///   blitt i JS: `null`).
-/// - Tom/ugyldig JSON-streng -> `Value::Null` (sunn fallback fremfor å feile
-///   hele spørringen på korrupt data).
-/// - Gyldig JSON-streng -> parses til sin faktiske `Value` (array/objekt/osv).
-fn decode_students(raw: Option<String>) -> Value {
-  match raw {
-    None => Value::Null,
-    Some(s) => serde_json::from_str(&s).unwrap_or(Value::Null),
-  }
+/// INGEN parsing/validering skjer her - dette er et ren pass-through av den
+/// rå kolonneteksten, akkurat som den gamle Electron/sql.js `dbAll`/`dbGet`
+/// alltid ga frontend den rå TEXT-strengen og lot FRONTEND selv gjøre
+/// `JSON.parse` (med sin egen try/catch for korrupt data).
+///
+/// - `NULL` i databasen -> `None` (serialiseres til JSON `null`, speiler hva
+///   en NULL SQL-verdi ville blitt i JS: `null`).
+/// - Enhver ikke-NULL kolonneverdi - inkludert eventuelt korrupt/ugyldig
+///   JSON-tekst - returneres AS-IS. Vi validerer/parser IKKE på Rust-siden;
+///   det ville risikert å stille transformere/miste data på en måte den
+///   gamle appen aldri gjorde.
+fn decode_students(raw: Option<String>) -> Option<String> {
+  raw
 }
 
-fn row_to_class(row: &rusqlite::Row) -> rusqlite::Result<ClassRecord> {
-  Ok(ClassRecord {
+fn row_to_class(row: &rusqlite::Row) -> rusqlite::Result<ClassReadRecord> {
+  Ok(ClassReadRecord {
     id: row.get(0)?,
     name: row.get(1)?,
     students: decode_students(row.get(2)?),
   })
 }
 
-pub fn get_classes_impl(conn: &Connection) -> rusqlite::Result<Vec<ClassRecord>> {
+pub fn get_classes_impl(conn: &Connection) -> rusqlite::Result<Vec<ClassReadRecord>> {
   let mut stmt = conn.prepare("SELECT id, name, students FROM classes ORDER BY name ASC")?;
   let rows = stmt.query_map([], row_to_class)?;
   rows.collect()
 }
 
-pub fn get_class_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<ClassRecord>> {
+pub fn get_class_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<ClassReadRecord>> {
   conn
     .query_row(
       "SELECT id, name, students FROM classes WHERE id = ?1",
@@ -164,13 +191,13 @@ pub fn delete_class_impl(conn: &mut Connection, id: i64) -> rusqlite::Result<()>
 // ---- Tauri-kommando-wrappere: låser DbState-Mutex-en og delegerer til *_impl ----
 
 #[tauri::command]
-pub fn get_classes(state: State<DbState>) -> Result<Vec<ClassRecord>, String> {
+pub fn get_classes(state: State<DbState>) -> Result<Vec<ClassReadRecord>, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
   get_classes_impl(&conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn get_class(state: State<DbState>, id: i64) -> Result<Option<ClassRecord>, String> {
+pub fn get_class(state: State<DbState>, id: i64) -> Result<Option<ClassReadRecord>, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
   get_class_impl(&conn, id).map_err(|e| e.to_string())
 }
@@ -278,8 +305,14 @@ mod tests {
       .unwrap();
     assert_eq!(raw, r#"["Alice","Bob"]"#);
 
+    // READ path returns the raw stored string as-is (not re-parsed into an
+    // object) - this is the fix for the bug where the frontend's
+    // `JSON.parse(cls.students)` threw on an already-parsed object.
     let fetched = get_class_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(fetched.students, serde_json::json!(["Alice", "Bob"]));
+    assert_eq!(fetched.students, Some(r#"["Alice","Bob"]"#.to_string()));
+    // Round-trip: the returned string actually parses back to the saved data.
+    let reparsed: Value = serde_json::from_str(&fetched.students.unwrap()).unwrap();
+    assert_eq!(reparsed, serde_json::json!(["Alice", "Bob"]));
   }
 
   #[test]
@@ -305,7 +338,7 @@ mod tests {
     assert_eq!(raw, r#"["Alice","Bob"]"#);
 
     let fetched = get_class_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(fetched.students, serde_json::json!(["Alice", "Bob"]));
+    assert_eq!(fetched.students, Some(r#"["Alice","Bob"]"#.to_string()));
   }
 
   #[test]
@@ -327,7 +360,7 @@ mod tests {
   }
 
   #[test]
-  fn get_class_with_null_students_decodes_to_null() {
+  fn get_class_with_null_students_decodes_to_none() {
     let conn = setup();
     conn
       .execute(
@@ -338,7 +371,28 @@ mod tests {
     let id = conn.last_insert_rowid();
 
     let fetched = get_class_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(fetched.students, Value::Null);
+    assert_eq!(fetched.students, None);
+    // Confirm it actually serializes to JSON `null`, matching the old
+    // Electron/sql.js NULL -> JS `null` contract.
+    let json = serde_json::to_value(&fetched).unwrap();
+    assert_eq!(json["students"], serde_json::Value::Null);
+  }
+
+  #[test]
+  fn get_class_with_malformed_students_json_passes_through_as_is() {
+    let conn = setup();
+    conn
+      .execute(
+        "INSERT INTO classes (name, students) VALUES ('Malformed', 'not valid json{{{')",
+        [],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    // No parsing/validation on the read path - the raw (possibly corrupt)
+    // stored text is handed back verbatim, exactly like the old app did.
+    let fetched = get_class_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.students, Some("not valid json{{{".to_string()));
   }
 
   #[test]

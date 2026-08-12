@@ -31,6 +31,22 @@ pub struct RoomRecord {
   pub layout_data: Value,
 }
 
+/// Rad returnert av `get_room`/`get_rooms` - `layout_data` er den RÅ
+/// TEXT-kolonneverdien (eller `None` for SQL NULL), IKKE parset til en
+/// `serde_json::Value`. Se classes.rs::ClassReadRecord for den fulle
+/// begrunnelsen (samme bug, samme fiks: frontend gjør selv
+/// `JSON.parse(rm.layout_data || '{}')`, og et allerede-parset objekt fikk
+/// den til å kaste og falle tilbake til et tomt layout ved navigering).
+///
+/// `RoomRecord` (over) beholdes uendret for `save_room`-inputen.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RoomReadRecord {
+  pub id: Option<i64>,
+  pub name: String,
+  pub layout_data: Option<String>,
+}
+
 /// Speiler JS sin `typeof layoutData === 'string' ? layoutData : JSON.stringify(layoutData)`.
 /// Se classes.rs::encode_students for den fulle begrunnelsen for dette skillet.
 fn encode_layout_data(layout_data: &Value) -> String {
@@ -40,30 +56,27 @@ fn encode_layout_data(layout_data: &Value) -> String {
   }
 }
 
-/// Leser `layout_data`-TEXT-kolonnen tilbake til en `serde_json::Value`.
-/// Se classes.rs::decode_students for den fulle begrunnelsen.
-fn decode_layout_data(raw: Option<String>) -> Value {
-  match raw {
-    None => Value::Null,
-    Some(s) => serde_json::from_str(&s).unwrap_or(Value::Null),
-  }
+/// Leser `layout_data`-TEXT-kolonnen tilbake for READ-veien - rent
+/// pass-through, ingen parsing/validering. Se classes.rs::decode_students.
+fn decode_layout_data(raw: Option<String>) -> Option<String> {
+  raw
 }
 
-fn row_to_room(row: &rusqlite::Row) -> rusqlite::Result<RoomRecord> {
-  Ok(RoomRecord {
+fn row_to_room(row: &rusqlite::Row) -> rusqlite::Result<RoomReadRecord> {
+  Ok(RoomReadRecord {
     id: row.get(0)?,
     name: row.get(1)?,
     layout_data: decode_layout_data(row.get(2)?),
   })
 }
 
-pub fn get_rooms_impl(conn: &Connection) -> rusqlite::Result<Vec<RoomRecord>> {
+pub fn get_rooms_impl(conn: &Connection) -> rusqlite::Result<Vec<RoomReadRecord>> {
   let mut stmt = conn.prepare("SELECT id, name, layout_data FROM rooms ORDER BY name ASC")?;
   let rows = stmt.query_map([], row_to_room)?;
   rows.collect()
 }
 
-pub fn get_room_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<RoomRecord>> {
+pub fn get_room_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<RoomReadRecord>> {
   conn
     .query_row(
       "SELECT id, name, layout_data FROM rooms WHERE id = ?1",
@@ -109,13 +122,13 @@ pub fn delete_room_impl(conn: &Connection, id: i64) -> rusqlite::Result<()> {
 // ---- Tauri-kommando-wrappere: låser DbState-Mutex-en og delegerer til *_impl ----
 
 #[tauri::command]
-pub fn get_rooms(state: State<DbState>) -> Result<Vec<RoomRecord>, String> {
+pub fn get_rooms(state: State<DbState>) -> Result<Vec<RoomReadRecord>, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
   get_rooms_impl(&conn).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn get_room(state: State<DbState>, id: i64) -> Result<Option<RoomRecord>, String> {
+pub fn get_room(state: State<DbState>, id: i64) -> Result<Option<RoomReadRecord>, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
   get_room_impl(&conn, id).map_err(|e| e.to_string())
 }
@@ -223,8 +236,14 @@ mod tests {
       .unwrap();
     assert_eq!(raw, r#"{"desks":[1,2]}"#);
 
+    // READ path returns the raw stored string as-is (not re-parsed into an
+    // object) - fix for the bug where frontend's `JSON.parse(rm.layout_data)`
+    // threw on an already-parsed object and silently dropped the layout.
     let fetched = get_room_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(fetched.layout_data, serde_json::json!({"desks": [1, 2]}));
+    assert_eq!(fetched.layout_data, Some(r#"{"desks":[1,2]}"#.to_string()));
+    // Round-trip: the returned string actually parses back to the saved data.
+    let reparsed: Value = serde_json::from_str(&fetched.layout_data.unwrap()).unwrap();
+    assert_eq!(reparsed, serde_json::json!({"desks": [1, 2]}));
   }
 
   #[test]
@@ -246,7 +265,7 @@ mod tests {
     assert_eq!(raw, r#"{"desks":[1,2]}"#);
 
     let fetched = get_room_impl(&conn, id).unwrap().unwrap();
-    assert_eq!(fetched.layout_data, serde_json::json!({"desks": [1, 2]}));
+    assert_eq!(fetched.layout_data, Some(r#"{"desks":[1,2]}"#.to_string()));
   }
 
   #[test]
@@ -265,6 +284,38 @@ mod tests {
 
     let missing = get_room_impl(&conn, id + 9999).unwrap();
     assert!(missing.is_none());
+  }
+
+  #[test]
+  fn get_room_with_null_layout_data_decodes_to_none() {
+    let conn = setup();
+    conn
+      .execute(
+        "INSERT INTO rooms (name, layout_data) VALUES ('NullLayout', NULL)",
+        [],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_room_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.layout_data, None);
+    let json = serde_json::to_value(&fetched).unwrap();
+    assert_eq!(json["layoutData"], serde_json::Value::Null);
+  }
+
+  #[test]
+  fn get_room_with_malformed_layout_data_json_passes_through_as_is() {
+    let conn = setup();
+    conn
+      .execute(
+        "INSERT INTO rooms (name, layout_data) VALUES ('Malformed', 'not valid json{{{')",
+        [],
+      )
+      .unwrap();
+    let id = conn.last_insert_rowid();
+
+    let fetched = get_room_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.layout_data, Some("not valid json{{{".to_string()));
   }
 
   #[test]
