@@ -80,6 +80,14 @@ if (-not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
 }
 
 # --- 5. Bygg ---
+$bundleDir = Join-Path $RepoRoot 'src-tauri/target/release/bundle/nsis'
+# Rydd gamle bundle-artifacts forst - ellers kan et stale installer-.exe fra
+# en tidligere versjon (uten .sig, siden signeringsnokkelen kan ha endret seg
+# siden da) bli plukket opp ved en feiltakelse i steg 6.
+if (Test-Path $bundleDir) {
+  Remove-Item (Join-Path $bundleDir '*') -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 Push-Location $RepoRoot
 try {
   npm run build
@@ -89,10 +97,9 @@ try {
 }
 
 # --- 6. Finn artifacts ---
-$bundleDir = Join-Path $RepoRoot 'src-tauri/target/release/bundle/nsis'
-$installer = Get-ChildItem $bundleDir -Filter '*-setup.exe' | Select-Object -First 1
+$installer = Get-ChildItem $bundleDir -Filter "*_${Version}_*-setup.exe" | Select-Object -First 1
 if (-not $installer) {
-  throw "Fant ingen NSIS-installer i $bundleDir"
+  throw "Fant ingen NSIS-installer for versjon $Version i $bundleDir"
 }
 $sigFile = "$($installer.FullName).sig"
 if (-not (Test-Path $sigFile)) {
