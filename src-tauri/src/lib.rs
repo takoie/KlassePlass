@@ -8,8 +8,9 @@ use tauri::Manager;
 
 use commands::app_info::{get_migration_info, get_version};
 use commands::classes::{delete_class, get_class, get_classes, save_class};
-use commands::constraints::get_constraints;
+use commands::constraints::{get_constraints, import_constraints};
 use commands::db_maintenance::{backup_db, move_db, restore_db};
+use commands::export_import::{export_bundle, import_bundle_pick_file};
 use commands::groups::{
   delete_group_assignment, get_group_assignment, get_group_assignment_groups,
   get_group_assignments, get_group_history, save_group_assignment, save_group_history,
@@ -47,6 +48,7 @@ pub fn run() {
       save_seating,
       delete_seating,
       get_constraints,
+      import_constraints,
       get_group_assignments,
       get_group_assignment,
       save_group_assignment,
@@ -65,7 +67,9 @@ pub fn run() {
       backup_db,
       restore_db,
       move_db,
-      export_seating_chart_pdf
+      export_seating_chart_pdf,
+      export_bundle,
+      import_bundle_pick_file
     ])
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())

@@ -82,7 +82,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDe
           Sett makkergruppe:
         </div>
         <div className="grid grid-cols-4 gap-1 px-3 pb-3 pt-2">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(g => (
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
             <button
               key={g}
               className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-900 shadow transition-transform hover:scale-110"

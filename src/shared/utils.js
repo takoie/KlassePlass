@@ -25,6 +25,24 @@ export function createDesk(type, x, y) {
   };
 }
 
+/**
+ * Blander en hex-farge mot hvitt med `amount` (0 = uendret, 1 = ren hvit).
+ * Brukes til å lage en lysere fyll-tone av makkergruppe-fargen på pulter/
+ * elevnavn, slik at den mer mettede kantfargen (borderen) fortsatt skiller
+ * seg synlig ut fra fyllet - se SeatingChart.jsx/SeatingChartPrintContent.jsx.
+ */
+export function lightenHex(hex, amount = 0.65) {
+  const h = (hex || '').replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  if (full.length !== 6) return hex;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  const mix = (c) => Math.round(c + (255 - c) * amount);
+  const toHex = (c) => c.toString(16).padStart(2, '0');
+  return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
+}
+
 /** Snapper x/y til nærmeste grid-punkt */
 export function snapToGrid(value, snap = 15) {
   return Math.round(value / snap) * snap;

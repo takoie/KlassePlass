@@ -149,8 +149,13 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   };
 
   const handleClassChange = async (cid) => {
-    setClassId(cid);
-    await loadStudentsForClass(cid);
+    // `cid` kommer fra <select>-elementets `value` og er alltid en JS-streng
+    // — Rust-siden (getClass/saveStationSession) forventer class_id som
+    // i64/Option<i64> og godtar ikke en JSON-streng der. Samme bug-klasse som
+    // ble fikset for klassekart i SeatingOverview (se seatings.rs).
+    const numericCid = cid === '' ? '' : Number(cid);
+    setClassId(numericCid);
+    await loadStudentsForClass(numericCid);
   };
 
   const addStation = () => {

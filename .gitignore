@@ -12,7 +12,7 @@ out/
 # div
 .claude/
 .agent/
-docs/
+docs/*
 
 CLAUDE.md
 graphify-out/*

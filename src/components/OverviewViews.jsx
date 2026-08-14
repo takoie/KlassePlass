@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import CreateGroupModal from './GroupWork/CreateGroupModal';
+import { ExportModal, ImportModal } from './DataTransfer/ExportImportModal';
 import { showToast } from '../shared/utils';
 
 export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
   <div
-    className="bg-base-100/50 backdrop-blur-md border border-white/10 rounded-2xl p-5 flex flex-col justify-between cursor-pointer hover:border-emerald-400/30 hover:bg-base-100/70 hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)] transition-all group duration-200 relative overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+    className="relative overflow-hidden rounded-2xl border border-[oklch(var(--p)/0.35)] bg-[oklch(var(--p)/0.10)] backdrop-blur-xl p-5 flex flex-col justify-between cursor-pointer shadow-[inset_0_1px_0_oklch(var(--p)/0.3),0_12px_28px_-10px_rgba(0,0,0,0.6)] transition-all duration-200 group hover:border-[oklch(var(--p)/0.6)] hover:bg-[oklch(var(--p)/0.16)] hover:shadow-[inset_0_1px_0_oklch(var(--p)/0.4),0_18px_36px_-10px_rgba(0,0,0,0.7)]"
     onClick={onClick}
   >
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[oklch(var(--p)/0.7)] to-transparent"></div>
     <div className="flex items-start gap-3 mb-4">
-      <div className="w-10 h-10 rounded-xl bg-blue-500/10 backdrop-blur-sm border border-blue-400/20 flex items-center justify-center text-blue-300 group-hover:scale-105 transition-all flex-shrink-0 mt-0.5">
+      <div className="w-10 h-10 rounded-xl bg-[oklch(var(--p)/0.14)] backdrop-blur-sm border border-[oklch(var(--p)/0.3)] flex items-center justify-center text-[oklch(var(--p))] group-hover:scale-105 transition-all flex-shrink-0 mt-0.5">
         <i className={`${icon} text-base`}></i>
       </div>
       <div className="flex-1 overflow-hidden">
-        <h3 className="font-bold text-base text-white truncate group-hover:text-emerald-400 transition-colors">{title}</h3>
+        <h3 className="font-bold text-base text-white truncate group-hover:text-[oklch(var(--p))] transition-colors">{title}</h3>
         {badgeText && (
           <div className="mt-1">
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeColor}`}>
@@ -28,7 +30,7 @@ export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-em
       <div className="flex flex-col gap-1">
         {infoList.map((info, i) => (
           <div key={i} className="flex items-center gap-1.5 text-xs">
-            <i className={`${info.icon} text-[11px] opacity-80 w-4 text-center text-emerald-400`}></i>
+            <i className={`${info.icon} text-[11px] opacity-80 w-4 text-center text-[oklch(var(--p))]`}></i>
             <span className="font-medium">{info.text}</span>
           </div>
         ))}
@@ -45,7 +47,7 @@ export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-em
             <i className="fa-solid fa-trash text-xs"></i>
           </button>
         )}
-        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-slate-300 group-hover:bg-[#34d399] group-hover:border-transparent group-hover:text-slate-950 flex items-center justify-center transition-all shadow">
+        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-slate-300 group-hover:bg-[oklch(var(--p))] group-hover:border-transparent group-hover:text-[oklch(var(--pc))] flex items-center justify-center transition-all shadow">
           <i className="fa-solid fa-arrow-right text-xs"></i>
         </div>
       </div>
@@ -74,16 +76,23 @@ export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCance
   );
 };
 
-export const PageLayout = ({ title, icon, onAdd, children }) => (
+export const PageLayout = ({ title, icon, onAdd, onImport, children }) => (
   <div className="h-full flex flex-col p-8 module-content-bg overflow-y-auto">
     <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
       <div className="flex items-center gap-3">
         <i className={`${icon} text-2xl text-[#34d399]`}></i>
         <h1 className="text-3xl font-extrabold text-white tracking-tight">{title}</h1>
       </div>
-      <button className="btn btn-sm bg-[#34d399] hover:bg-[#10b981] text-slate-950 border-none font-bold gap-2 shadow-lg shadow-emerald-950/40" onClick={onAdd}>
-        <i className="fa-solid fa-plus"></i> Opprett ny
-      </button>
+      <div className="flex items-center gap-2">
+        {onImport && (
+          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={onImport}>
+            <i className="fa-solid fa-file-import"></i> Importer
+          </button>
+        )}
+        <button className="btn btn-sm bg-[#34d399] hover:bg-[#10b981] text-slate-950 border-none font-bold gap-2 shadow-lg shadow-emerald-950/40" onClick={onAdd}>
+          <i className="fa-solid fa-plus"></i> Opprett ny
+        </button>
+      </div>
     </div>
 
     <div className="max-w-6xl mx-auto w-full">
@@ -98,6 +107,12 @@ export const ClassesOverview = ({ onEdit }) => {
   const [classes, setClasses] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [newClassName, setNewClassName] = useState('');
+  const [exportTarget, setExportTarget] = useState(null); // { id, name } | null
+
+  const openExport = (cls) => {
+    setExportTarget(cls);
+    document.getElementById('modal_export_class')?.showModal();
+  };
 
   useEffect(() => { loadClasses(); }, []);
 
@@ -137,7 +152,12 @@ export const ClassesOverview = ({ onEdit }) => {
   };
 
   return (
-    <PageLayout title="Mine klasser" icon="fa-solid fa-users" onAdd={handleOpenCreate}>
+    <PageLayout
+      title="Mine klasser"
+      icon="fa-solid fa-users"
+      onAdd={handleOpenCreate}
+      onImport={() => document.getElementById('modal_import_class')?.showModal()}
+    >
       {classes.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klasser opprettet enda.</p> : null}
       {classes.map(cls => {
         let count = 0;
@@ -157,6 +177,15 @@ export const ClassesOverview = ({ onEdit }) => {
             icon="fa-solid fa-users"
             onClick={() => onEdit(cls.id)}
             onDelete={() => setDeleteTarget(cls)}
+            actions={
+              <button
+                className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                onClick={(e) => { e.stopPropagation(); openExport(cls); }}
+                title="Eksporter klasse"
+              >
+                <i className="fa-solid fa-file-export text-xs"></i>
+              </button>
+            }
           />
         );
       })}
@@ -201,6 +230,13 @@ export const ClassesOverview = ({ onEdit }) => {
           <button>close</button>
         </form>
       </dialog>
+
+      <ExportModal
+        modalId="modal_export_class"
+        source={{ class: exportTarget, room: null, seating: null }}
+        suggestedName={`${exportTarget?.name || 'klasse'}.klasseplass`}
+      />
+      <ImportModal modalId="modal_import_class" onImported={() => loadClasses()} />
     </PageLayout>
   );
 };
@@ -208,6 +244,12 @@ export const ClassesOverview = ({ onEdit }) => {
 export const RoomsOverview = ({ onEdit, onAdd }) => {
   const [rooms, setRooms] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [exportTarget, setExportTarget] = useState(null); // { id, name } | null
+
+  const openExport = (room) => {
+    setExportTarget(room);
+    document.getElementById('modal_export_room')?.showModal();
+  };
 
   useEffect(() => { loadRooms(); }, []);
 
@@ -229,7 +271,12 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
   };
 
   return (
-    <PageLayout title="Mine rom" icon="fa-solid fa-school" onAdd={onAdd}>
+    <PageLayout
+      title="Mine rom"
+      icon="fa-solid fa-school"
+      onAdd={onAdd}
+      onImport={() => document.getElementById('modal_import_room')?.showModal()}
+    >
       {rooms.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen rom opprettet enda.</p> : null}
       {rooms.map(rm => {
         let seatCount = 0;
@@ -249,17 +296,33 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
             icon="fa-solid fa-school"
             onClick={() => onEdit(rm.id)}
             onDelete={() => setDeleteTarget(rm)}
+            actions={
+              <button
+                className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-purple-950/60 hover:text-purple-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                onClick={(e) => { e.stopPropagation(); openExport(rm); }}
+                title="Eksporter rom"
+              >
+                <i className="fa-solid fa-file-export text-xs"></i>
+              </button>
+            }
           />
         );
       })}
 
-      <ConfirmDeleteModal 
+      <ConfirmDeleteModal
         isOpen={!!deleteTarget}
         title="rom"
         itemName={deleteTarget?.name}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <ExportModal
+        modalId="modal_export_room"
+        source={{ class: null, room: exportTarget, seating: null }}
+        suggestedName={`${exportTarget?.name || 'rom'}.klasseplass`}
+      />
+      <ImportModal modalId="modal_import_room" onImported={() => loadRooms()} />
     </PageLayout>
   );
 };
@@ -269,12 +332,31 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   const [classes, setClasses] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  
+  const [exportTarget, setExportTarget] = useState(null); // seating | null
+
+  const openExport = (seating) => {
+    setExportTarget(seating);
+    document.getElementById('modal_export_seating')?.showModal();
+  };
+
+  // Grupperer klassekart i sammenleggbare skuffer per klasse. Husket i
+  // localStorage slik at valget overlever navigering/omstart av appen.
+  const [groupedByClass, setGroupedByClass] = useState(() => {
+    try { return localStorage.getItem('seatingOverviewGrouped') === 'true'; } catch (e) { return false; }
+  });
+
+  const toggleGroupedByClass = () => {
+    setGroupedByClass(prev => {
+      const next = !prev;
+      try { localStorage.setItem('seatingOverviewGrouped', String(next)); } catch (e) {}
+      return next;
+    });
+  };
+
   // Modal state
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
   const [chartName, setChartName] = useState('');
-  const [nameEdited, setNameEdited] = useState(false);
   const [startWeek, setStartWeek] = useState(1);
   const [periodWeeks, setPeriodWeeks] = useState(4);
 
@@ -282,14 +364,6 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
     loadSeatings();
     loadFormData();
   }, []);
-
-  // Foreslå klassenavn som standard kartnavn, men bare inntil brukeren
-  // begynner å skrive sitt eget — da skal ikke klassebytte overstyre det.
-  useEffect(() => {
-    if (nameEdited) return;
-    const cls = classes.find(c => c.id === Number(selectedClass));
-    if (cls) setChartName(cls.name);
-  }, [selectedClass, classes, nameEdited]);
 
   const loadFormData = async () => {
     try {
@@ -329,7 +403,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   };
 
   const handleOpenCreate = () => {
-    setNameEdited(false);
+    setChartName('');
     setStartWeek(1);
     setPeriodWeeks(4);
     const modal = document.getElementById('modal_create_seating');
@@ -381,103 +455,101 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
     modalStudentCount = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
   } catch(e){}
 
+  const renderSeatingCard = (seating) => {
+    const cls = classes.find(c => c.id === seating.class_id);
+
+    const handlePrint = (e) => {
+      e.stopPropagation();
+      // Setter localStorage flagg før vi navigerer, slik at den printer on mount
+      localStorage.setItem('print_on_mount', 'true');
+      onEdit(seating.id);
+    };
+
+    let studentCount = 0;
+    try {
+      const parsed = JSON.parse(cls?.students || '[]');
+      studentCount = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
+    } catch (e) {}
+    const roomName = seating.room_name || rooms.find(r => r.id === seating.room_id)?.name || '—';
+
+    return (
+      <Card
+        key={seating.id}
+        title={seating.name}
+        badgeText={cls?.name || seating.class_name || '—'}
+        badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
+        infoList={[
+          { icon: 'fa-solid fa-calendar-week', text: seating.comment || 'Ingen periode angitt' },
+          { icon: 'fa-solid fa-school', text: roomName },
+          { icon: 'fa-solid fa-users', text: `${studentCount} elever` }
+        ]}
+        icon="fa-solid fa-users-rectangle"
+        onClick={() => onEdit(seating.id)}
+        onDelete={() => setDeleteTarget(seating)}
+        actions={
+          <>
+             <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handlePrint} title="Skriv ut / PDF"><i className="fa-solid fa-print text-xs"></i></button>
+             <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-blue-950/60 hover:text-blue-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); openExport(seating); }} title="Eksporter kart"><i className="fa-solid fa-file-export text-xs"></i></button>
+          </>
+        }
+      />
+    );
+  };
+
   return (
-    <PageLayout title="Mine klassekart" icon="fa-solid fa-map-location-dot" onAdd={handleOpenCreate}>
+    <PageLayout
+      title="Mine klassekart"
+      icon="fa-solid fa-map-location-dot"
+      onAdd={handleOpenCreate}
+      onImport={() => document.getElementById('modal_import_seating')?.showModal()}
+    >
       {seatings.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klassekart opprettet enda.</p> : null}
-      
-      {classes.map(cls => {
-        const classSeatings = seatings.filter(s => s.class_id === cls.id).sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-        if (classSeatings.length === 0) return null;
-        
-        const latestChart = classSeatings[0];
 
-        const handleExport = (e) => {
-          e.stopPropagation();
-          const exportData = {
-             name: latestChart.name,
-             comment: latestChart.comment,
-             desks: latestChart.room_id ? rooms.find(r => r.id === latestChart.room_id)?.layout_data : null,
-             placements: JSON.parse(latestChart.placements || '{}')
-          };
-          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
-          const downloadAnchor = document.createElement('a');
-          downloadAnchor.setAttribute("href", dataStr);
-          downloadAnchor.setAttribute("download", `${latestChart.name || 'klassekart'}.klasseplass`);
-          document.body.appendChild(downloadAnchor);
-          downloadAnchor.click();
-          downloadAnchor.remove();
-        };
+      {seatings.length > 0 && (
+        <div className="col-span-full flex justify-end -mb-1">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-400 select-none">
+            <span>Grupper per klasse</span>
+            <input
+              type="checkbox"
+              className="toggle toggle-sm toggle-success"
+              checked={groupedByClass}
+              onChange={toggleGroupedByClass}
+            />
+          </label>
+        </div>
+      )}
 
-        const handleImport = (e) => {
-          e.stopPropagation();
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = '.klasseplass,.json';
-          input.onchange = async (event) => {
-             const file = event.target.files[0];
-             if(!file) return;
-             const reader = new FileReader();
-             reader.onload = async (ev) => {
-               try {
-                 const imported = JSON.parse(ev.target.result);
-                 // Opprett en ny periode for denne klassen
-                 const result = await window.api.saveSeating({
-                   id: null,
-                   name: (imported.name || 'Importert kart') + ' (Importert)',
-                   classId: cls.id,
-                   roomId: latestChart.room_id,
-                   placements: JSON.stringify(imported.placements || {}),
-                   comment: imported.comment || 'Importert'
-                 });
-                 if (result?.lastID) onEdit(result.lastID);
-                 await loadSeatings();
-               } catch(err) {
-                 showToast('Filen kunne ikke importeres. Sjekk at det er en gyldig .klasseplass/.json-fil.', 'error');
-               }
-             };
-             reader.readAsText(file);
-          };
-          input.click();
-        };
+      {groupedByClass ? (
+        classes
+          .filter(cls => seatings.some(s => s.class_id === cls.id))
+          .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
+          .map(cls => {
+            const classSeatings = seatings
+              .filter(s => s.class_id === cls.id)
+              .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 
-        const handlePrint = (e) => {
-          e.stopPropagation();
-          // Setter localStorage flagg før vi navigerer, slik at den printer on mount
-          localStorage.setItem('print_on_mount', 'true');
-          onEdit(latestChart.id);
-        };
-
-        let studentCount = 0;
-        try {
-          const parsed = JSON.parse(cls.students || '[]');
-          studentCount = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
-        } catch (e) {}
-        const roomName = latestChart.room_name || rooms.find(r => r.id === latestChart.room_id)?.name || '—';
-
-        return (
-          <Card
-            key={cls.id}
-            title={latestChart.name}
-            badgeText={cls.name}
-            badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
-            infoList={[
-              { icon: 'fa-solid fa-calendar-week', text: latestChart.comment || 'Ingen periode angitt' },
-              { icon: 'fa-solid fa-school', text: roomName },
-              { icon: 'fa-solid fa-users', text: `${studentCount} elever` }
-            ]}
-            icon="fa-solid fa-users-rectangle"
-            onClick={() => onEdit(latestChart.id)}
-            onDelete={() => setDeleteTarget({ ...cls, isClassGroup: true, name: `Klasse ${cls.name}` })}
-            actions={
-              <>
-                 <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handlePrint} title="Skriv ut / PDF"><i className="fa-solid fa-print text-xs"></i></button>
-                 <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-blue-950/60 hover:text-blue-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handleExport} title="Eksporter nyeste kart"><i className="fa-solid fa-download text-xs"></i></button>
-                 <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-purple-950/60 hover:text-purple-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handleImport} title="Importer til ny periode"><i className="fa-solid fa-upload text-xs"></i></button>
-              </>
-            }
-          />
-        );
-      })}
+            return (
+              <div key={cls.id} className="col-span-full collapse collapse-arrow bg-base-100/40 border border-white/10 rounded-2xl">
+                <input type="checkbox" defaultChecked />
+                <div className="collapse-title font-bold text-white flex items-center gap-2">
+                  <i className="fa-solid fa-users text-emerald-400"></i>
+                  {cls.name}
+                  <span className="text-xs font-normal text-slate-400">({classSeatings.length} klassekart)</span>
+                </div>
+                <div className="collapse-content">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
+                    {classSeatings.map(seating => renderSeatingCard(seating))}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+      ) : (
+        seatings
+          .slice()
+          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+          .map(seating => renderSeatingCard(seating))
+      )}
 
       <ConfirmDeleteModal 
         isOpen={!!deleteTarget}
@@ -500,7 +572,8 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                 type="text"
                 className="input input-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500"
                 value={chartName}
-                onChange={e => { setChartName(e.target.value); setNameEdited(true); }}
+                onChange={e => setChartName(e.target.value)}
+                placeholder="Skriv inn navn på klassekart.. Eksempel: Naturfag 1ST3"
                 autoFocus
               />
             </div>
@@ -569,6 +642,22 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
         </form>
       </dialog>
 
+      {(() => {
+        const cls = exportTarget ? classes.find(c => c.id === exportTarget.class_id) : null;
+        const room = exportTarget ? rooms.find(r => r.id === exportTarget.room_id) : null;
+        return (
+          <ExportModal
+            modalId="modal_export_seating"
+            source={{
+              class: cls ? { id: cls.id, name: cls.name } : null,
+              room: room ? { id: room.id, name: room.name } : null,
+              seating: exportTarget ? { id: exportTarget.id, name: exportTarget.name } : null,
+            }}
+            suggestedName={`${exportTarget?.name || 'klassekart'}.klasseplass`}
+          />
+        );
+      })()}
+      <ImportModal modalId="modal_import_seating" onImported={() => loadSeatings()} />
     </PageLayout>
   );
 };

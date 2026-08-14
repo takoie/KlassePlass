@@ -16,6 +16,16 @@
      lande på sin egen fysiske side. */
   #print-output .print-page { page-break-after: always; break-after: page; }
   #print-output .print-page:last-child { page-break-after: auto; break-after: auto; }
+  /* Nettlesere (inkl. Tauris Chromium-baserte webview) utelater som standard
+     CSS-bakgrunnsfarger/-bilder ved faktisk utskrift/PDF via window.print()
+     — kun forhåndsvisningen (vanlig skjermrendering, utenfor @media print)
+     viser dem. Uten dette matchet f.eks. "Fargelegg pulter" ALDRI forhånds-
+     visningen når man faktisk trykket "Skriv ut". */
+  #print-output, #print-output * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
 }
 
 #print-output {

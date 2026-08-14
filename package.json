@@ -1,12 +1,13 @@
 {
   "name": "klasseplass",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Verktøy for organisering av klassekart",
   "author": "Stian Taknes",
   "scripts": {
     "vite": "vite",
     "dev": "tauri dev",
     "build": "tauri build",
+    "release": "powershell -ExecutionPolicy Bypass -File scripts/release.ps1",
     "test": "node --test",
     "tauri": "tauri"
   },

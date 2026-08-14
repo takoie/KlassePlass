@@ -347,15 +347,21 @@ export default function ClassManager({ onBack, initialId }) {
                   </button>
                 </form>
 
-                <div className="bg-base-200 rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-2 flex flex-col gap-1">
+                <div
+                  className="bg-base-200 rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1 content-start"
+                  style={students.length > 0 ? { gridTemplateRows: `repeat(${Math.ceil(students.length / 2)}, minmax(0, auto))`, gridAutoFlow: 'column' } : undefined}
+                >
                   {students.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center h-full">
+                    <div className="col-span-full flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center h-full">
                       <i className="fa-solid fa-users text-4xl mb-2 opacity-30"></i>
                       <p>Ingen elever lagt til enda.</p>
                     </div>
                   ) : (
-                    students.map((student, idx) => (
-                      <div key={student.id} className="flex justify-between items-center p-2 hover:bg-surface-field rounded-xl group transition-colors">
+                    students.map((student, idx) => {
+                      const rowCount = Math.ceil(students.length / 2);
+                      const rowIdx = idx % rowCount;
+                      return (
+                      <div key={student.id} className={`flex justify-between items-center p-2 hover:bg-surface-field rounded-xl group transition-colors ${rowIdx % 2 === 1 ? 'bg-black/15' : ''}`}>
                         <div className="flex items-center gap-3 flex-1">
                           <span className="badge badge-sm font-mono opacity-50 w-6 border-none bg-slate-800 text-slate-300">{idx + 1}</span>
                           <input 
@@ -373,7 +379,8 @@ export default function ClassManager({ onBack, initialId }) {
                           <i className="fa-solid fa-xmark"></i>
                         </button>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>

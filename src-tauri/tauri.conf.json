@@ -48,7 +48,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/takoie/skoolboks/releases/latest/download/latest.json"
+        "https://github.com/takoie/KlassePlass/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5MEJEQ0NCMzAwQzIwOUEKUldTYUlBd3d5OXdMT2ZWelpnK01JWm5QYTdPYml3S1J2QUdxZ004eDN6MG5Ra1V3bGFveWt5OW4K"
     }

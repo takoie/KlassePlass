@@ -23,6 +23,7 @@ export default function Toolbar({
   showGroupDrawer, setShowGroupDrawer, activeGroupId, setActiveGroupId, GROUP_COLORS,
   showFunDrawer, setShowFunDrawer,
   hideGroups, setHideGroups,
+  colorSeatsByGroup, setColorSeatsByGroup,
   handleRuleBasedFunSpin, handleAutoFill, flipRoom,
   showHistory, setShowHistory,
   showNumbers, setShowNumbers,
@@ -212,6 +213,14 @@ export default function Toolbar({
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Visning</div>
           <button className={`btn btn-sm justify-start ${hideGroups ? 'btn-neutral bg-amber-900/30 text-amber-400 border-amber-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`} onClick={() => setHideGroups(!hideGroups)}>
             <i className={`fa-solid ${hideGroups ? 'fa-eye-slash' : 'fa-eye'} w-5 ${hideGroups ? 'text-amber-400' : 'text-slate-400'}`}></i> {hideGroups ? 'Vis makkergrupper' : 'Skjul makkergrupper'}
+          </button>
+          <button
+            className={`btn btn-sm justify-start ${colorSeatsByGroup ? 'btn-neutral bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`}
+            onClick={() => setColorSeatsByGroup(!colorSeatsByGroup)}
+            disabled={hideGroups}
+            title={hideGroups ? 'Slå på "Vis makkergrupper" først' : 'Fyller pultene med en lysere tone av makkergruppe-fargen'}
+          >
+            <i className={`fa-solid fa-fill-drip w-5 ${colorSeatsByGroup ? 'text-fuchsia-400' : 'text-slate-400'}`}></i> {colorSeatsByGroup ? 'Skjul pultfarger' : 'Fargelegg pulter'}
           </button>
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={flipRoom}>
             <i className="fa-solid fa-rotate w-5 text-cyan-400"></i> Snu klasserommet

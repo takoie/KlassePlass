@@ -55,16 +55,22 @@ export default function CreateGroupModal({ classes, onCreated }) {
     if (!name.trim() || !selectedClass || classStudents.length === 0 || busy) return;
     setBusy(true);
     try {
+      // `selectedClass` kommer fra et <select>-element sin `value` og er
+      // derfor alltid en JS-streng — IPC-laget deserialiserer class_id som
+      // i64/Option<i64> og godtar ikke en JSON-streng der (samme bug-klasse
+      // som ble fikset for klassekart i SeatingOverview, se
+      // seatings.rs::class_id_and_room_id_must_be_numeric_not_string).
+      const classIdNum = Number(selectedClass);
       const studentsById = Object.fromEntries(classStudents.map(s => [s.id, s]));
 
-      const rawConstraints = await window.api.getConstraints(selectedClass);
+      const rawConstraints = await window.api.getConstraints(classIdNum);
       const constraints = (rawConstraints || []).map(c => ({
         studentA: c.student_a, studentB: c.student_b, type: c.type,
       }));
 
       let recentPairs = [];
       if (avoidHistory && avoidLastN > 0) {
-        const rows = await window.api.getGroupHistory(selectedClass, avoidLastN);
+        const rows = await window.api.getGroupHistory(classIdNum, avoidLastN);
         recentPairs = (rows || []).flatMap(row => {
           try { return JSON.parse(row.pairs); } catch (e) { return []; }
         });
@@ -86,7 +92,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
       const saveResult = await window.api.saveGroupAssignment({
         id: null,
         name: name.trim(),
-        classId: selectedClass,
+        classId: classIdNum,
         sourceSeatingId: null,
         useConstraints,
         avoidLastN: avoidHistory ? avoidLastN : 0,

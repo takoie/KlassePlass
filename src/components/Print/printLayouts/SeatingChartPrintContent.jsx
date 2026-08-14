@@ -1,4 +1,5 @@
 import React from 'react';
+import { lightenHex } from '../../../shared/utils';
 import { BOARD_W, BOARD_H, DESK_H, CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX, computeCenteringOffset } from './printGeometry';
 
 export { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX };
@@ -7,7 +8,7 @@ export default function SeatingChartPrintContent({
   boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
   groupColors, zoneMeta, groupOverrides, settings,
 }) {
-  const { showNumbers, showZones, showGroups, showColors } = settings;
+  const { showNumbers, showZones, showGroups, showColors, colorSeats } = settings;
   const offset = computeCenteringOffset(boardObj, desks);
   return (
     <div style={{ position: 'relative', width: CONTENT_WIDTH_PX, height: CONTENT_HEIGHT_PX }}>
@@ -30,6 +31,7 @@ export default function SeatingChartPrintContent({
         const gId = (groupOverrides && groupOverrides[d.id]) || d.groupId;
         const groupColor = (gId && showGroups) ? groupColors[(gId - 1) % groupColors.length] : null;
         const activeZones = showZones ? (d.zones || []) : [];
+        const fillColor = (showColors && groupColor && colorSeats) ? lightenHex(groupColor, 0.65) : null;
         return (
           <div
             key={d.id}
@@ -37,6 +39,7 @@ export default function SeatingChartPrintContent({
             style={{
               left: d.x + offset.x, top: d.y + offset.y, width: deskW, height: DESK_H,
               borderColor: showColors && groupColor ? groupColor : '#475569',
+              ...(fillColor ? { background: fillColor } : {}),
             }}
           >
             <div style={{ display: 'flex', width: '100%', height: '100%' }}>

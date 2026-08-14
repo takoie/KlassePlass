@@ -14,6 +14,7 @@
 // handleExportPdf for skillet.
 
 import { computeCenteringOffset } from './printGeometry.js';
+import { lightenHex } from '../../../shared/utils.js';
 
 const DEFAULT_DESK_BORDER = '#475569';
 const DEFAULT_ZONE_COLOR = '#555';
@@ -26,7 +27,7 @@ export function buildSeatingChartPrintPayload({
   boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
   groupColors, zoneMeta, groupOverrides, settings, chartName, periodText,
 }) {
-  const { showNumbers, showZones, showGroups, showColors } = settings;
+  const { showNumbers, showZones, showGroups, showColors, colorSeats } = settings;
   const offset = computeCenteringOffset(boardObj, desks);
 
   const payloadDesks = desks.map((d) => {
@@ -61,6 +62,7 @@ export function buildSeatingChartPrintPayload({
       y: d.y + offset.y,
       capacity: cap,
       borderColorHex: (showColors && groupColor) ? groupColor : DEFAULT_DESK_BORDER,
+      fillColorHex: (showColors && groupColor && colorSeats) ? lightenHex(groupColor, 0.65) : null,
       seats,
       zoneChips,
     };

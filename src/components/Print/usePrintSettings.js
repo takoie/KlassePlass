@@ -3,10 +3,11 @@ import { useState, useEffect } from 'react';
 const COLORS_KEY = 'print_show_colors';
 const GROUP_LAYOUT_KEY = 'print_group_layout';
 
-export function usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups }) {
+export function usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats }) {
   const [showNumbers, setShowNumbers] = useState(initialShowNumbers);
   const [showZones, setShowZones] = useState(initialShowZones);
   const [showGroups, setShowGroups] = useState(initialShowGroups);
+  const [colorSeats, setColorSeats] = useState(!!initialColorSeats);
   const [showColors, setShowColors] = useState(() => {
     const stored = localStorage.getItem(COLORS_KEY);
     return stored === null ? true : stored === 'true';
@@ -27,7 +28,7 @@ export function usePrintSettings({ initialShowNumbers, initialShowZones, initial
   }, [groupLayout]);
 
   return {
-    settings: { showNumbers, showZones, showGroups, showColors, groupLayout },
-    setShowNumbers, setShowZones, setShowGroups, setShowColors, setGroupLayout,
+    settings: { showNumbers, showZones, showGroups, showColors, colorSeats, groupLayout },
+    setShowNumbers, setShowZones, setShowGroups, setShowColors, setColorSeats, setGroupLayout,
   };
 }

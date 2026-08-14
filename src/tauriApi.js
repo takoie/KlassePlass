@@ -114,6 +114,11 @@ const tauriApi = {
 
   // Constraints
   getConstraints: (cid) => invoke('get_constraints', { classId: cid }),
+  importConstraints: (classId, constraints) => invoke('import_constraints', { classId, constraints }),
+
+  // Eksport/import
+  exportBundle: (bundle, suggestedName) => invoke('export_bundle', { bundle, suggestedName }),
+  importBundlePickFile: () => invoke('import_bundle_pick_file'),
 
   // Settings
   getSettings: () => invoke('get_settings'),

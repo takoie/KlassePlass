@@ -16,15 +16,15 @@ export default function PrintPreviewModal({
   contentType = 'seatingChart',
   chartName, className, chartComment, boardObj, desks, deskNumberMap, placements,
   getStudentByIdOrName, groupColors, zoneMeta, groupOverrides, stationProps, groupWorkProps,
-  initialShowNumbers, initialShowZones, initialShowGroups,
+  initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats,
   onClose,
 }) {
   const isStation = contentType === 'station';
   const isGroupWork = contentType === 'groupWork';
   const isSeatingChart = !isStation && !isGroupWork;
 
-  const { settings, setShowNumbers, setShowZones, setShowGroups, setShowColors, setGroupLayout } =
-    usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups });
+  const { settings, setShowNumbers, setShowZones, setShowGroups, setShowColors, setColorSeats, setGroupLayout } =
+    usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats });
   const [exportState, setExportState] = useState({ status: 'idle' }); // idle | working | done | error
   const dialogRef = useRef(null);
   const previewPaneRef = useRef(null);
@@ -225,6 +225,17 @@ export default function PrintPreviewModal({
                 <span>{groupsToggleLabel}</span>
                 <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showGroups} onChange={(e) => setShowGroups(e.target.checked)} />
               </label>
+              {isSeatingChart && (
+                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
+                  <span>Fargelegg pulter</span>
+                  <input
+                    type="checkbox" className="toggle toggle-sm toggle-primary"
+                    checked={settings.colorSeats}
+                    onChange={(e) => setColorSeats(e.target.checked)}
+                    disabled={!settings.showGroups}
+                  />
+                </label>
+              )}
               {isSeatingChart && (
                 <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
                   <span>Soner</span>

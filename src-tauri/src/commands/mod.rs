@@ -2,6 +2,7 @@ pub mod app_info;
 pub mod classes;
 pub mod constraints;
 pub mod db_maintenance;
+pub mod export_import;
 pub mod groups;
 pub mod json_field;
 pub mod print_export;

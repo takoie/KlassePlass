@@ -26,6 +26,35 @@ pub struct ConstraintRecord {
   pub constraint_type: String,
 }
 
+/// Input-form for én constraint-rad ved bulk-import (`import_constraints`).
+/// Speiler `ConstraintRecord`s felter minus `id`/`class_id` (disse settes av
+/// funksjonen selv - `class_id` kommer fra parameteren, `id` er autoincrement).
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct NewConstraint {
+  pub student_a: String,
+  pub student_b: String,
+  #[serde(rename = "type")]
+  pub constraint_type: String,
+}
+
+/// Setter inn flere `student_constraints`-rader for én klasse i én
+/// transaksjon. Brukt av eksport/import-flyten - det finnes ingen "lagre én
+/// constraint"-kommando i appen i dag (kun `get_constraints`).
+pub fn import_constraints_impl(
+  conn: &mut Connection,
+  class_id: i64,
+  constraints: &[NewConstraint],
+) -> rusqlite::Result<()> {
+  let tx = conn.transaction()?;
+  for c in constraints {
+    tx.execute(
+      "INSERT INTO student_constraints (class_id, student_a, student_b, type) VALUES (?1, ?2, ?3, ?4)",
+      rusqlite::params![class_id, c.student_a, c.student_b, c.constraint_type],
+    )?;
+  }
+  tx.commit()
+}
+
 fn row_to_constraint(row: &rusqlite::Row) -> rusqlite::Result<ConstraintRecord> {
   Ok(ConstraintRecord {
     id: row.get(0)?,
@@ -48,6 +77,16 @@ pub fn get_constraints_impl(conn: &Connection, class_id: i64) -> rusqlite::Resul
 pub fn get_constraints(state: State<DbState>, class_id: i64) -> Result<Vec<ConstraintRecord>, String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
   get_constraints_impl(&conn, class_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn import_constraints(
+  state: State<DbState>,
+  class_id: i64,
+  constraints: Vec<NewConstraint>,
+) -> Result<(), String> {
+  let mut conn = state.0.lock().map_err(|e| e.to_string())?;
+  import_constraints_impl(&mut conn, class_id, &constraints).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -127,5 +166,30 @@ mod tests {
     let constraints_b = get_constraints_impl(&conn, class_b).unwrap();
     assert_eq!(constraints_b.len(), 1);
     assert_eq!(constraints_b[0].student_a, "x");
+  }
+
+  #[test]
+  fn import_constraints_inserts_all_rows_for_the_class() {
+    let mut conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+
+    let input = vec![
+      NewConstraint { student_a: "a".into(), student_b: "b".into(), constraint_type: "avoid".into() },
+      NewConstraint { student_a: "c".into(), student_b: "d".into(), constraint_type: "together".into() },
+    ];
+    import_constraints_impl(&mut conn, class_id, &input).unwrap();
+
+    let stored = get_constraints_impl(&conn, class_id).unwrap();
+    assert_eq!(stored.len(), 2);
+    assert_eq!(stored[0].student_a, "a");
+    assert_eq!(stored[1].constraint_type, "together");
+  }
+
+  #[test]
+  fn import_constraints_with_empty_list_is_a_noop() {
+    let mut conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    import_constraints_impl(&mut conn, class_id, &[]).unwrap();
+    assert!(get_constraints_impl(&conn, class_id).unwrap().is_empty());
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { lightenHex } from '../shared/utils';
 import PrintPreviewModal from './Print/PrintPreviewModal';
 import Modals from './SeatingChart/Modals';
 import DeskContextMenu from './SeatingChart/DeskContextMenu';
@@ -11,16 +12,15 @@ import { useGroupLasso } from './SeatingChart/hooks/useGroupLasso';
 import { useStudentDragAndDrop } from './SeatingChart/hooks/useStudentDragAndDrop';
 import { useSeatings } from './SeatingChart/hooks/useSeatings';
 
-// Makkergruppe-fargene 1-8 (kun disse 8 er faktisk valgbare - se
-// [1,2,3,4,5,6,7,8]-gridet i DeskContextMenu.jsx/Toolbar.jsx). Valgt for
-// maksimal parvis avstand i fargesirkelen PLUSS ulik lyshet/metning, ikke
-// bare ulik nyanse - de gamle fargene hadde tre nyanse-klynger som lå for
-// tett (fiolett/indigo/blå, rosa/rød, turkis/smaragd), noe som ble enda
-// vanskeligere å skille på papir siden bordene der KUN markeres med en tynn
-// kantfarge - ingen tall/etikett attåt (se SeatingChartPrintContent.jsx).
+// Makkergruppe-fargene 1-12 (se [1..12]-gridet i DeskContextMenu.jsx/
+// Toolbar.jsx). Brukerspesifisert palett (kategorisk, D3/Tableau-aktig) valgt
+// for tydelig innbyrdes forskjell mellom alle 12 - se SeatingChartPrintContent.jsx
+// for hvorfor dette er ekstra viktig på papir (bordene der markeres KUN med en
+// tynn kantfarge, ingen tall/etikett attåt).
 const GROUP_COLORS = [
-  '#f59e0b', '#2563eb', '#16a34a', '#dc2626',
-  '#7c3aed', '#db2777', '#0891b2', '#65a30d'
+  '#1F77B4', '#FF7F0E', '#2CA02C', '#D62728',
+  '#9467BD', '#8C564B', '#E377C2', '#17BECF',
+  '#E7BA52', '#4D4D4D', '#55A868', '#C44E52'
 ];
 
 const getFontSizeClass = (name) => {
@@ -47,6 +47,7 @@ export default function SeatingChart({ onBack, initialId }) {
   const [showNumbers, setShowNumbers] = useState(true);
   const [showZones, setShowZones] = useState(false);
   const [hideGroups, setHideGroups] = useState(false);
+  const [colorSeatsByGroup, setColorSeatsByGroup] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showStudentDrawer, setShowStudentDrawer] = useState(false);
   const [showPeriodsDrawer, setShowPeriodsDrawer] = useState(false);
@@ -304,6 +305,7 @@ export default function SeatingChart({ onBack, initialId }) {
             activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId} GROUP_COLORS={GROUP_COLORS}
             showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
             hideGroups={hideGroups} setHideGroups={setHideGroups}
+            colorSeatsByGroup={colorSeatsByGroup} setColorSeatsByGroup={setColorSeatsByGroup}
             handleRuleBasedFunSpin={handleRuleBasedFunSpin} handleAutoFill={handleAutoFill} flipRoom={flipRoom}
             showHistory={showHistory} setShowHistory={setShowHistory}
             showNumbers={showNumbers} setShowNumbers={setShowNumbers}
@@ -453,29 +455,42 @@ export default function SeatingChart({ onBack, initialId }) {
                               const isHoverTarget = hoverSlotKey === slotKey;
 
                               const conflictColor = showHistory && studentObj ? historyConflicts[studentObj.id] : null;
-                              let bgClass = conflictColor 
-                                ? `${conflictColor} text-white shadow-md border-2` 
+                              let bgClass = conflictColor
+                                ? `${conflictColor} text-white shadow-md border-2`
                                 : (studentObj ? 'bg-emerald-500/10 text-white shadow-md border border-emerald-500/20' : 'bg-surface-raised text-slate-500 border border-slate-700/30');
+
+                              // Makkergruppe-farge på selve setet: lysere fyll-tone (via lightenHex)
+                              // + full-metning kant, slik at borderen fortsatt er tydelig synlig mot
+                              // fyllet - se lightenHex-doc i shared/utils.js.
+                              let groupFillStyle = null;
+                              if (!conflictColor && studentObj && colorSeatsByGroup && groupColor) {
+                                bgClass = 'text-slate-900 shadow-md border-2';
+                                groupFillStyle = { backgroundColor: lightenHex(groupColor, 0.65), borderColor: groupColor };
+                              }
 
                               if (isHoverTarget) {
                                 bgClass = 'border-2 border-emerald-400 bg-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.9)] scale-105 z-30 animate-pulse text-white font-extrabold';
+                                groupFillStyle = null;
                               }
 
                               if (isGhostSeat) {
                                 bgClass = studentObj
                                   ? 'border-2 border-amber-400 bg-amber-500/25 shadow-[0_0_18px_rgba(251,191,36,0.7)] scale-[1.03] z-30 text-white font-extrabold animate-pulse'
                                   : 'border-2 border-amber-400/40 bg-amber-500/5';
+                                groupFillStyle = null;
                               }
 
                               const isSpotlit = spotlightSlotKey === slotKey;
                               if (isSpotlit) {
                                 bgClass = 'border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_25px_rgba(250,204,21,0.85)] scale-105 z-30 text-white font-extrabold';
+                                groupFillStyle = null;
                               }
 
                               return (
                                 <div
                                   key={slotIdx}
                                   className={`flex-1 h-full rounded-lg flex items-center justify-center relative transition-colors ${bgClass}`}
+                                  style={groupFillStyle || undefined}
                                   onContextMenu={(e) => { if (studentObj) { e.preventDefault(); e.stopPropagation(); handleDeskContextMenu(e, d, studentObj, slotKey); } }}
                                 >
                                   {showNumbers && seatNumbers[slotIdx] !== undefined && (
@@ -612,9 +627,10 @@ export default function SeatingChart({ onBack, initialId }) {
           groupColors={GROUP_COLORS}
           zoneMeta={zoneMeta}
           groupOverrides={groupOverrides}
-          initialShowNumbers={showNumbers}
+          initialShowNumbers={false}
           initialShowZones={showZones}
           initialShowGroups={!hideGroups}
+          initialColorSeats={colorSeatsByGroup}
           onClose={() => setShowPrintPreview(false)}
         />
       )}

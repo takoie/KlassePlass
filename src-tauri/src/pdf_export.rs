@@ -78,6 +78,11 @@ pub struct PrintDesk {
   pub y: f64,
   pub capacity: u32,
   pub border_color_hex: String,
+  /// Lysere fyll-tone av makkergruppe-fargen (allerede blandet mot hvitt av
+  /// JS-siden via `lightenHex`) - `None`/fravær betyr standard lys grå fyll
+  /// (`#f1f5f9`), speiler "Fargelegg pulter"-bryteren i print-modalen.
+  #[serde(default)]
+  pub fill_color_hex: Option<String>,
   pub seats: Vec<PrintSeat>,
   pub zone_chips: Vec<ZoneChip>,
 }
@@ -408,11 +413,16 @@ fn draw_desk(layer: &PdfLayerReference, fonts: &Fonts, desk: &PrintDesk, scale: 
   // Fill, then stroke on top (two passes — printpdf's PaintMode::FillStroke
   // uses a single color for both, but the JS uses different fill/border
   // colors, so we draw fill first, border second).
+  let fill_color = desk
+    .fill_color_hex
+    .as_deref()
+    .map(hex_to_color)
+    .unwrap_or_else(|| hex_to_color("#f1f5f9"));
   draw_rect(
     layer,
     (ll_x, bottom_mm),
     (ur_x, top_mm),
-    Some(hex_to_color("#f1f5f9")),
+    Some(fill_color),
     None,
     0.0,
     PaintMode::Fill,
@@ -615,6 +625,21 @@ mod tests {
     assert_eq!(desk1.border_color_hex, "#475569");
     assert_eq!(desk1.seats[0].student_name, None);
     assert_eq!(desk1.zone_chips.len(), 0);
+
+    // fillColorHex mangler i fixturen over - må ikke feile deserialisering,
+    // og skal falle tilbake til None (draw_desk bruker da standard #f1f5f9).
+    assert_eq!(desk0.fill_color_hex, None);
+  }
+
+  #[test]
+  fn print_desk_deserializes_fill_color_hex_when_present() {
+    let json = r##"{
+      "x": 0, "y": 0, "capacity": 1, "borderColorHex": "#2563eb",
+      "fillColorHex": "#c7d9f7",
+      "seats": [], "zoneChips": []
+    }"##;
+    let desk: PrintDesk = serde_json::from_str(json).expect("desk should deserialize");
+    assert_eq!(desk.fill_color_hex.as_deref(), Some("#c7d9f7"));
   }
 
   // ---------------------------------------------------------------------
