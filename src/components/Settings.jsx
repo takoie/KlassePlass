@@ -346,7 +346,7 @@ export default function Settings() {
           <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 text-white">Tredjepartsbiblioteker & Lisenser</h3>
 
-            <h4 className="font-bold text-sm text-slate-200 mb-2">Kjøretidsbiblioteker (kode som følger med i appen)</h4>
+            <h4 className="font-bold text-sm text-slate-200 mb-2">Frontend-biblioteker (kode som følger med i appen)</h4>
             <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6">
               <table className="table w-full text-xs text-slate-300">
                 <thead>
@@ -357,11 +357,32 @@ export default function Settings() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
                   <tr><td className="py-2.5 px-4 font-semibold">React & React DOM</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">Electron</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">electron-updater</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/api</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-dialog</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-opener</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-process</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-updater</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">dnd kit (core, sortable, utilities)</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">sql.js (SQLite for nettleser/WASM)</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">Font Awesome Free</td><td className="py-2.5 px-4 text-emerald-400">CC BY 4.0 / SIL OFL 1.1 / MIT</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4 className="font-bold text-sm text-slate-200 mb-2">Native runtime (Rust/Tauri-bakenden kompilert inn i appen)</h4>
+            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6">
+              <table className="table w-full text-xs text-slate-300">
+                <thead>
+                  <tr className="border-b border-slate-700/80 text-slate-400">
+                    <th className="py-3 px-4 text-left">Crate</th>
+                    <th className="py-3 px-4 text-left">Lisens</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80">
+                  <tr><td className="py-2.5 px-4 font-semibold">Tauri (core) & tauri-plugin-log</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">rusqlite (+ bundlet SQLite)</td><td className="py-2.5 px-4 text-emerald-400">MIT (SQLite: Public Domain)</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">printpdf</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">serde & serde_json</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">log</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
                 </tbody>
               </table>
             </div>
@@ -379,8 +400,7 @@ export default function Settings() {
                   <tr><td className="py-2.5 px-4 font-semibold">Vite & @vitejs/plugin-react</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">Tailwind CSS & daisyUI</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">PostCSS & Autoprefixer</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">electron-builder</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">concurrently & wait-on</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/cli & tauri-build</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
                 </tbody>
               </table>
             </div>

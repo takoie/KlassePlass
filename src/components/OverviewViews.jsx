@@ -128,6 +128,7 @@ export const ClassesOverview = ({ onEdit }) => {
       await window.api.deleteClass(deleteTarget.id);
       await loadClasses();
     } catch (e) {
+      console.error('deleteClass feilet:', e);
       showToast('Kunne ikke slette klassen.', 'error');
     }
     setDeleteTarget(null);

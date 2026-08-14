@@ -187,6 +187,14 @@ pub fn delete_class_impl(conn: &mut Connection, id: i64) -> rusqlite::Result<()>
 
   tx.execute("DELETE FROM seatings WHERE class_id = ?1", [id])?;
   tx.execute("DELETE FROM student_constraints WHERE class_id = ?1", [id])?;
+  // group_assignment_groups.assignment_id har en FOREIGN KEY mot
+  // group_assignments(id) - må slettes FØR group_assignments, ellers feiler
+  // sletting av klassen med "FOREIGN KEY constraint failed" for enhver
+  // klasse som faktisk har brukt Gruppearbeid-funksjonen.
+  tx.execute(
+    "DELETE FROM group_assignment_groups WHERE assignment_id IN (SELECT id FROM group_assignments WHERE class_id = ?1)",
+    [id],
+  )?;
   tx.execute("DELETE FROM group_assignments WHERE class_id = ?1", [id])?;
   tx.execute("DELETE FROM group_history WHERE class_id = ?1", [id])?;
   tx.execute("DELETE FROM schedule WHERE class_id = ?1", [id])?;
@@ -231,6 +239,11 @@ mod tests {
 
   fn setup() -> Connection {
     let conn = Connection::open_in_memory().unwrap();
+    // rusqlite sin "bundled" SQLite har FOREIGN KEYS-håndheving PÅ som
+    // standard (samme som den ekte fil-baserte connection appen bruker via
+    // db::open_connection) - må slås på her også for at tester skal fange
+    // manglende kaskade-sletting av avhengige tabeller.
+    conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
     schema::run_migrations(&conn).unwrap();
     conn
   }
@@ -461,6 +474,14 @@ mod tests {
         [class_id],
       )
       .unwrap();
+    let assignment_id = conn.last_insert_rowid();
+
+    conn
+      .execute(
+        "INSERT INTO group_assignment_groups (assignment_id, group_number, student_ids) VALUES (?1, 1, '[]')",
+        [assignment_id],
+      )
+      .unwrap();
 
     conn
       .execute(
@@ -502,6 +523,15 @@ mod tests {
     assert_eq!(count("group_history", "class_id"), 0);
     assert_eq!(count("schedule", "class_id"), 0);
     assert_eq!(count("station_sessions", "class_id"), 0);
+
+    let group_assignment_groups_count: i64 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM group_assignment_groups WHERE assignment_id = ?1",
+        [assignment_id],
+        |r| r.get(0),
+      )
+      .unwrap();
+    assert_eq!(group_assignment_groups_count, 0);
 
     let participation_count: i64 = conn
       .query_row(

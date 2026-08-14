@@ -161,6 +161,7 @@ export default function ClassManager({ onBack, initialId }) {
         setSelectedClass(null);
       }
     } catch (e) {
+      console.error('deleteClass feilet:', e);
       showToast('Kunne ikke slette klassen.', 'error');
     }
   };

@@ -156,7 +156,7 @@ export default function RoomToolsDrawer({
                 <i className="fa-solid w-4 text-center fa-align-center"></i> Midtsone
               </button>
               <button className="btn btn-xs btn-outline border-red-900/60 text-red-300 font-semibold hover:bg-red-950/60 gap-2 justify-start mt-1" onClick={clearAllZones}>
-                <i className="fa-solid w-4 text-center fa-eraser"></i> Fjern alle sone-inndelinger
+                <i className="fa-solid w-4 text-center fa-eraser"></i> Fjern alle soner
               </button>
             </div>
           </div>
