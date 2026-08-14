@@ -59,12 +59,24 @@ if ($existingTag) {
 
 # --- 4. Signeringsnokkel ---
 $env:TAURI_SIGNING_PRIVATE_KEY = (Resolve-Path $KeyPath).Path
+$PwCacheFile = Join-Path (Split-Path $KeyPath) 'klasseplass-updater.key.pw'
 if (-not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
-  $securePw = Read-Host -AsSecureString 'Passord for signeringsnokkel (Enter hvis ingen)'
-  $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePw)
-  $plainPw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-  [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-  $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $plainPw
+  if (Test-Path $PwCacheFile) {
+    # Hentet fra DPAPI-kryptert cache laget av scripts/setup-signing-key.ps1 -
+    # kun dekrypterbar av denne Windows-kontoen pa denne maskinen.
+    $cachedSecure = Get-Content $PwCacheFile -Raw | ConvertTo-SecureString
+    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($cachedSecure)
+    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    Write-Host "Bruker lagret signeringspassord fra $PwCacheFile" -ForegroundColor DarkGray
+  } else {
+    Write-Host "Tips: kjor ./scripts/setup-signing-key.ps1 en gang for a slippe a taste passord hver gang." -ForegroundColor DarkGray
+    $securePw = Read-Host -AsSecureString 'Passord (passfrase) for signeringsnokkelen (Enter hvis ingen)'
+    $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePw)
+    $plainPw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+    [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $plainPw
+  }
 }
 
 # --- 5. Bygg ---
