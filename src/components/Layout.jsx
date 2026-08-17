@@ -4,6 +4,11 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [hasUpdateReady, setHasUpdateReady] = useState(false);
+  const [appVersion, setAppVersion] = useState(null);
+
+  useEffect(() => {
+    window.api?.getVersion?.().then(setAppVersion).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const unlisten = window.api?.onUpdateReady?.(() => setHasUpdateReady(true));
@@ -84,8 +89,15 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
           })}
         </div>
 
+        {/* Versjonsnummer over skillelinjen */}
+        <div className="text-center pt-2 pb-0.5 select-none mt-auto">
+          <span className="text-[10px] font-semibold text-slate-500 tracking-wider">
+            v{appVersion || '2.5.1'}
+          </span>
+        </div>
+
         {/* Nederst i Sidemenyen - Oppdatering, Veiledning og Innstillinger */}
-        <div className="pt-3 border-t border-slate-800/80 mt-auto flex flex-col gap-1.5">
+        <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-1.5">
           <button
             className={`overblikk-nav-btn overblikk-nav-btn-sub relative transition-all duration-300 ${
               hasUpdateReady
