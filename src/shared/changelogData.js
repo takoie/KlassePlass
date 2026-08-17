@@ -5,9 +5,30 @@
 
 export const CHANGELOG = [
   {
-    version: '2.5.0',
+    version: '2.5.1',
     date: '17. august 2026',
     isLatest: true,
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Ny oppdateringsmodul & endringslogg',
+        desc: 'Manuell sjekk etter oppdateringer direkte fra venstremenyen med full oversikt over nyheter og endringer.'
+      },
+      {
+        type: 'ui',
+        title: 'Oppdateringsindikator i sidemenyen',
+        desc: 'Knappen for Oppdatering lyser nå grønt med glød og varselmerke når en oppdatering er klar til installasjon.'
+      },
+      {
+        type: 'ui',
+        title: 'Pikselperfekt layout i venstremenyen',
+        desc: 'Fast ikonbredde og jevn vertikal linjeføring på tvers av alle navigasjonsknapper.'
+      }
+    ]
+  },
+  {
+    version: '2.5.0',
+    date: '17. august 2026',
     highlights: [
       {
         type: 'feature',

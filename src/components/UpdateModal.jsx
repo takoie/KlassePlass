@@ -76,11 +76,6 @@ export default function UpdateModal({ isOpen, onClose }) {
     window.api?.restartApp?.();
   };
 
-  const handleSimulate = () => {
-    window.api?.simulateUpdate?.('2.5.1');
-    showToast('Simulert oppdatering v2.5.1 er nå lastet ned og klar!', 'success');
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -207,29 +202,6 @@ export default function UpdateModal({ isOpen, onClose }) {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Test Action for User Verification */}
-          <div className="px-4 py-3 rounded-xl border border-dashed border-slate-700/80 bg-slate-900/30 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <i className="fa-solid fa-vial-circle-check text-fuchsia-400 text-base"></i>
-              <div>
-                <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                  Test-modus for oppdateringsvarsling
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-fuchsia-950/60 text-fuchsia-300 border border-fuchsia-500/30">Utvikler-test</span>
-                </div>
-                <div className="text-[11px] text-slate-400">
-                  Simulerer at en ny oppdatering (v2.5.1) ble lastet ned i bakgrunnen og viser banneret.
-                </div>
-              </div>
-            </div>
-            <button
-              className="btn btn-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold border-none gap-1.5 flex-shrink-0"
-              onClick={handleSimulate}
-            >
-              <i className="fa-solid fa-play text-[10px]"></i>
-              Test oppdatering
-            </button>
           </div>
 
           {/* Changelog Section */}
