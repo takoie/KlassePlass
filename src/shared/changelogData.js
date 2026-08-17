@@ -5,9 +5,30 @@
 
 export const CHANGELOG = [
   {
-    version: '2.5.1',
+    version: '2.6.0',
     date: '17. august 2026',
     isLatest: true,
+    highlights: [
+      {
+        type: 'ui',
+        title: 'Nytt og raffinert verktøypanel for klassekart',
+        desc: 'Logisk inndeling i plassering, visningslag, rom og moduser. Nøytral mørk stil med fargede ikoner for et renere uttrykk.'
+      },
+      {
+        type: 'feature',
+        title: 'Ekte av/på-brytere for visningslag',
+        desc: 'Tydelige brytere som viser nøyaktig hva som er aktivt, med faste etiketter og forbedrede info-tooltips.'
+      },
+      {
+        type: 'ui',
+        title: 'Slank scrollbar & versjonsvisning',
+        desc: 'Minimalistisk 4px rullefelt og sentrert versjonsnummer i bunnen av sidemenyen.'
+      }
+    ]
+  },
+  {
+    version: '2.5.1',
+    date: '17. august 2026',
     highlights: [
       {
         type: 'feature',
