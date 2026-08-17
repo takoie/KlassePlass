@@ -122,7 +122,8 @@ $latestJson = [ordered]@{
 } | ConvertTo-Json -Depth 5
 
 $latestJsonPath = Join-Path $bundleDir 'latest.json'
-Set-Content -Path $latestJsonPath -Value $latestJson -Encoding utf8
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($latestJsonPath, $latestJson, $utf8NoBom)
 
 # --- 8. Git tag + push ---
 git -C $RepoRoot tag -a $Tag -m "Release $Tag"

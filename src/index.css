@@ -66,6 +66,20 @@ html, body {
   flex-shrink: 0;
 }
 
+.overblikk-nav-btn-sub {
+  height: 2.35rem;
+  font-size: 0.8rem;
+  gap: 0.65rem;
+  padding-left: 1.15rem;
+  padding-right: 0.85rem;
+  border-radius: 0.625rem;
+}
+
+.overblikk-nav-btn-sub i {
+  width: 1.1rem;
+  font-size: 0.775rem;
+}
+
 .overblikk-nav-btn:hover {
   background-color: rgba(255, 255, 255, 0.05);
   color: #f8fafc;

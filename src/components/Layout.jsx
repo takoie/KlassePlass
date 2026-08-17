@@ -85,16 +85,16 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
         </div>
 
         {/* Nederst i Sidemenyen - Oppdatering, Veiledning og Innstillinger */}
-        <div className="pt-3 border-t border-slate-800/80 mt-auto flex flex-col gap-2">
+        <div className="pt-3 border-t border-slate-800/80 mt-auto flex flex-col gap-1.5">
           <button
-            className={`overblikk-nav-btn relative transition-all duration-300 ${
+            className={`overblikk-nav-btn overblikk-nav-btn-sub relative transition-all duration-300 ${
               hasUpdateReady
                 ? 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
                 : ''
             }`}
             onClick={onOpenUpdateModal}
           >
-            <i className={`fa-solid fa-cloud-arrow-down fa-fw text-sm flex-shrink-0 ${
+            <i className={`fa-solid fa-cloud-arrow-down fa-fw flex-shrink-0 ${
               hasUpdateReady ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-slate-400'
             }`}></i>
             <span className="leading-none flex-1 text-left">Oppdatering</span>
@@ -105,17 +105,17 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             )}
           </button>
           <button
-            className="overblikk-nav-btn"
+            className="overblikk-nav-btn overblikk-nav-btn-sub"
             onClick={onOpenOnboarding}
           >
-            <i className="fa-solid fa-compass fa-fw text-sm flex-shrink-0 text-slate-400"></i>
+            <i className="fa-solid fa-compass fa-fw flex-shrink-0 text-slate-400"></i>
             <span className="leading-none flex-1 text-left">Veiledning</span>
           </button>
           <button
-            className={`overblikk-nav-btn ${currentView === 'settings' ? 'active' : ''}`}
+            className={`overblikk-nav-btn overblikk-nav-btn-sub ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
           >
-            <i className="fa-solid fa-gear fa-fw text-sm flex-shrink-0 text-slate-400"></i>
+            <i className="fa-solid fa-gear fa-fw flex-shrink-0 text-slate-400"></i>
             <span className="leading-none flex-1 text-left">Innstillinger</span>
           </button>
         </div>
