@@ -84,16 +84,24 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
           })}
         </div>
 
-        {/* Nederst i Sidemenyen - Oppdateringer, Veiledning og Innstillinger */}
+        {/* Nederst i Sidemenyen - Oppdatering, Veiledning og Innstillinger */}
         <div className="pt-3 border-t border-slate-800/80 mt-auto flex flex-col gap-2">
           <button
-            className="overblikk-nav-btn relative"
+            className={`overblikk-nav-btn relative transition-all duration-300 ${
+              hasUpdateReady
+                ? 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                : ''
+            }`}
             onClick={onOpenUpdateModal}
           >
-            <i className="fa-solid fa-cloud-arrow-down text-sm flex-shrink-0 text-slate-400"></i>
-            <span className="leading-none flex-1 text-left">Oppdateringer</span>
+            <i className={`fa-solid fa-cloud-arrow-down text-sm flex-shrink-0 ${
+              hasUpdateReady ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-slate-400'
+            }`}></i>
+            <span className="leading-none flex-1 text-left">Oppdatering</span>
             {hasUpdateReady && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-400 text-slate-950 shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse">
+                Klar
+              </span>
             )}
           </button>
           <button

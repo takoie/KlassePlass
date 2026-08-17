@@ -97,7 +97,7 @@ export default function UpdateModal({ isOpen, onClose }) {
             </div>
             <div>
               <h2 className="font-extrabold text-white text-lg tracking-tight flex items-center gap-2">
-                Oppdateringer & Endringslogg
+                Oppdatering & Endringslogg
               </h2>
               <p className="text-xs text-slate-400">
                 Installert versjon: <span className="font-bold text-slate-200">v{currentVersion || '2.5.0'}</span>
