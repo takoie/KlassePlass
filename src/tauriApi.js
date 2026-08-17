@@ -184,7 +184,20 @@ const tauriApi = {
   // gjør at denne callback-kontrakten kan speile Electrons push-baserte
   // `onUpdateReady` 1:1.
   onUpdateReady: (cb) => onUpdateReadyImpl(cb),
-  restartApp: () => relaunch(),
+  restartApp: async () => {
+    // I dev-miljø (http://localhost:3000) vil en native app.exe-relaunch
+    // starte exe-en uten npm run vite dev serveren. Vi gjør derfor reload() i dev
+    // slik at testing fungerer sømløst, mens installert produksjonsbygg kjører ekte relaunch().
+    if (window.location.port === '3000' || window.location.hostname === 'localhost' && window.location.protocol === 'http:') {
+      window.location.reload();
+      return;
+    }
+    try {
+      await relaunch();
+    } catch (e) {
+      window.location.reload();
+    }
+  },
   checkForUpdates: () => checkForUpdatesManually(),
   downloadAndInstallUpdate: (u, onProgress) => downloadAndInstallUpdate(u, onProgress),
   simulateUpdate: (v) => simulateUpdateReady(v),
