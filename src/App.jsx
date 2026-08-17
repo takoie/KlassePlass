@@ -9,6 +9,7 @@ import StationOverview from './components/StationOverview';
 import StationSetup from './components/StationSetup';
 import StationPresenter from './components/StationPresenter';
 import UpdateBanner from './components/UpdateBanner';
+import UpdateModal from './components/UpdateModal';
 import OnboardingGuide from './components/OnboardingGuide';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
 import { showToast } from './shared/utils';
@@ -17,6 +18,7 @@ function App() {
   const [currentView, setCurrentView] = useState('classes-overview');
   const [editId, setEditId] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   // Bruk lagret tema fra første render - index.html har "klasseplass" som
   // statisk fallback for aller første maling, før innstillingene er hentet.
@@ -76,10 +78,12 @@ function App() {
         currentView={currentView}
         setCurrentView={(v) => { setEditId(null); setCurrentView(v); }}
         onOpenOnboarding={() => setShowOnboarding(true)}
+        onOpenUpdateModal={() => setShowUpdateModal(true)}
       >
         {renderView()}
       </Layout>
       <UpdateBanner />
+      <UpdateModal isOpen={showUpdateModal} onClose={() => setShowUpdateModal(false)} />
       {showOnboarding && <OnboardingGuide onClose={handleCloseOnboarding} />}
     </div>
   );

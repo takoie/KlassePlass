@@ -36,6 +36,7 @@
 
 /** Registrerte "update-ready"-callbacks, kalt når en nedlasting fullføres. */
 const updateReadyCallbacks = new Set();
+let cachedReadyUpdate = null;
 
 /**
  * Registrerer en callback som kalles med `{ version }` når en oppdatering er
@@ -51,10 +52,14 @@ const updateReadyCallbacks = new Set();
 export function onUpdateReady(cb) {
   if (typeof cb !== 'function') return () => {};
   updateReadyCallbacks.add(cb);
+  if (cachedReadyUpdate) {
+    try { cb(cachedReadyUpdate); } catch (e) {}
+  }
   return () => updateReadyCallbacks.delete(cb);
 }
 
-function notifyUpdateReady(info) {
+export function notifyUpdateReady(info) {
+  cachedReadyUpdate = info;
   for (const cb of updateReadyCallbacks) {
     try {
       cb(info);
@@ -65,14 +70,70 @@ function notifyUpdateReady(info) {
 }
 
 /**
+ * Sjekker manuelt etter oppdatering og returnerer detaljer til UI.
+ */
+export async function checkForUpdatesManually() {
+  let check;
+  try {
+    ({ check } = await import('@tauri-apps/plugin-updater'));
+  } catch (err) {
+    throw new Error('Kunne ikke laste updater-pluginet: ' + (err?.message ?? err));
+  }
+
+  const update = await check();
+  if (!update) {
+    return { available: false };
+  }
+
+  return {
+    available: true,
+    currentVersion: update.currentVersion,
+    version: update.version,
+    date: update.date,
+    body: update.body,
+    updateObj: update
+  };
+}
+
+/**
+ * Laster ned og installerer en oppdatering med valgfri fremdrifts-callback.
+ */
+export async function downloadAndInstallUpdate(updateObj, onProgress) {
+  if (!updateObj) throw new Error('Ingen oppdateringsobjekt angitt');
+
+  let downloadedBytes = 0;
+  let totalBytes = 0;
+
+  try {
+    await updateObj.downloadAndInstall((event) => {
+      if (event.event === 'Started' && event.data?.contentLength) {
+        totalBytes = event.data.contentLength;
+        onProgress?.({ percent: 0, downloadedBytes: 0, totalBytes });
+      } else if (event.event === 'Progress' && event.data?.chunkLength) {
+        downloadedBytes += event.data.chunkLength;
+        const percent = totalBytes > 0 ? Math.round((downloadedBytes / totalBytes) * 100) : 50;
+        onProgress?.({ percent, downloadedBytes, totalBytes });
+      } else if (event.event === 'Finished') {
+        onProgress?.({ percent: 100, downloadedBytes: totalBytes, totalBytes });
+      }
+    });
+    notifyUpdateReady({ version: updateObj.version });
+  } finally {
+    updateObj.close().catch(() => {});
+  }
+}
+
+/**
+ * Simulerer at en ny oppdatering er lastet ned og klar for installasjon.
+ * Brukes til testing og demonstrasjon i UI.
+ */
+export function simulateUpdateReady(testVersion = '2.5.1') {
+  notifyUpdateReady({ version: testVersion, simulated: true });
+}
+
+/**
  * Sjekker for oppdatering, laster ned og installerer den hvis en finnes.
  * Kalles én gang ved oppstart via `initAutoUpdateCheck()`.
- *
- * Enhver feil (nettverk, privat repo som svarer 404/403, manglende
- * `latest.json` osv.) fanges og logges KUN til konsollen — se modul-doc for
- * hvorfor dette er et eksplisitt produktkrav, ikke bare en bekvemmelighet.
- * `check()` som resolver til `null` (ingen oppdatering tilgjengelig) er en
- * normal, forventet vei og skal heller ikke logges som en feil.
  */
 async function checkAndInstallUpdate() {
   let check;
@@ -87,15 +148,11 @@ async function checkAndInstallUpdate() {
   try {
     update = await check();
   } catch (err) {
-    // Stille feil ved manglende nettverkstilgang / privat GitHub-repo /
-    // utvikling uten publisert release — speiler Electron-versjonens
-    // `checkForUpdatesAndNotify().catch(() => {})`.
     console.error('Auto-updater error:', err?.message ?? err);
     return;
   }
 
   if (!update) {
-    // Ingen oppdatering tilgjengelig - helt normal vei, ingen UI, ingen feil.
     return;
   }
 
@@ -105,15 +162,12 @@ async function checkAndInstallUpdate() {
   } catch (err) {
     console.error('Auto-updater error:', err?.message ?? err);
   } finally {
-    // Frigjør den underliggende Rust-ressursen (Update extends Resource).
     update.close().catch(() => {});
   }
 }
 
 /**
- * Starter oppdateringssjekken. Kalles fra `main.jsx`, kun når `isTauri()`,
- * på samme måte som `setupUpdater(winRef)` kalles fra Electrons
- * hovedprosess ved vindu-opprettelse.
+ * Starter oppdateringssjekken. Kalles fra `main.jsx`, kun når `isTauri()`.
  */
 export function initAutoUpdateCheck() {
   checkAndInstallUpdate();

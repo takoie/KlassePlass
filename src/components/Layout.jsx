@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
-export default function Layout({ currentView, setCurrentView, onOpenOnboarding, children }) {
+export default function Layout({ currentView, setCurrentView, onOpenOnboarding, onOpenUpdateModal, children }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [hasUpdateReady, setHasUpdateReady] = useState(false);
+
+  useEffect(() => {
+    const unlisten = window.api?.onUpdateReady?.(() => setHasUpdateReady(true));
+    return () => unlisten?.();
+  }, []);
 
   useEffect(() => {
     const handler = (e) => setIsFullscreen(e.detail);
@@ -78,8 +84,18 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
           })}
         </div>
 
-        {/* Nederst i Sidemenyen - Veiledning og Innstillinger */}
+        {/* Nederst i Sidemenyen - Oppdateringer, Veiledning og Innstillinger */}
         <div className="pt-3 border-t border-slate-800/80 mt-auto flex flex-col gap-2">
+          <button
+            className="overblikk-nav-btn relative"
+            onClick={onOpenUpdateModal}
+          >
+            <i className="fa-solid fa-cloud-arrow-down text-sm flex-shrink-0 text-slate-400"></i>
+            <span className="leading-none flex-1 text-left">Oppdateringer</span>
+            {hasUpdateReady && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            )}
+          </button>
           <button
             className="overblikk-nav-btn"
             onClick={onOpenOnboarding}

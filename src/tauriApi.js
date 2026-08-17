@@ -51,7 +51,12 @@ import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow, currentMonitor } from '@tauri-apps/api/window';
 import { openPath as pluginOpenPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { onUpdateReady as onUpdateReadyImpl } from './tauriUpdater.js';
+import {
+  onUpdateReady as onUpdateReadyImpl,
+  checkForUpdatesManually,
+  downloadAndInstallUpdate,
+  simulateUpdateReady
+} from './tauriUpdater.js';
 
 // --- Egendefinert maksimer/gjenopprett-tilstand ------------------------
 // Tauris native isMaximized() på Windows avgjøres ved å sammenligne
@@ -179,11 +184,10 @@ const tauriApi = {
   // gjør at denne callback-kontrakten kan speile Electrons push-baserte
   // `onUpdateReady` 1:1.
   onUpdateReady: (cb) => onUpdateReadyImpl(cb),
-  // `@tauri-apps/plugin-process`s `relaunch()` er Tauri-motstykket til
-  // Electrons `autoUpdater.quitAndInstall()`/`app.relaunch()` — avslutter og
-  // starter appen på nytt, slik at den nylig installerte oppdateringen tas i
-  // bruk.
   restartApp: () => relaunch(),
+  checkForUpdates: () => checkForUpdatesManually(),
+  downloadAndInstallUpdate: (u, onProgress) => downloadAndInstallUpdate(u, onProgress),
+  simulateUpdate: (v) => simulateUpdateReady(v),
 
   // Gruppearbeid
   getGroupAssignments: (cid) => invoke('get_group_assignments', { classId: cid }),
