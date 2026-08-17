@@ -70,8 +70,8 @@ if ($null -eq $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
     [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
     Write-Host "Bruker lagret signeringspassord fra $PwCacheFile" -ForegroundColor DarkGray
   } else {
-    Write-Host "Ingen passordcache funnet ($PwCacheFile) - bruker tom passfrase." -ForegroundColor DarkGray
-    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ''
+    Write-Host "Ingen passordcache funnet ($PwCacheFile) - bruker standard passfrase." -ForegroundColor DarkGray
+    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = 'klasseplass-secret-signing-key'
   }
 }
 

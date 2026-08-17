@@ -17,3 +17,10 @@ docs/*
 CLAUDE.md
 RELEASE.md
 graphify-out/*
+
+# Signeringsnøkler og passord
+*.key
+*.key.pub
+*.key.pw
+*.password.txt
+.tauri-keys/
