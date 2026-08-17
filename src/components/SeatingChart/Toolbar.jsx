@@ -1,11 +1,11 @@
 import React from 'react';
 
-/** Info-ikon med egen hover-boks (stilt som appens modaler), i stedet for nettleserens native title-tooltip. */
+/** Info-ikon med egen hover-boks som åpner under ikonet og holder seg innenfor panelet */
 function InfoTip({ text }) {
   return (
-    <span className="relative inline-flex group/tip ml-auto flex-shrink-0">
-      <i className="fa-solid fa-circle-info w-3.5 text-slate-400 opacity-60 group-hover/tip:opacity-100 transition-opacity"></i>
-      <div className="absolute right-0 bottom-full mb-2 w-56 p-2.5 rounded-lg bg-surface-raised border border-slate-700 shadow-xl text-[11px] leading-relaxed text-slate-300 text-left normal-case font-normal tracking-normal whitespace-pre-line opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-opacity z-50 pointer-events-none">
+    <span className="relative inline-flex group/tip flex-shrink-0">
+      <i className="fa-solid fa-circle-info text-xs text-slate-400 opacity-60 group-hover/tip:opacity-100 transition-opacity cursor-help"></i>
+      <div className="absolute right-0 top-full mt-1.5 w-52 p-2.5 rounded-xl bg-slate-950/95 border border-slate-700 shadow-2xl text-[11px] leading-relaxed text-slate-200 text-left normal-case font-normal tracking-normal whitespace-pre-line opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all duration-150 z-[9999] pointer-events-none">
         {text}
       </div>
     </span>
@@ -17,12 +17,12 @@ function ToggleRow({ icon, label, checked, onChange, disabled, tip }) {
   return (
     <button
       type="button"
-      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
         disabled
-          ? 'opacity-35 cursor-not-allowed border-transparent bg-transparent text-slate-500'
+          ? 'opacity-35 cursor-not-allowed bg-transparent text-slate-500'
           : checked
-          ? 'bg-slate-800/80 text-slate-100 border-slate-700 shadow-sm'
-          : 'bg-transparent text-slate-400 border-transparent hover:bg-slate-800/40 hover:text-slate-200'
+          ? 'bg-slate-800/80 text-slate-100 shadow-sm'
+          : 'bg-transparent text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
       }`}
       onClick={disabled ? undefined : onChange}
       disabled={disabled}
@@ -42,7 +42,11 @@ function ToggleRow({ icon, label, checked, onChange, disabled, tip }) {
 }
 
 /**
- * Venstre verktøypanel: strukturert i Handlinger, Moduser, Visningslag og Klasserom.
+ * Venstre verktøypanel for klassekart:
+ * - Plassering, Randomiser, Makkergrupper og Snu rom samlet øverst
+ * - Visning med rene toggle-brytere i midten
+ * - Rom / Prosjektor
+ * - Fun Mode plassert nederst
  */
 export default function Toolbar({
   unplacedStudents,
@@ -55,7 +59,6 @@ export default function Toolbar({
   showHistory, setShowHistory,
   showNumbers, setShowNumbers,
   showZones, setShowZones,
-  hideSensitiveInfo, setHideSensitiveInfo,
   setIsProjectorMode,
   revealMode, revealedCount, revealTotal, startReveal, revealNext, revealAll, endReveal,
   activeFunMode,
@@ -71,34 +74,38 @@ export default function Toolbar({
       {/* Header */}
       <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-base-200">
         <h3 className="font-extrabold text-xs text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
-          <i className="fa-solid fa-toolbox"></i> Verktøy & Visning
+          <i className="fa-solid fa-toolbox"></i> Verktøy
         </h3>
       </div>
 
       <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-3 custom-scrollbar">
-        {/* Seksjon 1: Elevplassering */}
+        {/* Seksjon 1: Plassering & Makkergrupper */}
         <div className="flex flex-col gap-1.5">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Plassering</div>
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-0.5">
+            Plassering & Grupper
+          </div>
           
+          {/* Elever */}
           <button 
-            className={`btn btn-sm justify-start border transition-all ${
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
               showStudentDrawer 
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm' 
-                : 'btn-outline border-slate-700 text-slate-200 hover:bg-slate-800'
+                ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40' 
+                : 'bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
             }`}
             onClick={() => { setShowStudentDrawer(!showStudentDrawer); setShowGroupDrawer(false); setShowFunDrawer(false); }}
           >
             <i className="fa-solid fa-users fa-fw text-xs text-emerald-400"></i>
             <span className="flex-1 text-left">Elever</span>
             {unplacedStudents.length > 0 && (
-              <span className="badge badge-sm bg-rose-500 text-white font-bold ml-auto border-none">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white ml-auto">
                 {unplacedStudents.length}
               </span>
             )}
           </button>
 
+          {/* Plasser alle */}
           <button 
-            className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900/70 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
             onClick={handleAutoFill} 
             disabled={unplacedStudents.length === 0} 
             title="Fyll alle ledige plasser med uplasserte elever"
@@ -107,25 +114,21 @@ export default function Toolbar({
             <span>Plasser alle</span>
           </button>
 
+          {/* Randomiser */}
           <button 
-            className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-950/30 hover:bg-amber-900/40 text-amber-200 hover:text-amber-100 border border-amber-500/30 hover:border-amber-500/50 transition-all text-xs font-semibold shadow-sm" 
             onClick={handleRuleBasedFunSpin}
           >
             <i className="fa-solid fa-shuffle fa-fw text-xs text-amber-400"></i>
             <span>Randomiser</span>
           </button>
-        </div>
 
-        {/* Seksjon 2: Verktøymoduser */}
-        <div className="flex flex-col gap-1.5">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Moduser</div>
-
-          {/* Makkergrupper Modus */}
+          {/* Makkergrupper */}
           <button 
-            className={`btn btn-sm justify-start border transition-all ${
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
               showGroupDrawer 
-                ? 'bg-fuchsia-950/50 text-fuchsia-300 border-fuchsia-500/50 shadow-sm' 
-                : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'
+                ? 'bg-fuchsia-950/60 text-fuchsia-200 border border-fuchsia-500/40' 
+                : 'bg-fuchsia-950/20 hover:bg-fuchsia-900/30 text-fuchsia-300 border border-fuchsia-500/25 hover:border-fuchsia-500/40'
             }`} 
             onClick={() => { setShowGroupDrawer(!showGroupDrawer); if (showGroupDrawer) setActiveGroupId(null); setShowStudentDrawer(false); setShowFunDrawer(false); }}
           >
@@ -134,8 +137,9 @@ export default function Toolbar({
             <i className={`fa-solid fa-chevron-${showGroupDrawer ? 'up' : 'down'} text-[10px] opacity-60`}></i>
           </button>
 
+          {/* Makkergrupper ekspanderbar boks */}
           {showGroupDrawer && (
-            <div className="flex flex-col gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-fuchsia-500/30">
+            <div className="flex flex-col gap-2 p-2.5 rounded-xl bg-slate-900/80 border border-fuchsia-500/30 animate-[fadeIn_0.15s_ease-out]">
               <p className="text-[10px] text-slate-400 leading-tight">Velg farge og klikk på bordene for å koble dem sammen.</p>
               <div className="grid grid-cols-4 gap-1.5">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
@@ -166,12 +170,99 @@ export default function Toolbar({
             </div>
           )}
 
-          {/* Fun Mode Modus */}
+          {/* Snu klasserommet */}
           <button 
-            className={`btn btn-sm justify-start border transition-all ${
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+            onClick={flipRoom}
+          >
+            <i className="fa-solid fa-rotate fa-fw text-xs text-cyan-400"></i>
+            <span>Snu klasserommet</span>
+          </button>
+        </div>
+
+        {/* Seksjon 2: Visning */}
+        <div className="flex flex-col gap-1">
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-0.5">
+            Visning
+          </div>
+
+          <ToggleRow
+            icon="fa-solid fa-eye"
+            label="Makkergrupper"
+            checked={!hideGroups}
+            onChange={() => setHideGroups(!hideGroups)}
+          />
+
+          <ToggleRow
+            icon="fa-solid fa-fill-drip"
+            label="Fargelagte bord"
+            checked={colorSeatsByGroup}
+            onChange={() => setColorSeatsByGroup(!colorSeatsByGroup)}
+            disabled={hideGroups}
+            tip="Fyller bordene med en lysere tone av makkergruppe-fargen."
+          />
+
+          <ToggleRow
+            icon="fa-solid fa-clock-rotate-left"
+            label="Historikk"
+            checked={showHistory}
+            onChange={() => setShowHistory(!showHistory)}
+            tip={'Fargen viser hvor nylig elevparet satt sammen sist:\nRød = forrige klassekart\nOransje = 2 kart siden\nGul = 3 kart siden\nLime = 4 kart siden\nGrønn = 5 kart siden'}
+          />
+
+          <ToggleRow
+            icon="fa-solid fa-hashtag"
+            label="Plassnumre"
+            checked={showNumbers}
+            onChange={() => setShowNumbers(!showNumbers)}
+          />
+
+          <ToggleRow
+            icon="fa-solid fa-map"
+            label="Soner"
+            checked={showZones}
+            onChange={() => setShowZones(!showZones)}
+          />
+
+          <ToggleRow
+            icon={canvasLight ? "fa-solid fa-sun" : "fa-solid fa-moon"}
+            label="Lys bakgrunn"
+            checked={canvasLight}
+            onChange={toggleCanvasLight}
+          />
+        </div>
+
+        {/* Seksjon 3: Rom & Prosjektor */}
+        <div className="flex flex-col gap-1.5">
+          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-0.5">
+            Rom & Visningsmodus
+          </div>
+
+          <button 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+            onClick={() => setIsProjectorMode(true)}
+          >
+            <i className="fa-solid fa-expand fa-fw text-xs text-fuchsia-400"></i>
+            <span>Prosjektor-modus</span>
+          </button>
+
+          <button 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+            onClick={() => document.getElementById('modal_sync_room')?.showModal()}
+          >
+            <i className="fa-solid fa-arrows-rotate fa-fw text-xs text-orange-400"></i>
+            <span className="flex-1 text-left">Oppdater romplan</span>
+            <InfoTip text={'Klassekartet bruker et fastfrosset øyeblikksbilde av bordoppsettet.\n\nHar du gjort endringer i rommet i Rom-editoren, må du trykke her for å hente inn det nye oppsettet.'} />
+          </button>
+        </div>
+
+        {/* Seksjon 4: Fun mode (Nederst) */}
+        <div className="flex flex-col gap-1.5 pt-1">
+          <button 
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
               showFunDrawer 
-                ? 'bg-pink-950/50 text-pink-300 border-pink-500/50 shadow-sm' 
-                : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'
+                ? 'bg-pink-950/60 text-pink-200 border border-pink-500/40' 
+                : 'bg-pink-950/20 hover:bg-pink-900/30 text-pink-300 border border-pink-500/25 hover:border-pink-500/40'
             }`} 
             onClick={() => { setShowFunDrawer(!showFunDrawer); setShowStudentDrawer(false); setShowGroupDrawer(false); }}
           >
@@ -181,7 +272,7 @@ export default function Toolbar({
           </button>
 
           {showFunDrawer && (
-            <div className="flex flex-col gap-2.5 p-2.5 rounded-xl bg-slate-900/60 border border-pink-500/30">
+            <div className="flex flex-col gap-2.5 p-2.5 rounded-xl bg-slate-900/80 border border-pink-500/30 animate-[fadeIn_0.15s_ease-out]">
               {/* Gradvis avdekking */}
               <div className="flex flex-col gap-1.5">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
@@ -271,95 +362,6 @@ export default function Toolbar({
               </div>
             </div>
           )}
-        </div>
-
-        {/* Seksjon 3: Visningslag (Toggles) */}
-        <div className="flex flex-col gap-1 p-2 rounded-xl bg-surface-field/40 border border-slate-800">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-1">
-            Visningslag
-          </div>
-
-          <ToggleRow
-            icon="fa-solid fa-eye"
-            label="Makkergrupper"
-            checked={!hideGroups}
-            onChange={() => setHideGroups(!hideGroups)}
-          />
-
-          <ToggleRow
-            icon="fa-solid fa-fill-drip"
-            label="Fargelagte bord"
-            checked={colorSeatsByGroup}
-            onChange={() => setColorSeatsByGroup(!colorSeatsByGroup)}
-            disabled={hideGroups}
-            tip="Fyller bordene med en lysere tone av makkergruppe-fargen."
-          />
-
-          <ToggleRow
-            icon="fa-solid fa-clock-rotate-left"
-            label="Makkere (historikk)"
-            checked={showHistory}
-            onChange={() => setShowHistory(!showHistory)}
-            tip={'Fargen viser hvor nylig elevparet satt sammen sist:\nRød = forrige klassekart\nOransje = 2 kart siden\nGul = 3 kart siden\nLime = 4 kart siden\nGrønn = 5 kart siden'}
-          />
-
-          <ToggleRow
-            icon="fa-solid fa-hashtag"
-            label="Plassnumre"
-            checked={showNumbers}
-            onChange={() => setShowNumbers(!showNumbers)}
-          />
-
-          <ToggleRow
-            icon="fa-solid fa-map"
-            label="Soner"
-            checked={showZones}
-            onChange={() => setShowZones(!showZones)}
-          />
-
-          <ToggleRow
-            icon="fa-solid fa-user-shield"
-            label="Skjul personinfo"
-            checked={hideSensitiveInfo}
-            onChange={() => setHideSensitiveInfo(!hideSensitiveInfo)}
-          />
-
-          <ToggleRow
-            icon={canvasLight ? "fa-solid fa-sun" : "fa-solid fa-moon"}
-            label="Lys bakgrunn"
-            checked={canvasLight}
-            onChange={toggleCanvasLight}
-          />
-        </div>
-
-        {/* Seksjon 4: Klasserom og visningsmodus */}
-        <div className="flex flex-col gap-1.5">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Klasserom</div>
-
-          <button 
-            className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" 
-            onClick={flipRoom}
-          >
-            <i className="fa-solid fa-rotate fa-fw text-xs text-cyan-400"></i>
-            <span>Snu klasserommet</span>
-          </button>
-
-          <button 
-            className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" 
-            onClick={() => setIsProjectorMode(true)}
-          >
-            <i className="fa-solid fa-expand fa-fw text-xs text-fuchsia-400"></i>
-            <span>Prosjektor-modus</span>
-          </button>
-
-          <button 
-            className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" 
-            onClick={() => document.getElementById('modal_sync_room')?.showModal()}
-          >
-            <i className="fa-solid fa-arrows-rotate fa-fw text-xs text-orange-400"></i>
-            <span className="flex-1 text-left">Oppdater romplan</span>
-            <InfoTip text={'Klassekartet bruker et fastfrosset øyeblikksbilde av bordoppsettet.\n\nHar du gjort endringer i rommet i Rom-editoren, må du trykke her for å hente inn det nye oppsettet.'} />
-          </button>
         </div>
       </div>
     </div>
