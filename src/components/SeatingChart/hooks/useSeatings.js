@@ -34,7 +34,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   const [allStudents, setAllStudents] = useState([]);
   const [unplacedStudents, setUnplacedStudents] = useState([]);
 
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
   const [historyConflicts, setHistoryConflicts] = useState({});
 
   const [editingPeriod, setEditingPeriod] = useState(null);
@@ -44,6 +44,50 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
 
   const saveTimeoutRef = useRef(null);
   const isInitialLoadRef = useRef(true);
+  const latestSeatingDataRef = useRef({
+    selectedSeatingId, selectedClass, selectedRoom, chartName, chartComment,
+    placements, lockedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
+  });
+  const pendingSaveRef = useRef(false);
+
+  useEffect(() => {
+    latestSeatingDataRef.current = {
+      selectedSeatingId, selectedClass, selectedRoom, chartName, chartComment,
+      placements, lockedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
+    };
+  });
+
+  useEffect(() => {
+    return () => {
+      if (pendingSaveRef.current && latestSeatingDataRef.current) {
+        const {
+          selectedSeatingId: sid, selectedClass: sc, selectedRoom: sr,
+          chartName: cn, chartComment: cc, placements: pl, lockedSeats: ls,
+          studentRoles: sRoles, studentNotes: sNotes, groupOverrides: go,
+          desks: ds, boardObj: bo
+        } = latestSeatingDataRef.current;
+
+        if (sc && sr && cn?.trim()) {
+          const savePayload = JSON.stringify({
+            placements: pl,
+            lockedSeats: ls,
+            studentRoles: sRoles,
+            studentNotes: sNotes,
+            groupOverrides: go,
+            deskLayout: { desks: ds, boardObj: bo }
+          });
+          window.api.saveSeating({
+            id: sid || null,
+            name: cn.trim(),
+            classId: Number(sc),
+            roomId: Number(sr),
+            placements: savePayload,
+            comment: cc
+          }).catch(() => {});
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     loadBaseData();
@@ -148,7 +192,28 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         setAllStudents(stuList);
         setClassRules(rls);
 
-        const placedIds = Object.values(currentPlacements);
+        // Rens bort eventuelle plasseringer for elever som er slettet fra klassen, og dedupliser
+        const validIds = new Set(stuList.flatMap(s => [s.id, s.name]));
+        const seenStudentIds = new Set();
+        const cleanedPlacements = {};
+
+        // Prioriter først låste seter så låste elever beholder sin plass
+        for (const [slotKey, val] of Object.entries(currentPlacements || {})) {
+          if (val && validIds.has(val) && lockedSeats[slotKey] && !seenStudentIds.has(val)) {
+            seenStudentIds.add(val);
+            cleanedPlacements[slotKey] = val;
+          }
+        }
+        // Deretter ulåste seter
+        for (const [slotKey, val] of Object.entries(currentPlacements || {})) {
+          if (val && validIds.has(val) && !cleanedPlacements[slotKey] && !seenStudentIds.has(val)) {
+            seenStudentIds.add(val);
+            cleanedPlacements[slotKey] = val;
+          }
+        }
+        setPlacements(cleanedPlacements);
+
+        const placedIds = Object.values(cleanedPlacements);
         setUnplacedStudents(stuList.filter(s => !placedIds.includes(s.id) && !placedIds.includes(s.name)));
       } catch (e) {
         setAllStudents([]);
@@ -171,10 +236,12 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     }
     if (!selectedClass || !selectedRoom) return;
 
+    pendingSaveRef.current = true;
     setSaveState('saving');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveCurrentSeating();
+    saveTimeoutRef.current = setTimeout(async () => {
+      await saveCurrentSeating();
+      pendingSaveRef.current = false;
     }, 1000);
 
     return () => clearTimeout(saveTimeoutRef.current);
@@ -386,7 +453,28 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         setAllStudents(stuList);
         setClassRules(rls);
 
-        const placedIds = Object.values(currentPlacements);
+        // Rens bort eventuelle plasseringer for elever som er slettet fra klassen, og dedupliser
+        const validIds = new Set(stuList.flatMap(s => [s.id, s.name]));
+        const seenStudentIds = new Set();
+        const cleanedPlacements = {};
+
+        // Prioriter først låste seter så låste elever beholder sin plass
+        for (const [slotKey, val] of Object.entries(currentPlacements || {})) {
+          if (val && validIds.has(val) && lockedSeats[slotKey] && !seenStudentIds.has(val)) {
+            seenStudentIds.add(val);
+            cleanedPlacements[slotKey] = val;
+          }
+        }
+        // Deretter ulåste seter
+        for (const [slotKey, val] of Object.entries(currentPlacements || {})) {
+          if (val && validIds.has(val) && !cleanedPlacements[slotKey] && !seenStudentIds.has(val)) {
+            seenStudentIds.add(val);
+            cleanedPlacements[slotKey] = val;
+          }
+        }
+        setPlacements(cleanedPlacements);
+
+        const placedIds = Object.values(cleanedPlacements);
         setUnplacedStudents(stuList.filter(s => !placedIds.includes(s.id) && !placedIds.includes(s.name)));
       } catch (e) {
         setAllStudents([]);
@@ -397,7 +485,8 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   };
 
   const getStudentByIdOrName = (idOrName) => {
-    return allStudents.find(s => s.id === idOrName || s.name === idOrName) || { id: idOrName, name: idOrName, note: '' };
+    if (!idOrName) return null;
+    return allStudents.find(s => s.id === idOrName || s.name === idOrName) || null;
   };
 
   const saveCurrentSeating = async () => {
@@ -546,7 +635,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   };
 
   // Henter romets NÅVÆRENDE oppsett og erstatter bord-snapshotet i dette klassekartet.
-  // Bord-IDer som ikke lenger finnes i rommet mister plasseringen sin (studenten havner
+  // Bord-IDer eller seter som ikke lenger finnes i rommet mister plasseringen sin (studenten havner
   // i "uplassert") — det er forventet og er selve poenget: dette er en bevisst handling,
   // ikke noe som skal skje stille av seg selv når rommet redigeres.
   const syncFromRoom = () => {
@@ -560,7 +649,15 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         zones: Array.isArray(d.zones) ? d.zones : (d.zone ? [d.zone] : []),
         groupId: d.groupId || null
       }));
-      const newDeskIds = new Set(newDesks.map(d => String(d.id)));
+
+      // Bygg liste over alle eksakte gyldige slotKeys i det nye oppsettet
+      const validSlotKeys = new Set();
+      newDesks.forEach(d => {
+        const cap = d.capacity || 1;
+        for (let s = 0; s < cap; s++) {
+          validSlotKeys.add(`${d.id}_seat_${s}`);
+        }
+      });
 
       setDesks(newDesks);
       setBoardObj(layout.boardObj || { x: 422, y: 15 });
@@ -568,10 +665,18 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       setPlacements(prev => {
         const next = {};
         for (const [slotKey, val] of Object.entries(prev)) {
-          if (newDeskIds.has(slotKey.split('_seat_')[0])) next[slotKey] = val;
+          if (validSlotKeys.has(slotKey)) next[slotKey] = val;
         }
         const keptIds = Object.values(next);
         setUnplacedStudents(allStudents.filter(s => !keptIds.includes(s.id) && !keptIds.includes(s.name)));
+        return next;
+      });
+
+      setLockedSeats(prev => {
+        const next = {};
+        for (const [slotKey, val] of Object.entries(prev)) {
+          if (validSlotKeys.has(slotKey)) next[slotKey] = val;
+        }
         return next;
       });
     } catch (e) {}

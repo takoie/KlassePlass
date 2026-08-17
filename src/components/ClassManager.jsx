@@ -47,6 +47,31 @@ export default function ClassManager({ onBack, initialId }) {
   
   const saveTimeoutRef = useRef(null);
   const isInitialLoadRef = useRef(true);
+  const latestClassDataRef = useRef({ selectedClass, className, students, rules });
+  const pendingSaveRef = useRef(false);
+
+  useEffect(() => {
+    latestClassDataRef.current = { selectedClass, className, students, rules };
+  });
+
+  useEffect(() => {
+    return () => {
+      if (pendingSaveRef.current && latestClassDataRef.current) {
+        const { selectedClass: sc, className: cn, students: st, rules: rl } = latestClassDataRef.current;
+        if (sc?.id && cn.trim()) {
+          const payload = JSON.stringify({
+            students: st.filter(s => s.name.trim() !== ''),
+            rules: rl
+          });
+          window.api.saveClass({
+            id: sc.id,
+            name: cn.trim(),
+            students: payload
+          }).catch(() => {});
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     loadClasses();
@@ -77,10 +102,12 @@ export default function ClassManager({ onBack, initialId }) {
     }
     if (!selectedClass || !selectedClass.id) return;
 
+    pendingSaveRef.current = true;
     setSaveState('saving');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveCurrentClass();
+    saveTimeoutRef.current = setTimeout(async () => {
+      await saveCurrentClass();
+      pendingSaveRef.current = false;
     }, 500); 
     
     return () => clearTimeout(saveTimeoutRef.current);

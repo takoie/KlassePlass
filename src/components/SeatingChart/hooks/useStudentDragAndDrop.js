@@ -90,8 +90,10 @@ export function useStudentDragAndDrop({
       const existingVal = newPlacements[targetSlotKey];
       if (existingVal) {
         const existingObj = getStudentByIdOrName(existingVal);
-        if (fromSlotKey) newPlacements[fromSlotKey] = existingObj.id;
-        else newUnplaced.push(existingObj);
+        if (existingObj) {
+          if (fromSlotKey) newPlacements[fromSlotKey] = existingObj.id;
+          else newUnplaced.push(existingObj);
+        }
       }
       newPlacements[targetSlotKey] = studentObj.id;
     } else if (cx < -50) {

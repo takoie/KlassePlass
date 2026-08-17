@@ -155,6 +155,9 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     // ble fikset for klassekart i SeatingOverview (se seatings.rs).
     const numericCid = cid === '' ? '' : Number(cid);
     setClassId(numericCid);
+    // Tøm utdaterte grupper og gruppeledere fra forrige klasse
+    setGroups(prev => prev.map(() => []));
+    setGroupLeaders(prev => prev.map(() => null));
     await loadStudentsForClass(numericCid);
   };
 

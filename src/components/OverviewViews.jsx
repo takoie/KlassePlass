@@ -471,7 +471,8 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       const parsed = JSON.parse(cls?.students || '[]');
       studentCount = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
     } catch (e) {}
-    const roomName = seating.room_name || rooms.find(r => r.id === seating.room_id)?.name || '—';
+    const hasValidRoom = !!(seating.room_id && rooms.some(r => r.id === seating.room_id));
+    const roomName = seating.room_name || rooms.find(r => r.id === seating.room_id)?.name || (hasValidRoom ? '—' : 'Mangler rom');
 
     return (
       <Card
@@ -481,7 +482,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
         badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
         infoList={[
           { icon: 'fa-solid fa-calendar-week', text: seating.comment || 'Ingen periode angitt' },
-          { icon: 'fa-solid fa-school', text: roomName },
+          { icon: hasValidRoom ? 'fa-solid fa-school' : 'fa-solid fa-triangle-exclamation text-amber-400', text: roomName },
           { icon: 'fa-solid fa-users', text: `${studentCount} elever` }
         ]}
         icon="fa-solid fa-users-rectangle"

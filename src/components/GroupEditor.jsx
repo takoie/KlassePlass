@@ -188,6 +188,42 @@ export default function GroupEditor({ onBack, initialId }) {
     moveStudent(active.id, fromIdx, toIdx);
   };
 
+  const latestGroupDataRef = useRef({});
+  useEffect(() => {
+    latestGroupDataRef.current = {
+      assignmentId, name, classId, useConstraints, avoidLastN, requireLeaders,
+      leaderIds, lockedIds, useCustomNames, groups, groupNames, studentsById, dirty
+    };
+  });
+
+  useEffect(() => {
+    return () => {
+      const data = latestGroupDataRef.current;
+      if (data.dirty && data.assignmentId) {
+        const groupsPayload = (data.groups || []).map((studentIds, i) => ({
+          groupNumber: i + 1,
+          studentIds,
+          groupName: data.useCustomNames && data.groupNames?.[i]?.trim() ? data.groupNames[i].trim() : null,
+        }));
+        window.api.saveGroupAssignment({
+          id: data.assignmentId,
+          name: data.name?.trim() || 'Uten navn',
+          classId: data.classId,
+          sourceSeatingId: null,
+          useConstraints: data.useConstraints,
+          avoidLastN: data.avoidLastN,
+          requireLeaders: data.requireLeaders,
+          leaderIds: data.leaderIds,
+          lockedIds: data.lockedIds,
+          useCustomNames: data.useCustomNames,
+          groups: groupsPayload,
+        }).catch(() => {});
+        const pairs = buildGroupPairs(data.groups || [], data.studentsById || {});
+        window.api.saveGroupHistory({ classId: data.classId, assignmentId: data.assignmentId, pairs }).catch(() => {});
+      }
+    };
+  }, []);
+
   const handleSave = async () => {
     if (!assignmentId) return;
     setSaveState('saving');
@@ -208,6 +244,13 @@ export default function GroupEditor({ onBack, initialId }) {
     } catch (e) {
       setSaveState('saved');
     }
+  };
+
+  const handleBack = async () => {
+    if (dirty) {
+      await handleSave();
+    }
+    onBack();
   };
 
   const handleDelete = async () => {
@@ -238,7 +281,7 @@ export default function GroupEditor({ onBack, initialId }) {
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
       <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
-          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1 flex-shrink-0" onClick={onBack}>
+          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1 flex-shrink-0" onClick={handleBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake
           </button>
           <input

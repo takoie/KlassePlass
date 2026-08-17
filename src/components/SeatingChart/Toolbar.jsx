@@ -175,7 +175,7 @@ export default function Toolbar({
                 <p className="text-[10px] text-slate-400 leading-tight px-1 flex items-center gap-1.5">
                   <i className="fa-solid fa-people-group text-fuchsia-400"></i> Makkerbytte
                 </p>
-                <button className="btn btn-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-white gap-2 font-bold" onClick={startMakkerbytte} disabled={!!activeFunMode || revealMode} title="Bytter kun elever i pulter som har en makkergruppe-farge">
+                <button className="btn btn-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-white gap-2 font-bold" onClick={startMakkerbytte} disabled={!!activeFunMode || revealMode} title="Bytter kun elever ved bord som har en makkergruppe-farge">
                   <i className="fa-solid fa-shuffle"></i> Bytt om grupper
                 </button>
               </div>
@@ -218,9 +218,9 @@ export default function Toolbar({
             className={`btn btn-sm justify-start ${colorSeatsByGroup ? 'btn-neutral bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/50' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`}
             onClick={() => setColorSeatsByGroup(!colorSeatsByGroup)}
             disabled={hideGroups}
-            title={hideGroups ? 'Slå på "Vis makkergrupper" først' : 'Fyller pultene med en lysere tone av makkergruppe-fargen'}
+            title={hideGroups ? 'Slå på "Vis makkergrupper" først' : 'Fyller bordene med en lysere tone av makkergruppe-fargen'}
           >
-            <i className={`fa-solid fa-fill-drip w-5 ${colorSeatsByGroup ? 'text-fuchsia-400' : 'text-slate-400'}`}></i> {colorSeatsByGroup ? 'Skjul pultfarger' : 'Fargelegg pulter'}
+            <i className={`fa-solid fa-fill-drip w-5 ${colorSeatsByGroup ? 'text-fuchsia-400' : 'text-slate-400'}`}></i> {colorSeatsByGroup ? 'Skjul bordfarger' : 'Fargelegg bord'}
           </button>
           <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 justify-start hover:bg-slate-800" onClick={flipRoom}>
             <i className="fa-solid fa-rotate w-5 text-cyan-400"></i> Snu klasserommet

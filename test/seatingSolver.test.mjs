@@ -93,3 +93,23 @@ test('findBestPlacement: fyller aldri flere seter enn det er studenter', () => {
   const { placements } = findBestPlacement({ seatSlots, students, desks });
   assert.equal(Object.values(placements).length, 3);
 });
+
+test('findBestPlacement: dupliserer aldri elever som allerede er låst i basePlacements', () => {
+  const desks = makeDesks();
+  // d1_seat_1 er låst til s2
+  const basePlacements = { d1_seat_1: 's2' };
+  // Åpne seter er alle unntatt det låste
+  const seatSlots = buildSeatSlots(desks).filter(s => s.slotKey !== 'd1_seat_1');
+  // Full elevliste som inkluderer s2
+  const allStudents = [{ id: 's1' }, { id: 's2' }, { id: 's3' }];
+
+  const { placements } = findBestPlacement({ seatSlots, students: allStudents, basePlacements, desks });
+  const placedValues = Object.values(placements);
+
+  // s2 skal kun forekomme ÉN gang (på d1_seat_1)
+  assert.equal(placedValues.filter(id => id === 's2').length, 1);
+  assert.equal(placements.d1_seat_1, 's2');
+  // Totalt antall plasserte elever skal være 3
+  assert.equal(placedValues.length, 3);
+});
+

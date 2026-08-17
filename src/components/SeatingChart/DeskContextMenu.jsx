@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 
 /** Høyreklikk-meny på et bord: lås/lås opp (bord eller enkeltelev), sett/fjern makkergruppe, sist sammen med (per elev). */
-export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDesk, toggleLockStudent, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS, getRecentPartners }) {
+export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDesk, toggleLockStudent, handleUnseatStudent, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS, getRecentPartners }) {
   const menuRef = useRef(null);
   const [pos, setPos] = useState(null);
 
@@ -33,50 +33,63 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDe
       <div className="fixed inset-0 z-[9998]" onClick={() => setContextMenu(null)}></div>
       <div
         ref={menuRef}
-        className="fixed z-[9999] bg-base-200 border border-slate-700 shadow-2xl rounded-xl w-48 overflow-hidden flex flex-col"
+        className="fixed z-[9999] bg-base-200 border border-slate-700 shadow-2xl rounded-xl w-56 overflow-hidden flex flex-col"
         style={style}
         onClick={(e) => e.stopPropagation()}
       >
         {contextMenu.student && (
-          <div className="px-3 py-2.5 bg-surface-raised border-b border-slate-700 text-xs">
-            <div className="font-bold text-slate-200 truncate mb-1">{contextMenu.student.name}</div>
-            <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-0.5">Sist sammen med</div>
+          <div className="px-3.5 py-3 bg-surface-raised border-b border-slate-700">
+            <div className="font-bold text-slate-100 text-sm truncate mb-1.5">{contextMenu.student.name}</div>
+            <div className="text-[11px] uppercase font-bold tracking-wider text-slate-400 mb-1">Sist sammen med</div>
             {recentPartners.length > 0 ? (
-              <div className="text-slate-300 font-semibold">{recentPartners.join(', ')}</div>
+              <div className="text-slate-200 text-sm font-semibold leading-snug">{recentPartners.join(', ')}</div>
             ) : (
-              <div className="text-slate-500 italic">Ingen historikk funnet</div>
+              <div className="text-slate-400 text-sm italic">Ingen historikk funnet</div>
             )}
           </div>
         )}
 
-        <div className="px-3 py-2 bg-base-100 border-b border-slate-700 text-xs font-bold text-slate-300 flex justify-between items-center">
+        <div className="px-3.5 py-2 bg-base-100 border-b border-slate-700 text-xs font-bold text-slate-300 flex justify-between items-center">
           Bord-valg
           {(isDeskLocked || isStudentLocked) && <i className="fa-solid fa-lock text-red-400"></i>}
         </div>
 
         {contextMenu.student && (
           <button
-            className="px-4 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2 transition-colors"
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
             onClick={() => {
               toggleLockStudent(contextMenu.slotKey);
               setContextMenu(null);
             }}
           >
-            <i className={`fa-solid ${isStudentLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4`}></i>
+            <i className={`fa-solid ${isStudentLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4 text-center`}></i>
             {isStudentLocked ? 'Lås opp elev' : 'Lås elev'}
           </button>
         )}
 
         <button
-          className="px-4 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2 transition-colors"
+          className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
           onClick={() => {
             toggleLockDesk(contextMenu.desk.id);
             setContextMenu(null);
           }}
         >
-          <i className={`fa-solid ${isDeskLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4`}></i>
+          <i className={`fa-solid ${isDeskLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4 text-center`}></i>
           {isDeskLocked ? 'Lås opp bord' : 'Lås bord'}
         </button>
+
+        {contextMenu.student && (
+          <button
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-rose-300 flex items-center gap-2.5 transition-colors border-t border-slate-700/50"
+            onClick={() => {
+              handleUnseatStudent?.(contextMenu.slotKey, contextMenu.student);
+              setContextMenu(null);
+            }}
+          >
+            <i className="fa-solid fa-user-minus text-rose-400 w-4 text-center"></i>
+            Fjern fra bord
+          </button>
+        )}
 
         <div className="border-t border-slate-700/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-surface-raised">
           Sett makkergruppe:

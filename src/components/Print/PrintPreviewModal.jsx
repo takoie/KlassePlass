@@ -227,7 +227,7 @@ export default function PrintPreviewModal({
               </label>
               {isSeatingChart && (
                 <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
-                  <span>Fargelegg pulter</span>
+                  <span>Fargelegg bord</span>
                   <input
                     type="checkbox" className="toggle toggle-sm toggle-primary"
                     checked={settings.colorSeats}

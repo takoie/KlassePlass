@@ -114,9 +114,14 @@ export function findBestPlacement({ seatSlots, students, basePlacements = {}, cl
   let topScore = -Infinity;
   let topPlacements = { ...basePlacements };
 
+  // Filtrer bort studenter som allerede er plassert i basePlacements (f.eks. låste seter),
+  // slik at låste elever aldri dupliseres over på andre seter.
+  const placedStudentIds = new Set(Object.values(basePlacements));
+  const studentsToPlace = students.filter(st => !placedStudentIds.has(st.id) && !placedStudentIds.has(st.name));
+
   for (let attempt = 0; attempt < attempts; attempt++) {
     const testPlacements = { ...basePlacements };
-    const shuffledStudents = shuffle(students);
+    const shuffledStudents = shuffle(studentsToPlace);
     const shuffledSlots = shuffle(seatSlots);
 
     shuffledStudents.forEach((st, idx) => {

@@ -208,6 +208,26 @@ export default function SeatingChart({ onBack, initialId }) {
     setLockedSeats(prev => ({ ...prev, [slotKey]: !prev[slotKey] }));
   };
 
+  const handleUnseatStudent = (slotKey, studentObj) => {
+    if (!slotKey) return;
+    setPlacements(prev => {
+      const next = { ...prev };
+      delete next[slotKey];
+      return next;
+    });
+    setLockedSeats(prev => {
+      const next = { ...prev };
+      delete next[slotKey];
+      return next;
+    });
+    if (studentObj) {
+      setUnplacedStudents(prev => {
+        if (!prev.some(s => s.id === studentObj.id)) return [...prev, studentObj];
+        return prev;
+      });
+    }
+  };
+
   const openNoteModal = (studentObj) => {
     setEditingNoteStudent(studentObj);
     setNoteInputValue(studentNotes[studentObj.id] || '');
@@ -608,6 +628,7 @@ export default function SeatingChart({ onBack, initialId }) {
         lockedSeats={lockedSeats}
         toggleLockDesk={toggleLockDesk}
         toggleLockStudent={toggleLockStudent}
+        handleUnseatStudent={handleUnseatStudent}
         setContextMenu={setContextMenu}
         handleSetGroupContextMenu={handleSetGroupContextMenu}
         GROUP_COLORS={GROUP_COLORS}

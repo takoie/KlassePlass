@@ -15,4 +15,5 @@ out/
 docs/*
 
 CLAUDE.md
+RELEASE.md
 graphify-out/*

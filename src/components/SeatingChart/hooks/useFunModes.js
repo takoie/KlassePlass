@@ -57,30 +57,15 @@ export function useFunModes({
   };
 
   const handleAutoFill = () => {
-    let seatSlots = [];
-    desks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey]) {
-          seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
-        }
-      }
-    });
-
-    let availableStudents = [...unplacedStudents];
-    desks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey] && placements[slotKey]) {
-          availableStudents.push(getStudentByIdOrName(placements[slotKey]));
-        }
-      }
-    });
+    const seatSlots = buildOpenSeatSlots();
+    if (seatSlots.length === 0) return;
 
     const basePlacements = { ...placements };
     seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+
+    const placedStudentIds = new Set(Object.values(basePlacements));
+    const availableStudents = unplacedStudents.filter(st => !placedStudentIds.has(st.id) && !placedStudentIds.has(st.name));
+    if (availableStudents.length === 0) return;
 
     const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
     const targetSlots = sortedSlots.slice(0, availableStudents.length);
@@ -93,8 +78,8 @@ export function useFunModes({
       desks,
     });
 
-    const finalPlacedVals = Object.values(bestCandidate);
-    const finalUnplaced = availableStudents.filter(s => !finalPlacedVals.includes(s.id) && !finalPlacedVals.includes(s.name));
+    const finalPlacedVals = new Set(Object.values(bestCandidate));
+    const finalUnplaced = allStudents.filter(s => !finalPlacedVals.has(s.id) && !finalPlacedVals.has(s.name));
 
     setPlacements(bestCandidate);
     setUnplacedStudents(finalUnplaced);
@@ -104,36 +89,30 @@ export function useFunModes({
   // regelmotoren i src/lib/seatingSolver.mjs (samme motor som Roulette/Randombomb/
   // Musikkstoler/Makkerbytte bruker for å beregne SITT sluttresultat).
   const handleRuleBasedFunSpin = () => {
-    let seatSlots = [];
-    desks.forEach(d => {
-      const cap = d.capacity || 1;
-      for (let s = 0; s < cap; s++) {
-        const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey]) {
-          seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
-        }
-      }
-    });
-
+    const seatSlots = buildOpenSeatSlots();
     if (seatSlots.length === 0 || allStudents.length === 0) return;
 
     const basePlacements = { ...placements };
     seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
 
+    const placedStudentIds = new Set(Object.values(basePlacements));
+    const availableStudents = allStudents.filter(st => !placedStudentIds.has(st.id) && !placedStudentIds.has(st.name));
+    if (availableStudents.length === 0) return;
+
     const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
+    const targetSlots = sortedSlots.slice(0, availableStudents.length);
 
     const { placements: topPlacements } = findBestPlacement({
       seatSlots: targetSlots,
-      students: allStudents,
+      students: availableStudents,
       basePlacements,
       classRules,
       desks,
     });
 
     setPlacements(topPlacements);
-    const finalVals = Object.values(topPlacements);
-    setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id)));
+    const finalVals = new Set(Object.values(topPlacements));
+    setUnplacedStudents(allStudents.filter(s => !finalVals.has(s.id) && !finalVals.has(s.name)));
   };
 
   const clearFunModeTimer = () => {
@@ -150,8 +129,8 @@ export function useFunModes({
   // Setter det endelige, ekte resultatet og oppdaterer uplasserte-listen deretter.
   const applyFunModeResult = (finalPlacements) => {
     setPlacements(finalPlacements);
-    const finalVals = Object.values(finalPlacements);
-    setUnplacedStudents(allStudents.filter(s => !finalVals.includes(s.id) && !finalVals.includes(s.name)));
+    const finalVals = new Set(Object.values(finalPlacements));
+    setUnplacedStudents(allStudents.filter(s => !finalVals.has(s.id) && !finalVals.has(s.name)));
   };
 
   // Felles avslutning: stopper timer, fjerner spøkelses-/nedtellings-visning. Rører
@@ -190,18 +169,23 @@ export function useFunModes({
 
     const basePlacements = { ...placements };
     seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+
+    const placedStudentIds = new Set(Object.values(basePlacements));
+    const availableStudents = allStudents.filter(st => !placedStudentIds.has(st.id) && !placedStudentIds.has(st.name));
+    if (availableStudents.length === 0) return;
+
     const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
+    const targetSlots = sortedSlots.slice(0, availableStudents.length);
 
     const { placements: finalPlacements } = findBestPlacement({
       seatSlots: targetSlots,
-      students: allStudents,
+      students: availableStudents,
       basePlacements,
       classRules,
       desks,
     });
 
-    const revealOrderIds = allStudents
+    const revealOrderIds = availableStudents
       .map(s => s.id)
       .filter(id => Object.values(finalPlacements).includes(id))
       .sort(() => Math.random() - 0.5);
@@ -259,12 +243,17 @@ export function useFunModes({
 
     const basePlacements = { ...placements };
     seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+
+    const placedStudentIds = new Set(Object.values(basePlacements));
+    const availableStudents = allStudents.filter(st => !placedStudentIds.has(st.id) && !placedStudentIds.has(st.name));
+    if (availableStudents.length === 0) return;
+
     const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
+    const targetSlots = sortedSlots.slice(0, availableStudents.length);
 
     const { placements: finalPlacements } = findBestPlacement({
       seatSlots: targetSlots,
-      students: allStudents,
+      students: availableStudents,
       basePlacements,
       classRules,
       desks,
@@ -273,7 +262,7 @@ export function useFunModes({
     funModeFinalRef.current = finalPlacements;
     funModePreStateRef.current = { ...placements };
     setActiveFunMode('randombomb');
-    runBombTick(targetSlots, allStudents, 5);
+    runBombTick(targetSlots, availableStudents, 5);
   };
 
   const runBombTick = (targetSlots, students, count) => {
@@ -337,12 +326,17 @@ export function useFunModes({
 
     const basePlacements = { ...placements };
     seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+
+    const placedStudentIds = new Set(Object.values(basePlacements));
+    const availableStudents = allStudents.filter(st => !placedStudentIds.has(st.id) && !placedStudentIds.has(st.name));
+    if (availableStudents.length === 0) return;
+
     const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
-    const targetSlots = sortedSlots.slice(0, allStudents.length);
+    const targetSlots = sortedSlots.slice(0, availableStudents.length);
 
     const { placements: finalPlacements } = findBestPlacement({
       seatSlots: targetSlots,
-      students: allStudents,
+      students: availableStudents,
       basePlacements,
       classRules,
       desks,
@@ -350,7 +344,7 @@ export function useFunModes({
 
     funModeFinalRef.current = finalPlacements;
     setActiveFunMode('musikkstoler');
-    runFlashTick(targetSlots, allStudents, FUN_FLASH_COUNT);
+    runFlashTick(targetSlots, availableStudents, FUN_FLASH_COUNT);
   };
 
   const startMakkerbytte = () => {
@@ -369,16 +363,23 @@ export function useFunModes({
     });
     if (seatSlots.length === 0) return;
 
-    // Elever som allerede sitter i en gruppe-pult, pluss uplasserte (kan trekkes inn
-    // hvis det er ledig plass i gruppene). Elever ved ugrupperte pulter røres ikke.
+    const basePlacements = { ...placements };
+    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+
+    const placedStudentIds = new Set(Object.values(basePlacements));
+
+    // Elever som allerede sitter i en åpen gruppe-pult, pluss uplasserte (kan trekkes inn
+    // hvis det er ledig plass i gruppene). Låste elever og elever ved ugrupperte pulter røres ikke.
     const groupedSeatKeys = new Set(seatSlots.map(s => s.slotKey));
     const groupedStudents = Object.entries(placements)
       .filter(([slotKey]) => groupedSeatKeys.has(slotKey))
-      .map(([, studentId]) => getStudentByIdOrName(studentId));
-    const candidateStudents = [...groupedStudents, ...unplacedStudents];
+      .map(([, studentId]) => getStudentByIdOrName(studentId))
+      .filter(Boolean);
+    const candidateStudents = [...groupedStudents, ...unplacedStudents]
+      .filter(st => !placedStudentIds.has(st.id) && !placedStudentIds.has(st.name));
 
-    const basePlacements = { ...placements };
-    seatSlots.forEach(slot => delete basePlacements[slot.slotKey]);
+    if (candidateStudents.length === 0) return;
+
     const sortedSlots = sortSlotsByDeskOrder(seatSlots, desks, boardObj);
     const targetSlots = sortedSlots.slice(0, candidateStudents.length);
 

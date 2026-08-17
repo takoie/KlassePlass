@@ -403,6 +403,9 @@ pub fn save_group_history_impl(
   input: &GroupHistoryInput,
 ) -> rusqlite::Result<i64> {
   let pairs_json = encode_json_field(Some(&input.pairs));
+  if let Some(aid) = input.assignment_id {
+    conn.execute("DELETE FROM group_history WHERE assignment_id = ?1", [aid])?;
+  }
   conn.execute(
     "INSERT INTO group_history (class_id, assignment_id, pairs) VALUES (?1, ?2, ?3)",
     rusqlite::params![input.class_id, input.assignment_id, pairs_json],
@@ -973,4 +976,30 @@ mod tests {
     let missing = get_group_assignment_impl(&conn, id + 9999).unwrap();
     assert!(missing.is_none());
   }
+
+  #[test]
+  fn save_group_history_replaces_existing_for_same_assignment_id() {
+    let mut conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let assignment_id = save_group_assignment_impl(&mut conn, &base_input(class_id)).unwrap();
+
+    let hist1 = GroupHistoryInput {
+      class_id,
+      assignment_id: Some(assignment_id),
+      pairs: serde_json::json!([["s1", "s2"]]),
+    };
+    save_group_history_impl(&conn, &hist1).unwrap();
+
+    let hist2 = GroupHistoryInput {
+      class_id,
+      assignment_id: Some(assignment_id),
+      pairs: serde_json::json!([["s1", "s3"]]),
+    };
+    save_group_history_impl(&conn, &hist2).unwrap();
+
+    let history = get_group_history_impl(&conn, class_id, Some(10)).unwrap();
+    assert_eq!(history.len(), 1);
+    assert_eq!(history[0].pairs.as_deref(), Some(r#"[["s1","s3"]]"#));
+  }
 }
+

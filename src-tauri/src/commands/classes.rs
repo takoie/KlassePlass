@@ -122,6 +122,151 @@ pub fn get_class_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<Cla
     .optional()
 }
 
+use std::collections::HashSet;
+
+/// Ekstraherer gyldige elev-IDer og elevnavn fra en `students`-Value / JSON.
+/// Støtter både `[{"id": "...", "name": "..."}]` og `{"students": [{"id": "...", "name": "..."}], "rules": [...]}` samt rene streng-lister `["Ola", "Kari"]`.
+pub fn extract_valid_student_keys(students_val: &Value) -> HashSet<String> {
+  let mut keys = HashSet::new();
+
+  let list = if let Some(arr) = students_val.as_array() {
+    Some(arr)
+  } else if let Some(obj) = students_val.as_object() {
+    obj.get("students").and_then(|s| s.as_array())
+  } else if let Value::String(s) = students_val {
+    if let Ok(parsed) = serde_json::from_str::<Value>(s) {
+      return extract_valid_student_keys(&parsed);
+    }
+    None
+  } else {
+    None
+  };
+
+  if let Some(students) = list {
+    for st in students {
+      if let Some(obj) = st.as_object() {
+        if let Some(id) = obj.get("id").and_then(|v| v.as_str()) {
+          keys.insert(id.to_string());
+        }
+        if let Some(name) = obj.get("name").and_then(|v| v.as_str()) {
+          keys.insert(name.to_string());
+        }
+      } else if let Some(name) = st.as_str() {
+        keys.insert(name.to_string());
+      }
+    }
+  }
+
+  keys
+}
+
+/// Renser foreldreløse elev-referanser i andre tabeller (seatings, constraints, logs)
+/// når en klasse oppdateres med en ny elevliste.
+pub fn cleanup_orphaned_students(conn: &Connection, class_id: i64, valid_keys: &HashSet<String>) -> rusqlite::Result<()> {
+  // 1. Rydd `seatings` for denne klassen
+  let mut stmt = conn.prepare("SELECT id, placements FROM seatings WHERE class_id = ?1")?;
+  let seatings: Vec<(i64, Option<String>)> = stmt
+    .query_map([class_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+    .collect::<Result<Vec<_>, _>>()?;
+
+  for (seating_id, raw_placements) in seatings {
+    let Some(raw) = raw_placements else { continue };
+    let Ok(mut val) = serde_json::from_str::<Value>(&raw) else { continue };
+
+    let mut changed = false;
+
+    if let Some(obj) = val.as_object_mut() {
+      let mut remaining_slots: Option<HashSet<String>> = None;
+
+      if let Some(placements_map) = obj.get_mut("placements").and_then(|p| p.as_object_mut()) {
+        let before_len = placements_map.len();
+        placements_map.retain(|_, v| {
+          v.as_str().map(|s| valid_keys.contains(s)).unwrap_or(false)
+        });
+        if placements_map.len() != before_len {
+          changed = true;
+        }
+        remaining_slots = Some(placements_map.keys().cloned().collect());
+      } else if obj.get("placements").is_none() {
+        // Direkte slotKey -> studentId mapping
+        let before_len = obj.len();
+        obj.retain(|_, v| {
+          v.as_str().map(|s| valid_keys.contains(s)).unwrap_or(false)
+        });
+        if obj.len() != before_len {
+          changed = true;
+        }
+      }
+
+      if let Some(slots) = remaining_slots {
+        // Rydd lockedSeats hvis plassen ble tømt
+        if let Some(locked) = obj.get_mut("lockedSeats").and_then(|l| l.as_object_mut()) {
+          let before_locked = locked.len();
+          locked.retain(|slot, _| slots.contains(slot));
+          if locked.len() != before_locked {
+            changed = true;
+          }
+        }
+      }
+
+      // Rydd studentRoles
+      if let Some(roles) = obj.get_mut("studentRoles").and_then(|r| r.as_object_mut()) {
+        let before = roles.len();
+        roles.retain(|stu_id, _| valid_keys.contains(stu_id));
+        if roles.len() != before {
+          changed = true;
+        }
+      }
+
+      // Rydd studentNotes
+      if let Some(notes) = obj.get_mut("studentNotes").and_then(|n| n.as_object_mut()) {
+        let before = notes.len();
+        notes.retain(|stu_id, _| valid_keys.contains(stu_id));
+        if notes.len() != before {
+          changed = true;
+        }
+      }
+    }
+
+    if changed {
+      let updated_json = serde_json::to_string(&val)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+      conn.execute(
+        "UPDATE seatings SET placements = ?1 WHERE id = ?2",
+        rusqlite::params![updated_json, seating_id],
+      )?;
+    }
+  }
+
+  // 2. Rydd student_constraints
+  let mut c_stmt = conn.prepare("SELECT id, student_a, student_b FROM student_constraints WHERE class_id = ?1")?;
+  let constraints: Vec<(i64, String, String)> = c_stmt
+    .query_map([class_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+    .collect::<Result<Vec<_>, _>>()?;
+
+  for (c_id, a, b) in constraints {
+    if !valid_keys.contains(&a) || !valid_keys.contains(&b) {
+      conn.execute("DELETE FROM student_constraints WHERE id = ?1", [c_id])?;
+    }
+  }
+
+  // 3. Rydd participation_logs
+  let mut p_stmt = conn.prepare(
+    "SELECT id, student_id FROM participation_logs WHERE seating_id IN (SELECT id FROM seatings WHERE class_id = ?1)"
+  )?;
+  let logs: Vec<(i64, String)> = p_stmt
+    .query_map([class_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+    .collect::<Result<Vec<_>, _>>()?;
+
+  for (log_id, stu_id) in logs {
+    if !valid_keys.contains(&stu_id) {
+      conn.execute("DELETE FROM participation_logs WHERE id = ?1", [log_id])?;
+    }
+  }
+
+  Ok(())
+}
+
 /// Insert (id == None) eller update (id == Some) av en klasse. Returnerer
 /// radens id (den eksisterende ved update, den nye autoinkrementerte ved
 /// insert) - speiler at frontend etterpå kan referere til klassen uansett
@@ -135,6 +280,8 @@ pub fn save_class_impl(conn: &Connection, record: &ClassRecord) -> rusqlite::Res
         "UPDATE classes SET name = ?1, students = ?2 WHERE id = ?3",
         rusqlite::params![record.name, students_json, id],
       )?;
+      let valid_keys = extract_valid_student_keys(&record.students);
+      cleanup_orphaned_students(conn, id, &valid_keys)?;
       Ok(id)
     }
     None => {
@@ -588,4 +735,98 @@ mod tests {
       .unwrap();
     assert_eq!(count, 0);
   }
+
+  #[test]
+  fn save_class_cleans_up_orphaned_seating_placements_and_constraints_when_students_removed() {
+    let conn = setup();
+    // 1. Opprett klasse med tre elever
+    let record = ClassRecord {
+      id: None,
+      name: "7A".to_string(),
+      students: serde_json::json!({
+        "students": [
+          {"id": "stu-1", "name": "Anna"},
+          {"id": "stu-2", "name": "Berit"},
+          {"id": "stu-3", "name": "Carl"}
+        ],
+        "rules": []
+      }),
+    };
+    let class_id = save_class_impl(&conn, &record).unwrap();
+
+    // 2. Opprett et klassekart med plasseringer for stu-1, stu-2, stu-3
+    let placements_json = serde_json::json!({
+      "placements": {
+        "desk1_seat_0": "stu-1",
+        "desk1_seat_1": "stu-2",
+        "desk2_seat_0": "stu-3"
+      },
+      "lockedSeats": {
+        "desk1_seat_1": true
+      },
+      "studentRoles": {
+        "stu-2": "Ordenselev"
+      },
+      "studentNotes": {
+        "stu-2": "Trives best foran"
+      }
+    }).to_string();
+
+    conn.execute(
+      "INSERT INTO seatings (name, class_id, placements) VALUES ('Kart 1', ?1, ?2)",
+      rusqlite::params![class_id, placements_json],
+    ).unwrap();
+
+    let seating_id = conn.last_insert_rowid();
+
+    // Opprett constraint mellom stu-1 og stu-2
+    conn.execute(
+      "INSERT INTO student_constraints (class_id, student_a, student_b, type) VALUES (?1, 'stu-1', 'stu-2', 'avoid')",
+      [class_id],
+    ).unwrap();
+
+    // 3. Oppdater klassen hvor elev stu-2 er fjernet (sluttet/byttet klasse)
+    let updated_record = ClassRecord {
+      id: Some(class_id),
+      name: "7A".to_string(),
+      students: serde_json::json!({
+        "students": [
+          {"id": "stu-1", "name": "Anna"},
+          {"id": "stu-3", "name": "Carl"}
+        ],
+        "rules": []
+      }),
+    };
+    save_class_impl(&conn, &updated_record).unwrap();
+
+    // 4. Verifiser at stu-2 ble renset fra placements, lockedSeats, roles, notes og constraints
+    let raw_placements: String = conn.query_row(
+      "SELECT placements FROM seatings WHERE id = ?1",
+      [seating_id],
+      |r| r.get(0),
+    ).unwrap();
+
+    let parsed: Value = serde_json::from_str(&raw_placements).unwrap();
+    let p_map = parsed["placements"].as_object().unwrap();
+    assert_eq!(p_map.get("desk1_seat_0"), Some(&Value::String("stu-1".to_string())));
+    assert_eq!(p_map.get("desk1_seat_1"), None); // renset!
+    assert_eq!(p_map.get("desk2_seat_0"), Some(&Value::String("stu-3".to_string())));
+
+    let locked_map = parsed["lockedSeats"].as_object().unwrap();
+    assert_eq!(locked_map.get("desk1_seat_1"), None); // renset!
+
+    let roles_map = parsed["studentRoles"].as_object().unwrap();
+    assert_eq!(roles_map.get("stu-2"), None); // renset!
+
+    let notes_map = parsed["studentNotes"].as_object().unwrap();
+    assert_eq!(notes_map.get("stu-2"), None); // renset!
+
+    let constraint_count: i64 = conn.query_row(
+      "SELECT COUNT(*) FROM student_constraints WHERE class_id = ?1",
+      [class_id],
+      |r| r.get(0),
+    ).unwrap();
+    assert_eq!(constraint_count, 0); // renset fordi stu-2 ikke lenger finnes!
+  }
 }
+

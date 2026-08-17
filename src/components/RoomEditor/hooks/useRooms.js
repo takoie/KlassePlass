@@ -26,6 +26,28 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
   const hasAutoOpenedRef = useRef(false);
   const saveTimeoutRef = useRef(null);
   const isInitialLoadRef = useRef(true);
+  const latestRoomDataRef = useRef({ selectedRoom, roomName, desks, boardObj });
+  const pendingSaveRef = useRef(false);
+
+  useEffect(() => {
+    latestRoomDataRef.current = { selectedRoom, roomName, desks, boardObj };
+  });
+
+  useEffect(() => {
+    return () => {
+      if (pendingSaveRef.current && latestRoomDataRef.current) {
+        const { selectedRoom: sr, roomName: rn, desks: dks, boardObj: bo } = latestRoomDataRef.current;
+        if (sr?.id && rn.trim()) {
+          const layoutData = { desks: dks, boardObj: bo };
+          window.api.saveRoom({
+            id: sr.id,
+            name: rn.trim(),
+            layoutData
+          }).catch(() => {});
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     loadRooms();
@@ -63,10 +85,12 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     }
     if (!selectedRoom) return;
 
+    pendingSaveRef.current = true;
     setSaveState('saving');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(() => {
-      saveCurrentRoom();
+    saveTimeoutRef.current = setTimeout(async () => {
+      await saveCurrentRoom();
+      pendingSaveRef.current = false;
     }, 1000);
 
     return () => clearTimeout(saveTimeoutRef.current);
