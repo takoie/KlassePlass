@@ -77,8 +77,8 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
                 className={`overblikk-nav-btn ${isActive ? 'active' : ''}`}
                 onClick={() => setCurrentView(tab.id)}
               >
-                <i className={`${tab.icon} text-sm flex-shrink-0 ${isActive ? 'text-[#34d399]' : 'text-slate-400'}`}></i>
-                <span className="leading-none">{tab.label}</span>
+                <i className={`${tab.icon} fa-fw text-sm flex-shrink-0 ${isActive ? 'text-[#34d399]' : 'text-slate-400'}`}></i>
+                <span className="leading-none flex-1 text-left">{tab.label}</span>
               </button>
             );
           })}
@@ -94,7 +94,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             }`}
             onClick={onOpenUpdateModal}
           >
-            <i className={`fa-solid fa-cloud-arrow-down text-sm flex-shrink-0 ${
+            <i className={`fa-solid fa-cloud-arrow-down fa-fw text-sm flex-shrink-0 ${
               hasUpdateReady ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-slate-400'
             }`}></i>
             <span className="leading-none flex-1 text-left">Oppdatering</span>
@@ -108,15 +108,15 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             className="overblikk-nav-btn"
             onClick={onOpenOnboarding}
           >
-            <i className="fa-solid fa-compass text-sm flex-shrink-0 text-slate-400"></i>
-            <span className="leading-none">Veiledning</span>
+            <i className="fa-solid fa-compass fa-fw text-sm flex-shrink-0 text-slate-400"></i>
+            <span className="leading-none flex-1 text-left">Veiledning</span>
           </button>
           <button
             className={`overblikk-nav-btn ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
           >
-            <i className="fa-solid fa-gear text-sm flex-shrink-0 text-slate-400"></i>
-            <span className="leading-none">Innstillinger</span>
+            <i className="fa-solid fa-gear fa-fw text-sm flex-shrink-0 text-slate-400"></i>
+            <span className="leading-none flex-1 text-left">Innstillinger</span>
           </button>
         </div>
 
