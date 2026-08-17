@@ -70,16 +70,8 @@ if ($null -eq $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
     [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
     Write-Host "Bruker lagret signeringspassord fra $PwCacheFile" -ForegroundColor DarkGray
   } else {
-    try {
-      Write-Host "Tips: kjor ./scripts/setup-signing-key.ps1 en gang for a slippe a taste passord hver gang." -ForegroundColor DarkGray
-      $securePw = Read-Host -AsSecureString 'Passord (passfrase) for signeringsnokkelen (Enter hvis ingen)'
-      $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePw)
-      $plainPw = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-      [System.Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-      $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = $plainPw
-    } catch {
-      $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ''
-    }
+    Write-Host "Ingen passordcache funnet ($PwCacheFile) - bruker tom passfrase." -ForegroundColor DarkGray
+    $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ''
   }
 }
 
