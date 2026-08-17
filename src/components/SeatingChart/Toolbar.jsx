@@ -89,8 +89,8 @@ export default function Toolbar({
           <button 
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
               showStudentDrawer 
-                ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/40' 
-                : 'bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600/70' 
+                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
             }`}
             onClick={() => { setShowStudentDrawer(!showStudentDrawer); setShowGroupDrawer(false); setShowFunDrawer(false); }}
           >
@@ -105,7 +105,7 @@ export default function Toolbar({
 
           {/* Plasser alle */}
           <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900/70 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900/60 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
             onClick={handleAutoFill} 
             disabled={unplacedStudents.length === 0} 
             title="Fyll alle ledige plasser med uplasserte elever"
@@ -116,7 +116,7 @@ export default function Toolbar({
 
           {/* Randomiser */}
           <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-950/30 hover:bg-amber-900/40 text-amber-200 hover:text-amber-100 border border-amber-500/30 hover:border-amber-500/50 transition-all text-xs font-semibold shadow-sm" 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
             onClick={handleRuleBasedFunSpin}
           >
             <i className="fa-solid fa-shuffle fa-fw text-xs text-amber-400"></i>
@@ -127,8 +127,8 @@ export default function Toolbar({
           <button 
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
               showGroupDrawer 
-                ? 'bg-fuchsia-950/60 text-fuchsia-200 border border-fuchsia-500/40' 
-                : 'bg-fuchsia-950/20 hover:bg-fuchsia-900/30 text-fuchsia-300 border border-fuchsia-500/25 hover:border-fuchsia-500/40'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600/70' 
+                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
             }`} 
             onClick={() => { setShowGroupDrawer(!showGroupDrawer); if (showGroupDrawer) setActiveGroupId(null); setShowStudentDrawer(false); setShowFunDrawer(false); }}
           >
@@ -239,7 +239,7 @@ export default function Toolbar({
           </div>
 
           <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
             onClick={() => setIsProjectorMode(true)}
           >
             <i className="fa-solid fa-expand fa-fw text-xs text-fuchsia-400"></i>
@@ -247,7 +247,7 @@ export default function Toolbar({
           </button>
 
           <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
             onClick={() => document.getElementById('modal_sync_room')?.showModal()}
           >
             <i className="fa-solid fa-arrows-rotate fa-fw text-xs text-orange-400"></i>
@@ -261,8 +261,8 @@ export default function Toolbar({
           <button 
             className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
               showFunDrawer 
-                ? 'bg-pink-950/60 text-pink-200 border border-pink-500/40' 
-                : 'bg-pink-950/20 hover:bg-pink-900/30 text-pink-300 border border-pink-500/25 hover:border-pink-500/40'
+                ? 'bg-slate-800 text-slate-100 border border-slate-600/70' 
+                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
             }`} 
             onClick={() => { setShowFunDrawer(!showFunDrawer); setShowStudentDrawer(false); setShowGroupDrawer(false); }}
           >
