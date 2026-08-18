@@ -111,6 +111,123 @@ pub fn backup_before_migrate_if_needed(
   Ok(Some(backup_path))
 }
 
+/// Helper to determine if an existing SQLite database file has zero classes and rooms.
+/// Used to detect if the target database was merely auto-created on a blank run rather than
+/// populated with real user data.
+pub fn is_db_empty(path: &Path) -> bool {
+  if !path.exists() {
+    return true;
+  }
+  if let Ok(metadata) = std::fs::metadata(path) {
+    if metadata.len() == 0 {
+      return true;
+    }
+  }
+  if let Ok(conn) = Connection::open(path) {
+    let classes_count: i64 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='classes'",
+        [],
+        |r| r.get(0),
+      )
+      .and_then(|count: i64| {
+        if count > 0 {
+          conn.query_row("SELECT COUNT(*) FROM classes", [], |r| r.get(0))
+        } else {
+          Ok(0)
+        }
+      })
+      .unwrap_or(0);
+
+    let rooms_count: i64 = conn
+      .query_row(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='rooms'",
+        [],
+        |r| r.get(0),
+      )
+      .and_then(|count: i64| {
+        if count > 0 {
+          conn.query_row("SELECT COUNT(*) FROM rooms", [], |r| r.get(0))
+        } else {
+          Ok(0)
+        }
+      })
+      .unwrap_or(0);
+
+    classes_count == 0 && rooms_count == 0
+  } else {
+    true
+  }
+}
+
+/// Automatically migrates legacy Electron database files, `db-location.json`, and `settings.json`
+/// from older AppData paths (e.g. `%APPDATA%\klasseplass`, `%APPDATA%\KlassePlass`) to the new
+/// Tauri AppData path (`user_data_dir`, e.g. `%APPDATA%\com.klasseplass.app`).
+///
+/// This ensures that upgrading from Electron or older installs never leaves user data behind.
+pub fn migrate_legacy_data_if_needed(user_data_dir: &Path) {
+  let _ = std::fs::create_dir_all(user_data_dir);
+
+  let parent = match user_data_dir.parent() {
+    Some(p) => p,
+    None => return,
+  };
+
+  let legacy_dirs = [
+    parent.join("klasseplass"),
+    parent.join("KlassePlass"),
+    parent.join("klassekart-pro"),
+  ];
+
+  // 1. Migrate settings.json if missing
+  let target_settings = user_data_dir.join("settings.json");
+  if !target_settings.exists() {
+    for leg_dir in &legacy_dirs {
+      let leg_settings = leg_dir.join("settings.json");
+      if leg_settings.exists() {
+        if let Ok(_) = std::fs::copy(&leg_settings, &target_settings) {
+          log::info!("Migrated settings.json from {:?}", leg_settings);
+          break;
+        }
+      }
+    }
+  }
+
+  // 2. Migrate db-location.json if missing
+  let target_location = user_data_dir.join("db-location.json");
+  if !target_location.exists() {
+    for leg_dir in &legacy_dirs {
+      let leg_location = leg_dir.join("db-location.json");
+      if leg_location.exists() {
+        if let Ok(_) = std::fs::copy(&leg_location, &target_location) {
+          log::info!("Migrated db-location.json from {:?}", leg_location);
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. Migrate database file if target is missing or empty
+  let target_db = user_data_dir.join("klassekart_database.db");
+  let target_empty = is_db_empty(&target_db);
+
+  if target_empty {
+    for leg_dir in &legacy_dirs {
+      let leg_db = leg_dir.join("klassekart_database.db");
+      if leg_db.exists() && !is_db_empty(&leg_db) {
+        if target_db.exists() {
+          let backup_empty = user_data_dir.join("klassekart_database.empty-backup.db");
+          let _ = std::fs::rename(&target_db, backup_empty);
+        }
+        if let Ok(_) = std::fs::copy(&leg_db, &target_db) {
+          log::info!("Migrated database from legacy path: {:?}", leg_db);
+          break;
+        }
+      }
+    }
+  }
+}
+
 /// Resolves the sqlite database file path, mirroring src/db.js's getDbPath():
 ///
 /// 1. Look for `db-location.json` in `user_data_dir`.
@@ -339,5 +456,65 @@ mod tests {
     assert!(!name.contains(".DB.v3"));
     assert!(name.contains(".v3-backup-"));
     assert!(name.ends_with(".db"));
+  }
+
+  #[test]
+  fn migrate_legacy_data_copies_database_settings_and_location() {
+    let appdata_root = tempdir().unwrap();
+    let legacy_dir = appdata_root.path().join("klasseplass");
+    fs::create_dir_all(&legacy_dir).unwrap();
+
+    let legacy_db = legacy_dir.join("klassekart_database.db");
+    let legacy_conn = Connection::open(&legacy_db).unwrap();
+    legacy_conn.execute_batch(
+      "CREATE TABLE classes (id INTEGER PRIMARY KEY, name TEXT);
+       INSERT INTO classes (name) VALUES ('Class 1');"
+    ).unwrap();
+
+    let legacy_settings = legacy_dir.join("settings.json");
+    fs::write(&legacy_settings, r#"{"theme":"light"}"#).unwrap();
+
+    let legacy_location = legacy_dir.join("db-location.json");
+    fs::write(&legacy_location, r#"{"dbPath":"C:\\fake\\path.db"}"#).unwrap();
+
+    let target_dir = appdata_root.path().join("com.klasseplass.app");
+    migrate_legacy_data_if_needed(&target_dir);
+
+    assert!(target_dir.join("klassekart_database.db").exists());
+    assert!(target_dir.join("settings.json").exists());
+    assert!(target_dir.join("db-location.json").exists());
+
+    let target_conn = Connection::open(target_dir.join("klassekart_database.db")).unwrap();
+    let count: i64 = target_conn.query_row("SELECT COUNT(*) FROM classes", [], |r| r.get(0)).unwrap();
+    assert_eq!(count, 1);
+  }
+
+  #[test]
+  fn migrate_legacy_data_replaces_empty_target_database() {
+    let appdata_root = tempdir().unwrap();
+    let legacy_dir = appdata_root.path().join("KlassePlass");
+    fs::create_dir_all(&legacy_dir).unwrap();
+
+    let legacy_db = legacy_dir.join("klassekart_database.db");
+    let legacy_conn = Connection::open(&legacy_db).unwrap();
+    legacy_conn.execute_batch(
+      "CREATE TABLE classes (id INTEGER PRIMARY KEY, name TEXT);
+       INSERT INTO classes (name) VALUES ('Real Class');"
+    ).unwrap();
+
+    let target_dir = appdata_root.path().join("com.klasseplass.app");
+    fs::create_dir_all(&target_dir).unwrap();
+    let target_db = target_dir.join("klassekart_database.db");
+    let target_conn = Connection::open(&target_db).unwrap();
+    target_conn.execute_batch(
+      "CREATE TABLE classes (id INTEGER PRIMARY KEY, name TEXT);"
+    ).unwrap();
+    drop(target_conn);
+
+    migrate_legacy_data_if_needed(&target_dir);
+
+    let check_conn = Connection::open(target_dir.join("klassekart_database.db")).unwrap();
+    let count: i64 = check_conn.query_row("SELECT COUNT(*) FROM classes", [], |r| r.get(0)).unwrap();
+    assert_eq!(count, 1);
   }
 }

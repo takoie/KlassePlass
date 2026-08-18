@@ -236,6 +236,8 @@ const tauriApi = {
     return applyMaximize(win);
   },
   closeWindow: () => getCurrentWindow().close(),
+  setFullscreen: (fullscreen) => getCurrentWindow().setFullscreen(fullscreen),
+  isFullscreen: () => getCurrentWindow().isFullscreen(),
   isWindowMaximized: () => Promise.resolve(restoreBounds !== null),
   // Callback får gjeldende maksimert-tilstand hver gang den endres - enten
   // via knappen (applyMaximize/applyRestore over) eller via native

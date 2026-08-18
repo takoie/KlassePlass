@@ -89,8 +89,12 @@ export default function SeatingChart({ onBack, initialId }) {
 
 
   useEffect(() => {
+    window.api?.setFullscreen?.(isProjectorMode).catch(() => {});
     window.dispatchEvent(new CustomEvent('toggle-projector', { detail: isProjectorMode }));
-    return () => window.dispatchEvent(new CustomEvent('toggle-projector', { detail: false }));
+    return () => {
+      window.api?.setFullscreen?.(false).catch(() => {});
+      window.dispatchEvent(new CustomEvent('toggle-projector', { detail: false }));
+    };
   }, [isProjectorMode]);
 
   // Start alltid med full oversikt hver gang prosjektorvisningen åpnes, uansett

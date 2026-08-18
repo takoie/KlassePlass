@@ -37,7 +37,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
   ];
 
   return (
-    <div className="flex h-full w-full app-shell-bg p-3 gap-3 relative">
+    <div className={`flex h-full w-full app-shell-bg ${isFullscreen ? 'p-0 gap-0' : 'p-3 gap-3'} relative`}>
       {/* Global Titlebar (Always on top) */}
       {!isFullscreen && (
         <div className="titlebar flex items-center justify-end pr-3 pt-3 flex-shrink-0 bg-transparent absolute top-0 right-0 w-full z-[100] pointer-events-auto" data-tauri-drag-region style={{ WebkitAppRegion: 'drag', height: '40px' }}>
@@ -135,13 +135,9 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
       </div>
       )}
 
-      {/* Main Content Area — samme innrammet-boks + topp-avstand for titlebar-knappene
-          på alle sider, uansett om sidemenyen er skjult (canvas-fokuserte visninger som
-          klassekart/rom/stasjonspresentasjon) eller synlig. Tidligere hoppet "seating" og
-          "station-presenter" over denne innpakningen, som fikk deres egne topplinjer til
-          å kollidere visuelt med vinduskontrollene (minimer/maksimer/lukk). */}
-      <div className="flex-1 flex flex-col overflow-hidden relative module-content-bg rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]">
-        <div className="flex-1 overflow-hidden pt-10">
+      {/* Main Content Area */}
+      <div className={`flex-1 flex flex-col overflow-hidden relative module-content-bg ${isFullscreen ? 'rounded-none border-0 shadow-none' : 'rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]'}`}>
+        <div className={`flex-1 overflow-hidden ${isFullscreen ? 'pt-0' : 'pt-10'}`}>
           {children}
         </div>
       </div>
