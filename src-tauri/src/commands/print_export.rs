@@ -147,6 +147,40 @@ pub async fn export_seating_chart_pdf(
   })
 }
 
+#[tauri::command]
+pub fn open_file_native(path: String) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  {
+    std::process::Command::new("cmd")
+      .args(["/c", "start", "", &path])
+      .spawn()
+      .map_err(|e| e.to_string())?;
+    Ok(())
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    let _ = path;
+    Ok(())
+  }
+}
+
+#[tauri::command]
+pub fn show_in_folder_native(path: String) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  {
+    std::process::Command::new("explorer")
+      .args(["/select,", &path])
+      .spawn()
+      .map_err(|e| e.to_string())?;
+    Ok(())
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    let _ = path;
+    Ok(())
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;

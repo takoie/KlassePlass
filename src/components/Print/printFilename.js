@@ -1,16 +1,22 @@
 /**
- * Bygger et sanert PDF-filnavn: Klassekart_{klasse}_{kart}_{YYYY-MM-DD}.pdf
+ * Bygger et sanert PDF-filnavn etter formatet:
+ * Klassekart - klasse - navn på klassekart - ukeintervall.pdf
  */
-export function buildPrintFilename({ className, chartName, date = new Date(), prefix = 'Klassekart' }) {
-  const namePart = [className, chartName].filter(Boolean).join('_');
-  const dateStr = [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-');
-  const base = `${prefix}_${namePart || 'Uten_navn'}_${dateStr}`;
+export function buildPrintFilename({ className, chartName, chartComment, prefix = 'Klassekart' }) {
+  const parts = [
+    prefix,
+    className,
+    chartName,
+    chartComment,
+  ]
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter(Boolean);
+
+  const base = parts.length > 0 ? parts.join(' - ') : prefix;
   const sanitized = base
     .replace(/[\\/:*?"<>|]+/g, '-')
-    .replace(/\s+/g, '_');
+    .replace(/\s+/g, ' ')
+    .trim();
+
   return `${sanitized}.pdf`;
 }

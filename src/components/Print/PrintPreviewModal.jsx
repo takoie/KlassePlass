@@ -135,13 +135,13 @@ export default function PrintPreviewModal({
   }
 
   const pageSizePx = getPageSizePx();
-  const PANE_PADDING_PX = 32; // tilsvarer p-4 på begge sider av preview-ruten
+  const PANE_PADDING_PX = 16;
   const previewScale = previewPaneSize
     ? Math.min(
         (previewPaneSize.width - PANE_PADDING_PX) / pageSizePx.width,
         (previewPaneSize.height - PANE_PADDING_PX) / pageSizePx.height,
       )
-    : computePrintScale(pages[0].contentWidthPx, pages[0].contentHeightPx);
+    : 1;
 
   // Skjermpiksler i den interaktive previewen tilsvarer sidens contentWidthPx/Height
   // nedskalert to ganger (modal-panelets tilpasning + PrintPage sin egen
@@ -174,24 +174,23 @@ export default function PrintPreviewModal({
   const filenamePrefix = isStation ? 'Stasjonsplan' : isGroupWork ? 'Gruppeinndeling' : 'Klassekart';
 
   const handlePrint = () => {
-    window.print();
+    const originalTitle = document.title;
+    try {
+      document.title = '';
+      window.print();
+    } finally {
+      document.title = originalTitle;
+    }
   };
 
   const handleExportPdf = async () => {
     setExportState({ status: 'working' });
-    const suggestedName = buildPrintFilename({ className, chartName, prefix: filenamePrefix });
-    // Rust-native PDF-rendering (Task 6.2/6.3) dekker KUN klassekart —
-    // stasjonsplan/gruppeinndeling har ingen payload-bygger på Rust-siden
-    // ennå (se buildSeatingChartPrintPayload.js sin modul-doc), så vi bygger
-    // bevisst IKKE noen payload for dem her. tauriApi.js sin exportPrintPdf
-    // avviser kallet med en tydelig, ikke-krasjende feilmelding når payload
-    // mangler, som fanges av catch-blokken under og vises i den eksisterende
-    // feil-alerten — "Skriv ut" (window.print()) er upåvirket og fungerer
-    // som før for disse typene.
+    const suggestedName = buildPrintFilename({ className, chartName, chartComment, prefix: filenamePrefix });
     const payload = isSeatingChart
       ? buildSeatingChartPrintPayload({
           boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
           groupColors, zoneMeta, groupOverrides, settings, chartName, periodText,
+          roomZoom, roomPan,
         })
       : null;
     try {
@@ -287,7 +286,7 @@ export default function PrintPreviewModal({
                 </>
               )}
             </div>
-            <div ref={previewPaneRef} className="flex-1 min-h-0 overflow-auto bg-slate-800 rounded-lg p-4 flex flex-col items-center gap-4">
+            <div ref={previewPaneRef} className="flex-1 min-h-0 overflow-auto bg-slate-900/60 border border-slate-800/80 rounded-xl p-2 flex flex-col items-center justify-center gap-4">
               {pages.map((page, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
                   {pages.length > 1 && (
@@ -309,24 +308,53 @@ export default function PrintPreviewModal({
           </div>
 
           {exportState.status === 'done' && (
-            <div className="alert alert-success mt-4 flex justify-between">
-              <span>PDF lagret som {exportState.filePath.split(/[\\/]/).pop()}</span>
-              <div className="flex gap-2">
-                <button className="btn btn-xs" onClick={() => window.api.openPath(exportState.filePath)}>Åpne fil</button>
-                <button className="btn btn-xs" onClick={() => window.api.showInFolder(exportState.filePath)}>Åpne mappe</button>
+            <div className="mt-4 flex items-center justify-between bg-slate-800/80 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <i className="fa-solid fa-circle-check text-sm"></i>
+                </div>
+                <div>
+                  <div className="font-semibold text-white text-xs">PDF lagret</div>
+                  <div className="text-[11px] text-slate-400 font-mono truncate max-w-sm" title={exportState.filePath}>
+                    {exportState.filePath.split(/[\\/]/).pop()}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="btn btn-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 gap-1.5 font-medium transition-all"
+                  onClick={() => window.api.openPath(exportState.filePath)}
+                >
+                  <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Åpne fil
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs bg-slate-700/80 hover:bg-slate-600 text-slate-200 border border-slate-600 gap-1.5 font-medium transition-all"
+                  onClick={() => window.api.showInFolder(exportState.filePath)}
+                >
+                  <i className="fa-regular fa-folder-open text-[10px]"></i> Åpne mappe
+                </button>
               </div>
             </div>
           )}
           {exportState.status === 'error' && (
-            <div className="alert alert-error mt-4">Kunne ikke lagre PDF: {exportState.message}</div>
+            <div className="mt-4 flex items-center gap-3 bg-red-950/40 border border-red-500/30 rounded-xl px-4 py-3 text-xs text-red-200">
+              <i className="fa-solid fa-triangle-exclamation text-red-400 text-base"></i>
+              <span>Kunne ikke lagre PDF: {exportState.message}</span>
+            </div>
           )}
 
-          <div className="modal-action">
-            <button className="btn" onClick={onClose}>Lukk</button>
-            <button className="btn btn-outline" onClick={handlePrint}>Skriv ut</button>
-            <button className="btn btn-primary" onClick={handleExportPdf} disabled={exportState.status === 'working'}>
-              {exportState.status === 'working' ? 'Genererer PDF…' : 'Eksporter til PDF'}
-            </button>
+          <div className="modal-action flex justify-between items-center">
+            <button className="btn btn-ghost text-slate-400 hover:text-white" onClick={onClose}>Lukk</button>
+            <div className="flex items-center gap-2">
+              <button className="btn btn-outline border-slate-700 text-slate-200 hover:bg-slate-800 gap-2" onClick={handlePrint}>
+                <i className="fa-solid fa-print"></i> Skriv ut
+              </button>
+              <button className="btn btn-primary gap-2" onClick={handleExportPdf} disabled={exportState.status === 'working'}>
+                <i className="fa-solid fa-file-pdf"></i> {exportState.status === 'working' ? 'Genererer PDF…' : 'Eksporter til PDF'}
+              </button>
+            </div>
           </div>
         </div>
       </dialog>

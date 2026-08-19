@@ -26,9 +26,17 @@ const DEFAULT_ZONE_COLOR = '#555';
 export function buildSeatingChartPrintPayload({
   boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
   groupColors, zoneMeta, groupOverrides, settings, chartName, periodText,
+  roomZoom = 1, roomPan = { x: 0, y: 0 },
 }) {
   const { showNumbers, showZones, showGroups, showColors, colorSeats } = settings;
   const offset = computeCenteringOffset(boardObj, desks);
+
+  const centerX = 1100 / 2;
+  const centerY = 700 / 2;
+  const transformPos = (x, y) => ({
+    x: centerX + (x + offset.x - centerX) * roomZoom + (roomPan.x || 0),
+    y: centerY + (y + offset.y - centerY) * roomZoom + (roomPan.y || 0),
+  });
 
   const payloadDesks = desks.map((d) => {
     const cap = d.capacity || 1;
@@ -57,9 +65,11 @@ export function buildSeatingChartPrintPayload({
       })
       .filter(Boolean);
 
+    const pos = transformPos(d.x, d.y);
+
     return {
-      x: d.x + offset.x,
-      y: d.y + offset.y,
+      x: pos.x,
+      y: pos.y,
       capacity: cap,
       borderColorHex: (showColors && groupColor) ? groupColor : DEFAULT_DESK_BORDER,
       fillColorHex: (showColors && groupColor && colorSeats) ? lightenHex(groupColor, 0.65) : null,
@@ -68,8 +78,10 @@ export function buildSeatingChartPrintPayload({
     };
   });
 
+  const boardPos = transformPos(boardObj.x, boardObj.y);
+
   return {
-    board: { x: boardObj.x + offset.x, y: boardObj.y + offset.y },
+    board: { x: boardPos.x, y: boardPos.y },
     desks: payloadDesks,
     chartName: chartName || '',
     periodText: periodText || '',

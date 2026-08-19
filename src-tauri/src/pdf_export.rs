@@ -29,7 +29,7 @@
 //! place below — it's superseded by the real payload/rendering path but kept
 //! as a minimal smoke test that the `printpdf` crate still works end to end.
 
-use printpdf::path::PaintMode;
+use printpdf::path::{PaintMode, WindingOrder};
 use printpdf::*;
 use serde::Deserialize;
 use std::fs::File;
@@ -168,18 +168,19 @@ fn px_to_pt(px: f64, scale: f64) -> f64 {
   px_to_mm(px, scale) * MM_TO_PT
 }
 
-/// Content-area top-left origin, in mm, measured from the page's top-left
-/// (CSS-style, Y-down) — i.e. margin + header band.
-const CONTENT_ORIGIN_TOP_MM: f64 = MARGIN_MM + HEADER_MM;
-const CONTENT_ORIGIN_LEFT_MM: f64 = MARGIN_MM;
-
 /// Converts a top-left-origin/Y-down (content_x, content_y) point, in virtual
 /// px within the 1100x700 content box, into a printpdf bottom-left-origin/
-/// Y-up (Mm, Mm) point on the physical page. Returns `f32` (matching
-/// printpdf's `Mm(pub f32)`), computed via `f64` internally for precision.
+/// Y-up (Mm, Mm) point on the physical page with symmetrical horizontal and vertical centering.
 fn content_px_to_page_mm(content_x_px: f64, content_y_px: f64, scale: f64) -> (Mm, Mm) {
-  let x_mm = CONTENT_ORIGIN_LEFT_MM + px_to_mm(content_x_px, scale);
-  let y_from_top_mm = CONTENT_ORIGIN_TOP_MM + px_to_mm(content_y_px, scale);
+  let total_content_w_mm = px_to_mm(CONTENT_WIDTH_PX, scale);
+  let content_origin_left_mm = MARGIN_MM + (PAGE_W_MM - MARGIN_MM * 2.0 - total_content_w_mm) / 2.0;
+
+  let total_content_h_mm = px_to_mm(CONTENT_HEIGHT_PX, scale);
+  let available_h_mm = PAGE_H_MM - MARGIN_MM * 2.0 - HEADER_MM - FOOTER_MM;
+  let content_origin_top_mm = MARGIN_MM + HEADER_MM + (available_h_mm - total_content_h_mm) / 2.0;
+
+  let x_mm = content_origin_left_mm + px_to_mm(content_x_px, scale);
+  let y_from_top_mm = content_origin_top_mm + px_to_mm(content_y_px, scale);
   let y_from_bottom_mm = PAGE_H_MM - y_from_top_mm;
   (Mm(x_mm as f32), Mm(y_from_bottom_mm as f32))
 }
@@ -229,10 +230,104 @@ fn approx_text_width_mm(text: &str, font_size_pt: f64, bold: bool) -> f64 {
   width_pt / MM_TO_PT
 }
 
-/// Draws a plain rectangle (no rounded corners — printpdf's `Rect` type has
-/// no radius support, and hand-rolling bezier-cornered rects for this
-/// cosmetic detail isn't worth the complexity here; see Task 6.2 report).
-/// `mode` controls fill/stroke/both.
+/// Draws a rectangle or rounded rectangle with optional fill and outline.
+/// When `radius_mm > 0`, renders smooth quarter-circle corner arcs matching CSS `border-radius`.
+fn draw_rounded_rect(
+  layer: &PdfLayerReference,
+  ll: (Mm, Mm),
+  ur: (Mm, Mm),
+  radius_mm: f64,
+  fill: Option<Color>,
+  outline: Option<Color>,
+  outline_thickness_pt: f32,
+) {
+  if let Some(ref c) = fill {
+    layer.set_fill_color(c.clone());
+  }
+  if let Some(ref c) = outline {
+    layer.set_outline_color(c.clone());
+  }
+  layer.set_outline_thickness(outline_thickness_pt);
+
+  let x_min = (ll.0 .0 as f64).min(ur.0 .0 as f64);
+  let x_max = (ll.0 .0 as f64).max(ur.0 .0 as f64);
+  let y_min = (ll.1 .0 as f64).min(ur.1 .0 as f64);
+  let y_max = (ll.1 .0 as f64).max(ur.1 .0 as f64);
+
+  let width = x_max - x_min;
+  let height = y_max - y_min;
+  let r = radius_mm.min(width / 2.0).min(height / 2.0).max(0.0);
+
+  if r <= 0.05 {
+    let mode = match (fill.is_some(), outline.is_some()) {
+      (true, true) => PaintMode::FillStroke,
+      (true, false) => PaintMode::Fill,
+      (false, true) => PaintMode::Stroke,
+      (false, false) => return,
+    };
+    layer.add_rect(Rect::new(Mm(x_min as f32), Mm(y_min as f32), Mm(x_max as f32), Mm(y_max as f32)).with_mode(mode));
+    return;
+  }
+
+  // Generer en jevn, avrundet polygon med 6 punkter per hjørnebue
+  let steps_per_corner = 6;
+  let mut points = Vec::with_capacity((steps_per_corner + 1) * 4);
+
+  // 1. Øverst til høyre (angles pi/2 ned til 0)
+  let cx_tr = x_max - r;
+  let cy_tr = y_max - r;
+  for i in 0..=steps_per_corner {
+    let angle = std::f64::consts::FRAC_PI_2 * (1.0 - (i as f64 / steps_per_corner as f64));
+    let px = cx_tr + r * angle.cos();
+    let py = cy_tr + r * angle.sin();
+    points.push((Point::new(Mm(px as f32), Mm(py as f32)), false));
+  }
+
+  // 2. Nederst til høyre (angles 0 ned til -pi/2)
+  let cx_br = x_max - r;
+  let cy_br = y_min + r;
+  for i in 1..=steps_per_corner {
+    let angle = -std::f64::consts::FRAC_PI_2 * (i as f64 / steps_per_corner as f64);
+    let px = cx_br + r * angle.cos();
+    let py = cy_br + r * angle.sin();
+    points.push((Point::new(Mm(px as f32), Mm(py as f32)), false));
+  }
+
+  // 3. Nederst til venstre (angles -pi/2 ned til -pi)
+  let cx_bl = x_min + r;
+  let cy_bl = y_min + r;
+  for i in 1..=steps_per_corner {
+    let angle = -std::f64::consts::FRAC_PI_2 - std::f64::consts::FRAC_PI_2 * (i as f64 / steps_per_corner as f64);
+    let px = cx_bl + r * angle.cos();
+    let py = cy_bl + r * angle.sin();
+    points.push((Point::new(Mm(px as f32), Mm(py as f32)), false));
+  }
+
+  // 4. Øverst til venstre (angles pi ned til pi/2)
+  let cx_tl = x_min + r;
+  let cy_tl = y_max - r;
+  for i in 1..=steps_per_corner {
+    let angle = std::f64::consts::PI - std::f64::consts::FRAC_PI_2 * (i as f64 / steps_per_corner as f64);
+    let px = cx_tl + r * angle.cos();
+    let py = cy_tl + r * angle.sin();
+    points.push((Point::new(Mm(px as f32), Mm(py as f32)), false));
+  }
+
+  let mode = match (fill.is_some(), outline.is_some()) {
+    (true, true) => PaintMode::FillStroke,
+    (true, false) => PaintMode::Fill,
+    (false, true) => PaintMode::Stroke,
+    (false, false) => return,
+  };
+
+  let polygon = Polygon {
+    rings: vec![points],
+    mode,
+    winding_order: WindingOrder::NonZero,
+  };
+  layer.add_polygon(polygon);
+}
+
 fn draw_rect(
   layer: &PdfLayerReference,
   ll: (Mm, Mm),
@@ -341,7 +436,7 @@ fn draw_header(layer: &PdfLayerReference, fonts: &Fonts, payload: &PrintPayload)
     layer.use_text(&payload.period_text, 12.0, title_x, sub_y, &fonts.regular);
   }
 
-  // Rule under the header band (nice-to-have, cheap with printpdf's Rect).
+  // Rule under the header band
   let rule_y = (PAGE_H_MM - MARGIN_MM - HEADER_MM) as f32;
   draw_rect(
     layer,
@@ -372,27 +467,29 @@ fn draw_footer(layer: &PdfLayerReference, fonts: &Fonts) {
   layer.use_text(plass, font_size as f32, Mm(plass_x), y, &fonts.bold);
 }
 
-/// Board: bordered rect containing centered "TAVLE" text.
+/// Board: rounded pill-shaped rect containing centered "T A V L E" text (matching CSS border-radius: 18px).
 fn draw_board(layer: &PdfLayerReference, fonts: &Fonts, board: &PrintBoard, scale: f64) {
   let (ll_x, top_mm) = content_px_to_page_mm(board.x, board.y, scale);
   let (ur_x, bottom_mm) = content_px_to_page_mm(board.x + BOARD_W, board.y + BOARD_H, scale);
-  draw_rect(
+  let board_radius_mm = px_to_mm(18.0, scale);
+
+  draw_rounded_rect(
     layer,
     (ll_x, bottom_mm),
     (ur_x, top_mm),
+    board_radius_mm,
     None,
     Some(hex_to_color("#374151")),
     1.0,
-    PaintMode::Stroke,
   );
 
   let center_x = (ll_x.0 + ur_x.0) / 2.0;
-  let center_y = (top_mm.0 + bottom_mm.0) / 2.0 - px_to_mm(4.0, scale) as f32; // rough vertical-center nudge
+  let center_y = (top_mm.0 + bottom_mm.0) / 2.0 - px_to_mm(3.8, scale) as f32;
   let font_size = px_to_pt(11.0, scale);
   draw_centered_text(
     layer,
     &fonts.bold,
-    "TAVLE",
+    "T A V L E",
     center_x,
     center_y,
     font_size,
@@ -401,47 +498,65 @@ fn draw_board(layer: &PdfLayerReference, fonts: &Fonts, board: &PrintBoard, scal
   );
 }
 
-/// Desk: filled+bordered rect, per-seat-slot name/number, optional zone
-/// chips below.
+/// Desk: rounded filled+bordered rect (matching CSS border-radius: 4px), per-seat-slot name/number, optional zone chips below.
 fn draw_desk(layer: &PdfLayerReference, fonts: &Fonts, desk: &PrintDesk, scale: f64) {
   let cap = desk.capacity.max(1);
   let desk_w_px = cap as f64 * 100.0;
 
   let (ll_x, top_mm) = content_px_to_page_mm(desk.x, desk.y, scale);
   let (ur_x, bottom_mm) = content_px_to_page_mm(desk.x + desk_w_px, desk.y + DESK_H, scale);
+  let desk_radius_mm = px_to_mm(4.0, scale);
 
-  // Fill, then stroke on top (two passes — printpdf's PaintMode::FillStroke
-  // uses a single color for both, but the JS uses different fill/border
-  // colors, so we draw fill first, border second).
+  // Fill, then stroke on top (two passes) with rounded corners
   let fill_color = desk
     .fill_color_hex
     .as_deref()
     .map(hex_to_color)
     .unwrap_or_else(|| hex_to_color("#f1f5f9"));
-  draw_rect(
+
+  draw_rounded_rect(
     layer,
     (ll_x, bottom_mm),
     (ur_x, top_mm),
+    desk_radius_mm,
     Some(fill_color),
     None,
     0.0,
-    PaintMode::Fill,
   );
-  draw_rect(
+  draw_rounded_rect(
     layer,
     (ll_x, bottom_mm),
     (ur_x, top_mm),
+    desk_radius_mm,
     None,
     Some(hex_to_color(&desk.border_color_hex)),
-    2.0,
-    PaintMode::Stroke,
+    1.5,
   );
 
   // Seat slots: cap equal-width columns across the desk.
   let slot_w_px = desk_w_px / cap as f64;
+
+  // Slot dividers between seats inside a multi-seat desk
+  if cap > 1 {
+    for idx in 1..cap {
+      let div_x_px = desk.x + slot_w_px * idx as f64;
+      let (div_x_mm, div_top_mm) = content_px_to_page_mm(div_x_px, desk.y, scale);
+      let (_, div_bot_mm) = content_px_to_page_mm(div_x_px, desk.y + DESK_H, scale);
+      draw_rect(
+        layer,
+        (div_x_mm, div_bot_mm),
+        (Mm(div_x_mm.0 + 0.25), div_top_mm),
+        Some(hex_to_color("#e5e7eb")),
+        None,
+        0.0,
+        PaintMode::Fill,
+      );
+    }
+  }
+
   let name_font_size = px_to_pt(11.0, scale);
   let number_font_size = px_to_pt(10.0, scale);
-  let name_baseline_y = (top_mm.0 + bottom_mm.0) / 2.0 - px_to_mm(4.0, scale) as f32;
+  let name_baseline_y = (top_mm.0 + bottom_mm.0) / 2.0 - px_to_mm(3.8, scale) as f32;
 
   for (idx, seat) in desk.seats.iter().enumerate() {
     if idx as u32 >= cap {
@@ -464,10 +579,7 @@ fn draw_desk(layer: &PdfLayerReference, fonts: &Fonts, desk: &PrintDesk, scale: 
         );
       }
       None => {
-        // Empty-slot placeholder, drawn lighter to approximate the JS's
-        // `opacity: 0.25` (printpdf has no opacity/alpha support for fills
-        // without extended graphics state gymnastics, so we approximate
-        // with a light gray instead — documented simplification).
+        // Empty-slot placeholder, drawn lighter
         draw_centered_text(
           layer,
           &fonts.bold,
@@ -482,8 +594,6 @@ fn draw_desk(layer: &PdfLayerReference, fonts: &Fonts, desk: &PrintDesk, scale: 
     }
 
     if let Some(n) = seat.seat_number {
-      // JS positions the number at `top: -14px, left: -2px` relative to the
-      // slot's top-left corner.
       let number_x_px = desk.x + slot_w_px * idx as f64 - 2.0;
       let number_y_px = desk.y - 14.0;
       let (number_x_mm, number_y_mm) = content_px_to_page_mm(number_x_px, number_y_px, scale);
@@ -498,9 +608,7 @@ fn draw_desk(layer: &PdfLayerReference, fonts: &Fonts, desk: &PrintDesk, scale: 
     }
   }
 
-  // Zone chips: laid out left-to-right below the desk (simplified from the
-  // JS's centered flex-wrap row — a single left-to-right row covers the
-  // common case of a handful of short zone labels; see Task 6.2 report).
+  // Zone chips: laid out left-to-right below the desk with rounded borders (matching CSS border-radius: 6px)
   if !desk.zone_chips.is_empty() {
     let chip_font_size = px_to_pt(7.0, scale);
     let chip_gap_mm = px_to_mm(2.0, scale) as f32;
@@ -510,20 +618,21 @@ fn draw_desk(layer: &PdfLayerReference, fonts: &Fonts, desk: &PrintDesk, scale: 
     let chip_h_mm = px_to_mm(11.0, scale) as f32;
     let chip_y_bottom_mm = chip_y_top_mm - chip_h_mm;
     let text_baseline_mm = chip_y_bottom_mm + chip_h_mm * 0.3;
+    let chip_radius_mm = px_to_mm(3.0, scale);
 
     for chip in &desk.zone_chips {
       let color = hex_to_color(&chip.color_hex);
       let text_w_mm = approx_text_width_mm(&chip.label, chip_font_size, true) as f32;
       let chip_w_mm = text_w_mm + chip_pad_mm * 2.0;
 
-      draw_rect(
+      draw_rounded_rect(
         layer,
         (Mm(cursor_x_mm), Mm(chip_y_bottom_mm)),
         (Mm(cursor_x_mm + chip_w_mm), Mm(chip_y_top_mm)),
-        None,
+        chip_radius_mm,
+        Some(hex_to_color("#ffffff")),
         Some(color.clone()),
         0.5,
-        PaintMode::Stroke,
       );
       layer.set_fill_color(color);
       layer.use_text(

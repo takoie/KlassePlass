@@ -30,25 +30,36 @@ function DroppableGroup({ groupIdx, children }) {
   );
 }
 
-function DraggableStudent({ studentId, name, isLeader, onToggleLeader }) {
+function DraggableStudent({ studentId, name, isLeader, isLocked, onToggleLeader, onToggleLock }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: studentId });
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`flex items-center gap-1.5 bg-base-200 rounded px-2 py-1 cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-30' : ''}`}
+      className={`flex items-center justify-between gap-1.5 bg-base-200 rounded px-2 py-1 cursor-grab active:cursor-grabbing select-none ${isDragging ? 'opacity-30' : ''}`}
     >
+      <div className="flex items-center gap-1.5 min-w-0">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleLeader(); }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="flex-shrink-0"
+          title={isLeader ? 'Fjern som gruppeleder' : 'Gjør til gruppeleder'}
+        >
+          <i className={`fa-solid fa-star text-[11px] ${isLeader ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400/70'}`}></i>
+        </button>
+        <span className="text-xs text-slate-200 truncate">{name}</span>
+      </div>
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); onToggleLeader(); }}
+        onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="flex-shrink-0"
-        title={isLeader ? 'Fjern som gruppeleder' : 'Gjør til gruppeleder'}
+        className="flex-shrink-0 p-0.5 rounded hover:bg-slate-700/50"
+        title={isLocked ? 'Låst til denne stasjonen/gruppen (klikk for å låse opp)' : 'Lås elev til denne stasjonen/gruppen (påvirkes ikke av randomisering)'}
       >
-        <i className={`fa-solid fa-star text-[11px] ${isLeader ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400/70'}`}></i>
+        <i className={`fa-solid text-[10px] ${isLocked ? 'fa-lock text-red-400' : 'fa-lock-open text-slate-600 hover:text-slate-400'}`}></i>
       </button>
-      <span className="text-xs text-slate-200 truncate">{name}</span>
     </div>
   );
 }
@@ -69,6 +80,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [allStudents, setAllStudents] = useState([]);
   const [groups, setGroups] = useState([[], []]);
   const [groupLeaders, setGroupLeaders] = useState([null, null]);
+  const [lockedIds, setLockedIds] = useState([]);
   const [activeDragId, setActiveDragId] = useState(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [saveState, setSaveState] = useState('idle');
@@ -76,6 +88,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const nameInputRefs = useRef({});
   const [pendingFocusId, setPendingFocusId] = useState(null);
   const [nameDraft, setNameDraft] = useState('');
+  const [classDraft, setClassDraft] = useState('');
   const nameModalInputRef = useRef(null);
   const classSelectRef = useRef(null);
   const hasAutoOpenedNameModalRef = useRef(false);
@@ -89,11 +102,59 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     setPendingFocusId(null);
   }, [stations, pendingFocusId]);
 
+  const distributeStudentsIntoGroups = (
+    studentsList = allStudents,
+    numGroups = stations.length,
+    locked = lockedIds,
+    existingGroups = groups
+  ) => {
+    const targetCount = Math.max(2, numGroups);
+    if (!studentsList || studentsList.length === 0) {
+      setGroups(Array.from({ length: targetCount }, () => []));
+      setGroupLeaders(Array.from({ length: targetCount }, () => null));
+      return;
+    }
+    const studentsByIdMap = Object.fromEntries(studentsList.map(s => [s.id, s]));
+
+    // Ta vare på plassering for låste elever i eksisterende grupper
+    const lockedPlacements = [];
+    if (existingGroups && existingGroups.length > 0) {
+      existingGroups.forEach((groupStudents, groupIdx) => {
+        if (groupIdx < targetCount) {
+          groupStudents.forEach(sid => {
+            if (locked.includes(sid) && studentsByIdMap[sid]) {
+              lockedPlacements.push({ studentId: sid, groupIndex: groupIdx });
+            }
+          });
+        }
+      });
+    }
+
+    const result = generateGroups({
+      studentIds: studentsList.map(s => s.id),
+      studentsById: studentsByIdMap,
+      numGroups: targetCount,
+      useConstraints: false,
+      lockedPlacements,
+    });
+
+    setGroups(result.groups);
+    setGroupLeaders(prev => {
+      const next = Array.from({ length: result.groups.length }, () => null);
+      result.groups.forEach((g, idx) => {
+        if (prev[idx] && g.includes(prev[idx])) {
+          next[idx] = prev[idx];
+        }
+      });
+      return next;
+    });
+  };
+
   const loadInitial = async () => {
     setLoading(true);
     try {
       const cls = await window.api.getClasses();
-      setClasses(cls);
+      setClasses(cls || []);
 
       if (initialId && initialId !== 'new') {
         const s = await window.api.getStationSession(initialId);
@@ -104,7 +165,8 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           setMinutesPerStation(s.minutes_per_station ?? 10);
           setSecondsPerStation(s.seconds_per_station ?? 0);
           setNoTimer(!!s.no_timer);
-          try { setStations(JSON.parse(s.stations || '[]')); } catch (e) {}
+          let parsedStations = [];
+          try { parsedStations = JSON.parse(s.stations || '[]'); setStations(parsedStations); } catch (e) {}
           let parsedGroups = [];
           try { parsedGroups = JSON.parse(s.groups || '[]'); setGroups(parsedGroups); } catch (e) {}
           try {
@@ -118,6 +180,8 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       } else if (initialId === 'new' && !hasAutoOpenedNameModalRef.current) {
         hasAutoOpenedNameModalRef.current = true;
         setNameDraft('');
+        const defaultClassId = cls?.[0]?.id ? String(cls[0].id) : '';
+        setClassDraft(defaultClassId);
         setTimeout(() => {
           const modal = document.getElementById('modal_new_station_session');
           if (modal) {
@@ -130,73 +194,89 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     setLoading(false);
   };
 
-  const handleConfirmSessionName = () => {
-    if (!nameDraft.trim()) return;
+  const handleConfirmSessionName = async () => {
+    if (!nameDraft.trim() || !classDraft) return;
+    const cid = Number(classDraft);
     setName(nameDraft.trim());
+    setClassId(cid);
     const modal = document.getElementById('modal_new_station_session');
     if (modal) modal.close();
-    setTimeout(() => classSelectRef.current?.focus(), 150);
+
+    const loadedStudents = await loadStudentsForClass(cid);
+    if (loadedStudents && loadedStudents.length > 0) {
+      distributeStudentsIntoGroups(loadedStudents, stations.length, [], []);
+    }
   };
 
   const loadStudentsForClass = async (cid) => {
-    if (!cid) { setAllStudents([]); return; }
+    if (!cid) { setAllStudents([]); return []; }
     try {
       const cls = await window.api.getClass(cid);
       const parsed = cls?.students ? JSON.parse(cls.students) : [];
       const list = Array.isArray(parsed) ? parsed : (parsed.students || []);
-      setAllStudents(normalizeStudents(list));
-    } catch (e) { setAllStudents([]); }
+      const normalized = normalizeStudents(list);
+      setAllStudents(normalized);
+      return normalized;
+    } catch (e) {
+      setAllStudents([]);
+      return [];
+    }
   };
 
   const handleClassChange = async (cid) => {
-    // `cid` kommer fra <select>-elementets `value` og er alltid en JS-streng
-    // — Rust-siden (getClass/saveStationSession) forventer class_id som
-    // i64/Option<i64> og godtar ikke en JSON-streng der. Samme bug-klasse som
-    // ble fikset for klassekart i SeatingOverview (se seatings.rs).
     const numericCid = cid === '' ? '' : Number(cid);
     setClassId(numericCid);
-    // Tøm utdaterte grupper og gruppeledere fra forrige klasse
-    setGroups(prev => prev.map(() => []));
-    setGroupLeaders(prev => prev.map(() => null));
-    await loadStudentsForClass(numericCid);
+    setLockedIds([]);
+    const loadedStudents = await loadStudentsForClass(numericCid);
+    if (loadedStudents && loadedStudents.length > 0) {
+      distributeStudentsIntoGroups(loadedStudents, stations.length, [], []);
+    } else {
+      setGroups(Array.from({ length: stations.length }, () => []));
+      setGroupLeaders(Array.from({ length: stations.length }, () => null));
+    }
   };
 
   const addStation = () => {
     const st = { id: newStationId(), name: '', isTeacher: false, note: '' };
-    setStations(prev => [...prev, st]);
+    const nextStations = [...stations, st];
+    setStations(nextStations);
     setPendingFocusId(st.id);
+    if (allStudents.length > 0) {
+      distributeStudentsIntoGroups(allStudents, nextStations.length, lockedIds, groups);
+    } else {
+      setGroups(prev => [...prev, []]);
+      setGroupLeaders(prev => [...prev, null]);
+    }
   };
-  const removeStation = (id) => setStations(prev => prev.length > 2 ? prev.filter(s => s.id !== id) : prev);
+
+  const removeStation = (id) => {
+    if (stations.length <= 2) return;
+    const nextStations = stations.filter(s => s.id !== id);
+    setStations(nextStations);
+    if (allStudents.length > 0) {
+      distributeStudentsIntoGroups(allStudents, nextStations.length, lockedIds, groups);
+    } else {
+      setGroups(prev => prev.slice(0, nextStations.length));
+      setGroupLeaders(prev => prev.slice(0, nextStations.length));
+    }
+  };
+
   const updateStation = (id, field, value) => setStations(prev => prev.map(s => {
     if (s.id !== id) return field === 'isTeacher' && value ? { ...s, isTeacher: false } : s;
     return { ...s, [field]: value };
   }));
 
-  const setNumGroups = (n) => {
-    const target = Math.max(2, n);
-    setGroups(prev => {
-      const next = prev.slice(0, target);
-      while (next.length < target) next.push([]);
-      return next;
-    });
-    setGroupLeaders(prev => {
-      const next = prev.slice(0, target);
-      while (next.length < target) next.push(null);
-      return next;
-    });
+  const handleRandomize = () => {
+    if (allStudents.length === 0) return;
+    distributeStudentsIntoGroups(allStudents, stations.length, lockedIds, groups);
   };
 
-  const autoDistribute = () => {
-    if (allStudents.length === 0) return;
-    const studentsById = Object.fromEntries(allStudents.map(s => [s.id, s]));
-    const result = generateGroups({
-      studentIds: allStudents.map(s => s.id),
-      studentsById,
-      numGroups: groups.length,
-      useConstraints: false,
-    });
-    setGroups(result.groups);
-    setGroupLeaders(result.groups.map(() => null));
+  const toggleLock = (studentId) => {
+    setLockedIds(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
   };
 
   const moveStudent = (studentId, fromIdx, toIdx) => {
@@ -237,8 +317,6 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const studentsById = Object.fromEntries(allStudents.map(s => [s.id, s]));
   const validStations = stations.filter(s => s.name.trim());
   const canSave = name.trim() && classId && validStations.length >= 2 && (noTimer || minutesPerStation * 60 + secondsPerStation > 0);
-  const hasGroupStationMismatch = validStations.length >= 2 && groups.length !== validStations.length;
-  const tooFewGroups = hasGroupStationMismatch && groups.length < validStations.length;
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -407,46 +485,22 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
 
         <div className="bg-base-200 border border-slate-800 rounded-2xl p-5">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-sm text-white">Grupper ({groups.length})</h3>
+            <div>
+              <h3 className="font-bold text-sm text-white">Grupper ({groups.length})</h3>
+              <p className="text-[11px] text-slate-400">Gruppene følger automatisk antall stasjoner ({stations.length}).</p>
+            </div>
             <div className="flex items-center gap-2">
-              <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setNumGroups(groups.length - 1)} disabled={groups.length <= 2}>
-                <i className="fa-solid fa-minus"></i>
-              </button>
-              <span className="text-xs text-slate-400 w-4 text-center">{groups.length}</span>
-              <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => setNumGroups(groups.length + 1)}>
-                <i className="fa-solid fa-plus"></i>
-              </button>
-              <button className="btn btn-xs bg-amber-500/20 text-amber-300 border-none hover:bg-amber-500/30 gap-1 ml-2" onClick={autoDistribute} disabled={allStudents.length === 0}>
-                <i className="fa-solid fa-shuffle"></i> Auto-fordel
+              <button
+                className="btn btn-xs bg-amber-500/20 text-amber-300 border-none hover:bg-amber-500/30 gap-1.5 font-bold"
+                onClick={handleRandomize}
+                disabled={allStudents.length === 0}
+                title="Randomiser elever på nytt over stasjonene (beholder låste elever)"
+              >
+                <i className="fa-solid fa-shuffle text-xs"></i> Randomiser
               </button>
             </div>
           </div>
           {!classId && <p className="text-xs text-slate-500 italic">Velg en klasse for å fordele elever i grupper.</p>}
-          {hasGroupStationMismatch && (
-            <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-3 text-xs text-amber-200">
-              <i className="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5 flex-shrink-0"></i>
-              <div className="flex-1">
-                {tooFewGroups ? (
-                  <>
-                    <strong>{groups.length} grupper</strong> dekker ikke <strong>{validStations.length} stasjoner</strong> 1:1.
-                    Det går fint å gjennomføre, men i hver rotasjon vil noen grupper stå oppført på flere stasjoner samtidig.
-                  </>
-                ) : (
-                  <>
-                    <strong>{groups.length} grupper</strong> er flere enn <strong>{validStations.length} stasjoner</strong>.
-                    Det går fint å gjennomføre, men noen grupper vil ikke bli tildelt en stasjon i rotasjonsplanen.
-                  </>
-                )}
-              </div>
-              <button
-                type="button"
-                className="btn btn-xs bg-amber-500/20 text-amber-300 border-none hover:bg-amber-500/30 flex-shrink-0 whitespace-nowrap"
-                onClick={() => setNumGroups(validStations.length)}
-              >
-                Sett til {validStations.length}
-              </button>
-            </div>
-          )}
           <DndContext
             sensors={sensors}
             onDragStart={(event) => setActiveDragId(event.active.id)}
@@ -456,7 +510,14 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(200px, 1fr))` }}>
               {groups.map((studentIds, idx) => (
                 <DroppableGroup key={idx} groupIdx={idx}>
-                  <div className="text-xs font-bold text-slate-300 mb-1.5">Gruppe {idx + 1} ({studentIds.length})</div>
+                  <div className="text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                    <span>Gruppe {idx + 1} ({studentIds.length})</span>
+                    {stations[idx]?.name && (
+                      <span className="text-[10px] text-orange-400 truncate max-w-[100px] font-normal" title={stations[idx].name}>
+                        {stations[idx].name}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-col gap-1">
                     {studentIds.map(sid => {
                       const student = studentsById[sid];
@@ -467,7 +528,9 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
                           studentId={sid}
                           name={student.name}
                           isLeader={groupLeaders[idx] === sid}
+                          isLocked={lockedIds.includes(sid)}
                           onToggleLeader={() => toggleLeader(idx, sid)}
+                          onToggleLock={() => toggleLock(sid)}
                         />
                       );
                     })}
@@ -493,22 +556,56 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           <h3 className="font-bold text-lg flex items-center gap-2 text-white">
             <i className="fa-solid fa-arrows-rotate text-orange-400"></i> Ny stasjonsøkt
           </h3>
-          <p className="py-2 text-xs text-slate-400">Gi økten et navn, f.eks. tema eller dato:</p>
-          <input
-            ref={nameModalInputRef}
-            type="text"
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmSessionName(); }}
-            placeholder="f.eks. Norsk - stasjoner uke 12..."
-            className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
-            autoFocus
-          />
+          
+          <div className="flex flex-col gap-3 py-3">
+            <div>
+              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på økten</label>
+              <input
+                ref={nameModalInputRef}
+                type="text"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && nameDraft.trim() && classDraft) handleConfirmSessionName(); }}
+                placeholder="f.eks. Norsk - stasjoner uke 12..."
+                className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klasse</label>
+              <select
+                className="select select-bordered w-full bg-surface-field border-slate-700 text-white"
+                value={classDraft}
+                onChange={(e) => setClassDraft(e.target.value)}
+              >
+                <option value="">Velg klasse...</option>
+                {classes.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="modal-action">
-            <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
-              <button className="btn btn-primary" onClick={handleConfirmSessionName} disabled={!nameDraft.trim()}>Opprett</button>
-            </form>
+            <button
+              type="button"
+              className="btn btn-ghost text-slate-400 mr-2"
+              onClick={() => {
+                document.getElementById('modal_new_station_session')?.close();
+                if (initialId === 'new' && !sessionId) onBack();
+              }}
+            >
+              Avbryt
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleConfirmSessionName}
+              disabled={!nameDraft.trim() || !classDraft}
+            >
+              Opprett
+            </button>
           </div>
         </div>
       </dialog>

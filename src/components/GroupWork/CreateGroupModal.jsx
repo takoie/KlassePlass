@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { normalizeStudents } from '../../shared/utils';
+import { normalizeStudents, showToast } from '../../shared/utils';
 import { generateGroups } from '../../shared/groupRandomizer';
 
 /**
@@ -104,7 +104,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
       resetAndClose();
       if (saveResult?.lastID) onCreated(saveResult.lastID);
     } catch (e) {
-      // Stille feil — knappen forblir tilgjengelig for nytt forsøk
+      showToast(e?.message || 'Kunne ikke opprette gruppeinndeling.', 'error');
     } finally {
       setBusy(false);
     }

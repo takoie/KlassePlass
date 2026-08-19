@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, useDraggable, useDroppable, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer';
