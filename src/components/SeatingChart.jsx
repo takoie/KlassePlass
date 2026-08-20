@@ -88,14 +88,28 @@ export default function SeatingChart({ onBack, initialId }) {
   } = useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides });
 
 
+  // Speiler isProjectorMode mot native OS-fullskjerm. Kjøres KUN på faktisk
+  // endring (ikke som cleanup+body-par), for å unngå to overlappende
+  // setFullscreen-kall til WebView2 når man går ut av prosjektorvisning
+  // (root cause for at "Avslutt"-knappen sluttet å svare - se
+  // docs/plans/2026-08-20-fullskjerm-avslutt-fiks.md).
   useEffect(() => {
-    window.api?.setFullscreen?.(isProjectorMode).catch(() => {});
+    window.api?.setFullscreen?.(isProjectorMode)
+      .catch((err) => console.error('setFullscreen feilet:', err));
     window.dispatchEvent(new CustomEvent('toggle-projector', { detail: isProjectorMode }));
+  }, [isProjectorMode]);
+
+  // Sikkerhetsnett: hvis komponenten unmountes mens prosjektorvisning er
+  // aktiv (f.eks. bytte av klassekart), sørg for at vinduet faktisk går ut
+  // av native fullskjerm. Tom dep-array = kjører kun ved ekte unmount, ikke
+  // ved hver isProjectorMode-endring.
+  useEffect(() => {
     return () => {
-      window.api?.setFullscreen?.(false).catch(() => {});
+      window.api?.setFullscreen?.(false)
+        .catch((err) => console.error('setFullscreen cleanup feilet:', err));
       window.dispatchEvent(new CustomEvent('toggle-projector', { detail: false }));
     };
-  }, [isProjectorMode]);
+  }, []);
 
   // Start alltid med full oversikt hver gang prosjektorvisningen åpnes, uansett
   // hvilken zoom/pan-posisjon som var aktiv sist gang den var åpen.
@@ -104,6 +118,17 @@ export default function SeatingChart({ onBack, initialId }) {
       setProjectorZoom(1);
       setProjectorPan({ x: 0, y: 0 });
     }
+  }, [isProjectorMode]);
+
+  // Fallback dersom "Avslutt"-knappen av en eller annen grunn ikke fanger
+  // klikket (fokus-kant-tilfeller rundt native fullskjerm-overganger).
+  useEffect(() => {
+    if (!isProjectorMode) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') setIsProjectorMode(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [isProjectorMode]);
 
   const PROJECTOR_ZOOM_MIN = 1;
@@ -377,10 +402,10 @@ export default function SeatingChart({ onBack, initialId }) {
 
           {isProjectorMode && (
             <>
-              <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onClick={() => setIsProjectorMode(false)}>
+              <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsProjectorMode(false)}>
                 Avslutt prosjektorvisning
               </button>
-              <div className="fixed top-4 left-4 z-[9999] flex items-center gap-1.5 bg-base-200/95 border border-slate-700 rounded-xl shadow-2xl p-1.5">
+              <div className="fixed top-4 left-4 z-[9999] flex items-center gap-1.5 bg-base-200/95 border border-slate-700 rounded-xl shadow-2xl p-1.5" onMouseDown={(e) => e.stopPropagation()}>
                 <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Zoom ut" onClick={() => handleProjectorZoomButton(-0.25)} disabled={projectorZoom <= PROJECTOR_ZOOM_MIN}>
                   <i className="fa-solid fa-magnifying-glass-minus"></i>
                 </button>
