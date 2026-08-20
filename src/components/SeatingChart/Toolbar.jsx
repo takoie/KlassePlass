@@ -54,6 +54,7 @@ export default function Toolbar({
   showGroupDrawer, setShowGroupDrawer, activeGroupId, setActiveGroupId, GROUP_COLORS,
   showFunDrawer, setShowFunDrawer,
   hideGroups, setHideGroups,
+  showGroupNumbers, setShowGroupNumbers,
   colorSeatsByGroup, setColorSeatsByGroup,
   handleRuleBasedFunSpin, handleAutoFill, flipRoom,
   showHistory, setShowHistory,
@@ -167,6 +168,14 @@ export default function Toolbar({
                   <i className="fa-solid fa-xmark text-[10px]"></i> Avslutt modus
                 </button>
               )}
+              <div className="h-px bg-slate-800 my-0.5"></div>
+              <ToggleRow
+                icon="fa-solid fa-hashtag"
+                label="Vis gruppenummer"
+                checked={showGroupNumbers}
+                onChange={() => setShowGroupNumbers(!showGroupNumbers)}
+                tip="Viser 'Gruppe X'-merkelappen på fargelagte bord. Fargen vises uansett."
+              />
             </div>
           )}
 

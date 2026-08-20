@@ -47,6 +47,7 @@ export default function SeatingChart({ onBack, initialId }) {
   const [showNumbers, setShowNumbers] = useState(true);
   const [showZones, setShowZones] = useState(false);
   const [hideGroups, setHideGroups] = useState(false);
+  const [showGroupNumbers, setShowGroupNumbers] = useState(false);
   const [colorSeatsByGroup, setColorSeatsByGroup] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showStudentDrawer, setShowStudentDrawer] = useState(false);
@@ -354,6 +355,7 @@ export default function SeatingChart({ onBack, initialId }) {
             activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId} GROUP_COLORS={GROUP_COLORS}
             showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
             hideGroups={hideGroups} setHideGroups={setHideGroups}
+            showGroupNumbers={showGroupNumbers} setShowGroupNumbers={setShowGroupNumbers}
             colorSeatsByGroup={colorSeatsByGroup} setColorSeatsByGroup={setColorSeatsByGroup}
             handleRuleBasedFunSpin={handleRuleBasedFunSpin} handleAutoFill={handleAutoFill} flipRoom={flipRoom}
             showHistory={showHistory} setShowHistory={setShowHistory}
@@ -481,7 +483,7 @@ export default function SeatingChart({ onBack, initialId }) {
                           className={`absolute h-[60px] rounded-xl bg-base-200 flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-slate-700/70 z-10`}
                           style={{ left: d.x - offsetX, top: d.y, width: `${visualWidth}px`, ...borderStyle }}
                         >
-                          {gId && !hideGroups && (
+                          {gId && !hideGroups && showGroupNumbers && (
                             <div className="absolute -top-2.5 right-2 z-20 pointer-events-none">
                               <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded text-slate-950 shadow tracking-wider" style={{ backgroundColor: groupColor }}>
                                 Gruppe {gId}
