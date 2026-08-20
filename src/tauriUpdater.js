@@ -10,25 +10,27 @@
  * Tauris `@tauri-apps/plugin-updater` er derimot PULL-basert: frontend må
  * selv kalle `check()` (returnerer `Update | null` — bekreftet ved å lese
  * `node_modules/@tauri-apps/plugin-updater/dist-js/index.d.ts`, ikke
- * gjettet), og deretter selv kalle `update.downloadAndInstall()` hvis en
+ * gjettet), og deretter selv kalle `update.download()`/`.install()` hvis en
  * oppdatering finnes. Det finnes ingen automatisk bakgrunns-push.
  *
  * Denne modulen bygger derfor selv "push"-laget: `initAutoUpdateCheck()`
  * kalles én gang ved oppstart (fra `main.jsx`, kun når `isTauri()`), gjør
- * check() + downloadAndInstall() selv, og kaller REGISTRERTE callbacks
- * (samme kontrakt som Electron-preloadens `onUpdateReady`) når nedlastingen
- * faktisk er fullført. `tauriApi.js` sin `onUpdateReady(cb)` registrerer seg
- * her — dette betyr at `UpdateBanner.jsx` selv IKKE trenger noen endring:
- * den kaller fortsatt bare `window.api.onUpdateReady(cb)` og får `cb` kalt
- * med `{ version }` når en oppdatering er installert og klar for restart,
- * akkurat som under Electron.
+ * check() + download() (IKKE install() — se `checkAndDownloadUpdate()` for
+ * hvorfor) selv, og kaller REGISTRERTE callbacks (samme kontrakt som
+ * Electron-preloadens `onUpdateReady`) når nedlastingen faktisk er fullført.
+ * `tauriApi.js` sin `onUpdateReady(cb)` registrerer seg her — dette betyr at
+ * `UpdateBanner.jsx` selv IKKE trenger noen endring: den kaller fortsatt bare
+ * `window.api.onUpdateReady(cb)` og får `cb` kalt med `{ version }` når en
+ * oppdatering er lastet ned og klar for installasjon+restart, akkurat som
+ * under Electron. Selve installasjonen skjer først når brukeren trykker
+ * "Restart nå" (`window.api.restartApp()` → `installPendingUpdateAndRestart()`).
  *
  * KRITISK produktkrav (eksplisitt fra bruker, ikke bare arvet fra Electron-
  * adferden): "Ønsker ikke visuelle feilmeldinger i appen om manglende
  * connection til databasen, kun varslinger evt. om det er tilgjengelig
  * update og connection tilgjengelig." Enhver feil fra `check()` eller
- * `downloadAndInstall()` (nettverksfeil, 404 pga. privat GitHub-repo, osv.)
- * skal derfor ALDRI vises til brukeren — kun logges til konsollen for
+ * `download()` (nettverksfeil, 404 pga. privat GitHub-repo, osv.) skal
+ * derfor ALDRI vises til brukeren — kun logges til konsollen for
  * utviklerdiagnose, akkurat som Electron-versjonens
  * `autoUpdater.on('error', ...)`. Kun en VELLYKKET nedlasting trigger UI
  * (de registrerte callbackene).
@@ -37,6 +39,16 @@
 /** Registrerte "update-ready"-callbacks, kalt når en nedlasting fullføres. */
 const updateReadyCallbacks = new Set();
 let cachedReadyUpdate = null;
+
+/**
+ * `Update`-objektet fra den STILLE bakgrunnssjekken ved oppstart
+ * (`checkAndDownloadUpdate()`), holdt i minnet til brukeren selv ber om
+ * restart. Installasjon (`.install()`) skjer bevisst IKKE automatisk — se
+ * `checkAndDownloadUpdate()` og `installPendingUpdateAndRestart()` under for
+ * hvorfor (produktkrav: bruker skal alltid selv få velge når/om restart skjer,
+ * ikke bli restartet uten forvarsel).
+ */
+let pendingBackgroundUpdate = null;
 
 /**
  * Registrerer en callback som kalles med `{ version }` når en oppdatering er
@@ -132,10 +144,19 @@ export function simulateUpdateReady(testVersion = '2.5.1') {
 }
 
 /**
- * Sjekker for oppdatering, laster ned og installerer den hvis en finnes.
- * Kalles én gang ved oppstart via `initAutoUpdateCheck()`.
+ * Sjekker for oppdatering og laster den ned i bakgrunnen (KUN nedlasting,
+ * ALDRI installasjon) hvis en finnes. Kalles én gang ved oppstart via
+ * `initAutoUpdateCheck()`.
+ *
+ * Installasjon (`update.install()`) skjer bevisst IKKE her: på Windows må
+ * installasjonssteget erstatte den kjørende .exe-filen, noe som i praksis
+ * betyr at appen lukkes/restartes — dette skal ALDRI skje uten at brukeren
+ * eksplisitt har bedt om det (trykket "Restart nå" i UpdateBanner.jsx /
+ * UpdateModal.jsx). Vi laster derfor kun ned og kaller `notifyUpdateReady()`,
+ * som viser restart-varselet i UI-et; selve installasjonen skjer først i
+ * `installPendingUpdateAndRestart()`, trigget av brukerens knappetrykk.
  */
-async function checkAndInstallUpdate() {
+async function checkAndDownloadUpdate() {
   let check;
   try {
     ({ check } = await import('@tauri-apps/plugin-updater'));
@@ -157,10 +178,31 @@ async function checkAndInstallUpdate() {
   }
 
   try {
-    await update.downloadAndInstall();
+    await update.download();
+    pendingBackgroundUpdate = update;
     notifyUpdateReady({ version: update.version });
   } catch (err) {
     console.error('Auto-updater error:', err?.message ?? err);
+    update.close().catch(() => {});
+  }
+}
+
+/**
+ * Installerer en oppdatering som ble lastet ned i bakgrunnen av
+ * `checkAndDownloadUpdate()`, og restarter deretter appen. Kalles KUN som
+ * respons på et eksplisitt brukervalg (f.eks. "Restart nå"-knappen i
+ * UpdateBanner.jsx). Er ingen bakgrunns-nedlasting ventende (f.eks. fordi
+ * brukeren i stedet lastet ned+installerte manuelt via UpdateModal sin
+ * `downloadAndInstallUpdate`, som allerede installerer som del av
+ * knappetrykket), er dette en no-op og kallstedet må selv restarte
+ * (`relaunch()`) etterpå.
+ */
+export async function installPendingUpdateAndRestart() {
+  if (!pendingBackgroundUpdate) return;
+  const update = pendingBackgroundUpdate;
+  pendingBackgroundUpdate = null;
+  try {
+    await update.install();
   } finally {
     update.close().catch(() => {});
   }
@@ -170,5 +212,5 @@ async function checkAndInstallUpdate() {
  * Starter oppdateringssjekken. Kalles fra `main.jsx`, kun når `isTauri()`.
  */
 export function initAutoUpdateCheck() {
-  checkAndInstallUpdate();
+  checkAndDownloadUpdate();
 }

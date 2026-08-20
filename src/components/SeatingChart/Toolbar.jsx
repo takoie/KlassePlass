@@ -116,6 +116,25 @@ export default function Toolbar({
             <span>Plasser alle</span>
           </button>
 
+          {/* Fjern elever (lasso) */}
+          <button
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
+              removeStudentsMode
+                ? 'bg-rose-950/60 text-rose-200 border border-rose-500/50'
+                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
+            }`}
+            onClick={toggleRemoveStudentsMode}
+          >
+            <i className={`fa-solid fa-user-xmark fa-fw text-xs ${removeStudentsMode ? 'text-rose-400' : 'text-rose-400/80'}`}></i>
+            <span className="flex-1 text-left">{removeStudentsMode ? 'Avslutt fjerne-modus' : 'Fjern elever'}</span>
+          </button>
+
+          {removeStudentsMode && (
+            <div className="px-2.5 py-2 rounded-xl bg-rose-950/30 border border-rose-500/30 text-[10px] text-rose-200 leading-snug">
+              Dra en boks rundt elevene du vil fjerne. Låste elever hoppes over.
+            </div>
+          )}
+
           {/* Randomiser */}
           <button 
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
@@ -177,25 +196,6 @@ export default function Toolbar({
                 onChange={() => setShowGroupNumbers(!showGroupNumbers)}
                 tip="Viser 'Gruppe X'-merkelappen på fargelagte bord. Fargen vises uansett."
               />
-            </div>
-          )}
-
-          {/* Fjern elever (lasso) */}
-          <button
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
-              removeStudentsMode
-                ? 'bg-rose-950/60 text-rose-200 border border-rose-500/50'
-                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
-            }`}
-            onClick={toggleRemoveStudentsMode}
-          >
-            <i className={`fa-solid fa-user-xmark fa-fw text-xs ${removeStudentsMode ? 'text-rose-400' : 'text-rose-400/80'}`}></i>
-            <span className="flex-1 text-left">{removeStudentsMode ? 'Avslutt fjerne-modus' : 'Fjern elever (flere)'}</span>
-          </button>
-
-          {removeStudentsMode && (
-            <div className="px-2.5 py-2 rounded-xl bg-rose-950/30 border border-rose-500/30 text-[10px] text-rose-200 leading-snug">
-              Dra en boks rundt elevene du vil fjerne. Låste elever hoppes over.
             </div>
           )}
 

@@ -55,7 +55,8 @@ import {
   onUpdateReady as onUpdateReadyImpl,
   checkForUpdatesManually,
   downloadAndInstallUpdate,
-  simulateUpdateReady
+  simulateUpdateReady,
+  installPendingUpdateAndRestart
 } from './tauriUpdater.js';
 
 const maximizeListeners = new Set();
@@ -164,6 +165,17 @@ const tauriApi = {
     if (window.location.port === '3000' || window.location.hostname === 'localhost' && window.location.protocol === 'http:') {
       window.location.reload();
       return;
+    }
+    // Hvis oppdateringen kom fra den stille bakgrunnssjekken ved oppstart
+    // (kun nedlastet, aldri installert automatisk - se tauriUpdater.js),
+    // installer den nå, idet brukeren selv har trykket "Restart nå". Er det
+    // ingen ventende bakgrunns-nedlasting (f.eks. fordi brukeren i stedet
+    // brukte UpdateModal sin "Last ned & installer", som allerede
+    // installerte), er dette en no-op.
+    try {
+      await installPendingUpdateAndRestart();
+    } catch (e) {
+      console.error('Kunne ikke installere ventende oppdatering:', e?.message ?? e);
     }
     try {
       await relaunch();
