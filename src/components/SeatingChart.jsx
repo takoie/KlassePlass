@@ -19,8 +19,8 @@ import { useSeatings } from './SeatingChart/hooks/useSeatings';
 // tynn kantfarge, ingen tall/etikett attåt).
 const GROUP_COLORS = [
   '#1F77B4', '#FF7F0E', '#2CA02C', '#D62728',
-  '#9467BD', '#8C564B', '#E377C2', '#17BECF',
-  '#E7BA52', '#4D4D4D', '#55A868', '#C44E52'
+  '#9467BD', '#C9A227', '#E377C2', '#17BECF',
+  '#D6336C', '#0D9488', '#6366F1', '#F2994A'
 ];
 
 const getFontSizeClass = (name) => {
