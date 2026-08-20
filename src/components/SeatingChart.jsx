@@ -263,12 +263,9 @@ export default function SeatingChart({ onBack, initialId }) {
   // per state-variabel, ikke én per elev).
   const handleUnseatMultiple = (slotKeys) => {
     if (!slotKeys || slotKeys.length === 0) return;
-    let removedStudents = [];
+    const removedStudents = slotKeys.map(sk => placements[sk]).filter(Boolean);
     setPlacements(prev => {
       const next = { ...prev };
-      removedStudents = slotKeys
-        .filter(sk => next[sk])
-        .map(sk => next[sk]);
       slotKeys.forEach(sk => delete next[sk]);
       return next;
     });
