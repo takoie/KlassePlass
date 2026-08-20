@@ -48,6 +48,7 @@ export default function SeatingChart({ onBack, initialId }) {
   const [showZones, setShowZones] = useState(false);
   const [hideGroups, setHideGroups] = useState(false);
   const [showGroupNumbers, setShowGroupNumbers] = useState(false);
+  const [removeStudentsMode, setRemoveStudentsMode] = useState(false);
   const [colorSeatsByGroup, setColorSeatsByGroup] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showStudentDrawer, setShowStudentDrawer] = useState(false);
@@ -65,13 +66,42 @@ export default function SeatingChart({ onBack, initialId }) {
 
   const { scale, offset, containerRef, canvasRef } = useCanvasFit();
 
+  // "Fjern elever"-lassoen trenger handleUnseatMultiple, som igjen trenger
+  // placements/lockedSeats/setUnplacedStudents fra useSeatings(...) under -
+  // men useSeatings(...) trenger selv groupOverrides/setGroupOverrides FRA
+  // useGroupLasso(...), så de to hookene kan ikke enkelt bytte rekkefølge
+  // (sirkulær avhengighet). Løsning: en stabil ref-wrapper som fylles inn
+  // med den ferske handle-funksjonen etter at useSeatings(...) har kjørt
+  // lenger ned, men som allerede kan sendes inn til useGroupLasso(...) her.
+  const onRemoveInBoxRef = useRef(() => {});
+
   const {
     groupOverrides, setGroupOverrides,
     activeGroupId, setActiveGroupId,
     lasso, startCanvasAction,
     handleMouseMove: handleLassoMouseMove,
     handleMouseUp: handleLassoMouseUp
-  } = useGroupLasso({ desks, canvasRef, scale });
+  } = useGroupLasso({
+    desks, canvasRef, scale,
+    removeMode: removeStudentsMode,
+    onRemoveInBox: (deskIds) => onRemoveInBoxRef.current(deskIds)
+  });
+
+  const toggleRemoveStudentsMode = () => {
+    setRemoveStudentsMode(prev => {
+      const next = !prev;
+      if (next) setActiveGroupId(null);
+      return next;
+    });
+  };
+
+  const setActiveGroupIdExclusive = (updater) => {
+    setActiveGroupId(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (next !== null) setRemoveStudentsMode(false);
+      return next;
+    });
+  };
 
   const {
     classes, rooms, seatings,
@@ -283,6 +313,25 @@ export default function SeatingChart({ onBack, initialId }) {
     }
   };
 
+  // Holder useGroupLasso sin onRemoveInBox-callback fersk hver render (se
+  // kommentar ved onRemoveInBoxRef over) - regner ut hvilke sete-nøkler
+  // (låste seter hoppes over) som skal fjernes for bordene lassoen traff.
+  onRemoveInBoxRef.current = (deskIds) => {
+    const slotKeys = [];
+    deskIds.forEach(deskId => {
+      const desk = desks.find(d => d.id === deskId);
+      if (!desk) return;
+      const cap = desk.capacity || 1;
+      for (let i = 0; i < cap; i++) {
+        const slotKey = `${deskId}_seat_${i}`;
+        if (placements[slotKey] && !lockedSeats[slotKey]) {
+          slotKeys.push(slotKey);
+        }
+      }
+    });
+    handleUnseatMultiple(slotKeys);
+  };
+
   const openNoteModal = (studentObj) => {
     setEditingNoteStudent(studentObj);
     setNoteInputValue(studentNotes[studentObj.id] || '');
@@ -377,7 +426,8 @@ export default function SeatingChart({ onBack, initialId }) {
             unplacedStudents={unplacedStudents}
             showStudentDrawer={showStudentDrawer} setShowStudentDrawer={setShowStudentDrawer}
             showGroupDrawer={showGroupDrawer} setShowGroupDrawer={setShowGroupDrawer}
-            activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupId} GROUP_COLORS={GROUP_COLORS}
+            activeGroupId={activeGroupId} setActiveGroupId={setActiveGroupIdExclusive} GROUP_COLORS={GROUP_COLORS}
+            removeStudentsMode={removeStudentsMode} toggleRemoveStudentsMode={toggleRemoveStudentsMode}
             showFunDrawer={showFunDrawer} setShowFunDrawer={setShowFunDrawer}
             hideGroups={hideGroups} setHideGroups={setHideGroups}
             showGroupNumbers={showGroupNumbers} setShowGroupNumbers={setShowGroupNumbers}
@@ -603,8 +653,8 @@ export default function SeatingChart({ onBack, initialId }) {
                                     </div>
                                   ) : studentObj ? (
                                     <div
-                                      className={`w-full h-full flex items-center justify-center gap-1 px-1 truncate ${activeGroupId !== null || revealMode ? '' : 'cursor-move'}`}
-                                      onMouseDown={(e) => { if (activeGroupId === null && !revealMode && !activeFunMode) startDrag(e, studentObj, slotKey); }}
+                                      className={`w-full h-full flex items-center justify-center gap-1 px-1 truncate ${activeGroupId !== null || removeStudentsMode || revealMode ? '' : 'cursor-move'}`}
+                                      onMouseDown={(e) => { if (activeGroupId === null && !removeStudentsMode && !revealMode && !activeFunMode) startDrag(e, studentObj, slotKey); }}
                                       onDoubleClick={() => openNoteModal(studentObj)}
                                     >
                                       {!hideSensitiveInfo && role && <span className="text-[10px]">{role}</span>}
@@ -647,9 +697,9 @@ export default function SeatingChart({ onBack, initialId }) {
                     )}
 
                     {/* Lasso visual */}
-                    {lasso && activeGroupId !== null && (
-                      <div 
-                        className="absolute z-40 border-2 border-fuchsia-400 bg-fuchsia-500/20 pointer-events-none"
+                    {lasso && (activeGroupId !== null || removeStudentsMode) && (
+                      <div
+                        className={`absolute z-40 border-2 pointer-events-none ${removeStudentsMode ? 'border-rose-400 bg-rose-500/20' : 'border-fuchsia-400 bg-fuchsia-500/20'}`}
                         style={{
                           left: Math.min(lasso.startX, lasso.currentX),
                           top: Math.min(lasso.startY, lasso.currentY),
