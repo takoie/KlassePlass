@@ -258,6 +258,34 @@ export default function SeatingChart({ onBack, initialId }) {
     }
   };
 
+  // Batchet variant av handleUnseatStudent over — brukes av "Fjern elever"-
+  // lassoen for å fjerne flere elever i én operasjon (én state-oppdatering
+  // per state-variabel, ikke én per elev).
+  const handleUnseatMultiple = (slotKeys) => {
+    if (!slotKeys || slotKeys.length === 0) return;
+    let removedStudents = [];
+    setPlacements(prev => {
+      const next = { ...prev };
+      removedStudents = slotKeys
+        .filter(sk => next[sk])
+        .map(sk => next[sk]);
+      slotKeys.forEach(sk => delete next[sk]);
+      return next;
+    });
+    setLockedSeats(prev => {
+      const next = { ...prev };
+      slotKeys.forEach(sk => delete next[sk]);
+      return next;
+    });
+    if (removedStudents.length > 0) {
+      setUnplacedStudents(prev => {
+        const existingIds = new Set(prev.map(s => s.id));
+        const toAdd = removedStudents.filter(s => !existingIds.has(s.id));
+        return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+      });
+    }
+  };
+
   const openNoteModal = (studentObj) => {
     setEditingNoteStudent(studentObj);
     setNoteInputValue(studentNotes[studentObj.id] || '');
