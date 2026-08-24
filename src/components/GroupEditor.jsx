@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, useDraggable, useDroppable, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { normalizeStudents } from '../shared/utils';
+import { normalizeStudents, showToast, focusAfterRender } from '../shared/utils';
 import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer';
 import StudentContextMenu from './GroupWork/StudentContextMenu';
 import PrintPreviewModal from './Print/PrintPreviewModal';
@@ -27,11 +27,16 @@ export default function GroupEditor({ onBack, initialId }) {
   const [groupNames, setGroupNames] = useState([]);
   const [useCustomNames, setUseCustomNames] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [saveState, setSaveState] = useState('saved');
   const [regenerating, setRegenerating] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const nameInputRef = useRef(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   useEffect(() => { loadAssignment(); }, [initialId]);
+
+  useEffect(() => {
+    if (editingName) focusAfterRender(nameInputRef.current);
+  }, [editingName]);
 
   useEffect(() => {
     if (loading || !assignmentId) return;
@@ -78,7 +83,6 @@ export default function GroupEditor({ onBack, initialId }) {
       setGroupNames(groupRows.map(row => row.group_name || ''));
       setUseCustomNames(!!assignment.use_custom_names);
       setDirty(false);
-      setSaveState('saved');
     } catch (e) {}
     setLoading(false);
   };
@@ -169,6 +173,29 @@ export default function GroupEditor({ onBack, initialId }) {
     setDirty(true);
   };
 
+  const rotateLeaders = () => {
+    setLeaderIds(prev => {
+      const prevSet = new Set(prev);
+      return groups
+        .filter(studentIds => studentIds.length > 0)
+        .map(studentIds => {
+          const currentIdx = studentIds.findIndex(id => prevSet.has(id));
+          const nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % studentIds.length;
+          return studentIds[nextIdx];
+        });
+    });
+    setDirty(true);
+  };
+
+  const randomizeLeaders = () => {
+    setLeaderIds(
+      groups
+        .filter(studentIds => studentIds.length > 0)
+        .map(studentIds => studentIds[Math.floor(Math.random() * studentIds.length)])
+    );
+    setDirty(true);
+  };
+
   const handleStudentContextMenu = (e, studentId, groupIdx) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, studentId, groupIdx });
@@ -226,7 +253,6 @@ export default function GroupEditor({ onBack, initialId }) {
 
   const handleSave = async () => {
     if (!assignmentId) return;
-    setSaveState('saving');
     try {
       const groupsPayload = groups.map((studentIds, i) => ({
         groupNumber: i + 1, studentIds,
@@ -240,11 +266,19 @@ export default function GroupEditor({ onBack, initialId }) {
       const pairs = buildGroupPairs(groups, studentsById);
       await window.api.saveGroupHistory({ classId, assignmentId, pairs });
       setDirty(false);
-      setSaveState('saved');
+      showToast('Lagret.', 'success');
     } catch (e) {
-      setSaveState('saved');
+      showToast('Kunne ikke lagre.', 'error');
     }
   };
+
+  // Autolagring: lagre stille et lite øyeblikk etter siste endring, i stedet for å kreve manuelt trykk.
+  useEffect(() => {
+    if (!dirty || !assignmentId || loading) return;
+    const timer = setTimeout(() => { handleSave(); }, 1200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, name, groups, groupNames, useCustomNames, leaderIds, lockedIds, useConstraints, avoidLastN, requireLeaders]);
 
   const handleBack = async () => {
     if (dirty) {
@@ -279,55 +313,78 @@ export default function GroupEditor({ onBack, initialId }) {
 
   return (
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
-      <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0">
-        <div className="flex items-center gap-2 min-w-0 flex-wrap">
-          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1 flex-shrink-0" onClick={handleBack}>
-            <i className="fa-solid fa-arrow-left"></i> Tilbake
-          </button>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => { setName(e.target.value); setDirty(true); }}
-            className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-fuchsia-400 px-3 h-8 rounded text-white w-40"
-          />
-          <span className="text-xs font-bold uppercase opacity-50 text-slate-400 flex-shrink-0">{className}</span>
+      <div className="bg-base-200 border-b border-slate-800 z-20 flex-shrink-0">
+        <div className="px-4 py-2 grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1 flex-shrink-0" onClick={handleBack}>
+              <i className="fa-solid fa-arrow-left"></i> Tilbake
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 min-w-0">
+            {editingName ? (
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={name}
+                onChange={(e) => { setName(e.target.value); setDirty(true); }}
+                onBlur={() => setEditingName(false)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }}
+                className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-fuchsia-400 px-3 h-8 rounded text-white w-40"
+              />
+            ) : (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm font-bold text-white truncate max-w-[10rem]">{name || 'Uten navn'}</span>
+                <button
+                  className="btn btn-ghost btn-xs text-slate-400 hover:text-white flex-shrink-0"
+                  title="Endre navn"
+                  onClick={() => setEditingName(true)}
+                >
+                  <i className="fa-solid fa-pen text-xs"></i>
+                </button>
+              </div>
+            )}
+            <span className="text-xs font-bold uppercase opacity-50 text-slate-400 flex-shrink-0">{className}</span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <button className="btn btn-sm btn-ghost text-slate-400 hover:text-white gap-2" onClick={() => setShowPrintPreview(true)}>
+              <i className="fa-solid fa-print"></i> Skriv ut / PDF
+            </button>
+            <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={handleSave}>
+              <i className="fa-solid fa-floppy-disk"></i> Lagre
+            </button>
+            <button className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs" onClick={() => document.getElementById('modal_delete_group_assignment')?.showModal()}>
+              <i className="fa-solid fa-trash"></i>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {dirty && (
-            <span className="text-amber-400 opacity-80 text-xs font-semibold">Ulagrede endringer</span>
-          )}
-          {saveState === 'saving' ? (
-            <span className="text-amber-400 opacity-80 text-xs font-semibold flex items-center gap-1">
-              <i className="fa-solid fa-spinner fa-spin"></i> Lagrer...
-            </span>
-          ) : !dirty && (
-            <span className="text-[#34d399] text-xs font-semibold flex items-center gap-1">
-              <i className="fa-solid fa-circle-check text-[#34d399]"></i> Lagret
-            </span>
-          )}
+        <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
           <button
-            className={`btn btn-sm gap-2 ${useCustomNames ? 'bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800'}`}
+            className={`btn btn-sm gap-2 ${useCustomNames ? 'bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'}`}
             onClick={toggleCustomNames}
             title="Bytt mellom nummererte og egendefinerte gruppenavn"
           >
             <i className="fa-solid fa-pen"></i> Egendefinerte navn
           </button>
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={addGroup}>
+          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white gap-2" onClick={addGroup}>
             <i className="fa-solid fa-plus"></i> Legg til gruppe
           </button>
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={handleRegenerate} disabled={regenerating}>
+          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white gap-2" onClick={handleRegenerate} disabled={regenerating}>
             <i className={`fa-solid fa-shuffle ${regenerating ? 'fa-spin' : ''}`}></i> Generer på nytt
           </button>
-          <button className="btn btn-sm btn-ghost text-slate-400 hover:text-white gap-2" onClick={() => setShowPrintPreview(true)}>
-            <i className="fa-solid fa-print"></i> Skriv ut / PDF
-          </button>
-          <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={handleSave}>
-            <i className="fa-solid fa-floppy-disk"></i> Lagre
-          </button>
-          <button className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs" onClick={() => document.getElementById('modal_delete_group_assignment')?.showModal()}>
-            <i className="fa-solid fa-trash"></i>
-          </button>
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-700 bg-base-100/60 flex-shrink-0 whitespace-nowrap">
+            <span className="text-[10px] uppercase tracking-wide font-bold text-slate-500 pl-1 flex items-center gap-1">
+              <i className="fa-solid fa-star text-amber-400"></i> Leder
+            </span>
+            <button className="btn btn-xs btn-ghost text-slate-300 hover:bg-slate-800 gap-1" onClick={rotateLeaders} title="Roter lederen videre til neste elev i hver gruppe">
+              <i className="fa-solid fa-rotate"></i> Roter
+            </button>
+            <button className="btn btn-xs btn-ghost text-slate-300 hover:bg-slate-800 gap-1" onClick={randomizeLeaders} title="Velg tilfeldig leder i hver gruppe">
+              <i className="fa-solid fa-dice"></i> Tilfeldig
+            </button>
+          </div>
         </div>
       </div>
 
