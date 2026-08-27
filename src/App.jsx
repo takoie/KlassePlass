@@ -10,6 +10,7 @@ import StationSetup from './components/StationSetup';
 import StationPresenter from './components/StationPresenter';
 import UpdateBanner from './components/UpdateBanner';
 import UpdateModal from './components/UpdateModal';
+import WhatsNewModal from './components/WhatsNewModal';
 import OnboardingGuide from './components/OnboardingGuide';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
 import { showToast } from './shared/utils';
@@ -19,6 +20,7 @@ function App() {
   const [editId, setEditId] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
 
   // Bruk lagret tema fra første render - index.html har "klasseplass" som
   // statisk fallback for aller første maling, før innstillingene er hentet.
@@ -26,6 +28,20 @@ function App() {
     window.api?.getSettings?.().then((s) => {
       if (s?.theme) document.documentElement.setAttribute('data-theme', s.theme);
       if (!s?.onboardingCompleted) setShowOnboarding(true);
+
+      // "Hva er nytt"-popup: vises KUN når appen nettopp ble oppdatert (lagret
+      // `lastSeenVersion` fra forrige oppstart avviker fra kjørende versjon) -
+      // ikke ved aller første installasjon (da finnes ingen lastSeenVersion
+      // ennå, og det ville vært misvisende å kalle det en "oppdatering").
+      window.api?.getVersion?.().then((currentVersion) => {
+        if (!currentVersion) return;
+        if (s?.lastSeenVersion && s.lastSeenVersion !== currentVersion) {
+          setShowWhatsNew(true);
+        }
+        if (s?.lastSeenVersion !== currentVersion) {
+          window.api?.saveSettings?.({ lastSeenVersion: currentVersion }).catch(() => {});
+        }
+      }).catch(() => {});
     }).catch(() => {});
 
     // Varsle brukeren dersom databasen nettopp ble migrert til nyere
@@ -84,7 +100,17 @@ function App() {
       </Layout>
       <UpdateBanner />
       <UpdateModal isOpen={showUpdateModal} onClose={() => setShowUpdateModal(false)} />
+      <WhatsNewModal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
       {showOnboarding && <OnboardingGuide onClose={handleCloseOnboarding} />}
+
+      {/* Midlertidig testknapp for "Hva er nytt"-popupen - se WhatsNewModal.jsx */}
+      <button
+        className="btn btn-xs btn-ghost fixed bottom-2 right-2 z-[9997] text-slate-600 hover:text-slate-300 opacity-50 hover:opacity-100"
+        onClick={() => setShowWhatsNew(true)}
+        title="Test: vis 'Hva er nytt'-popup"
+      >
+        <i className="fa-solid fa-sparkles"></i> Test popup
+      </button>
     </div>
   );
 }

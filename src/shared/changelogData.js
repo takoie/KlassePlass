@@ -5,9 +5,25 @@
 
 export const CHANGELOG = [
   {
-    version: '2.8.0',
+    version: '2.8.1',
     date: '27. august 2026',
     isLatest: true,
+    highlights: [
+      {
+        type: 'feature',
+        title: '"Hva er nytt"-popup etter oppdatering',
+        desc: 'Rett etter en fullført oppdatering vises nå en egen popup med kun nyeste versjons endringer (merket Nyhet/Feilretting/Forbedring/Stabilitet), til forskjell fra den fulle historikken i "Oppdatering og endringslogg".'
+      },
+      {
+        type: 'ui',
+        title: 'Ryddigere "hva er nytt"-visning',
+        desc: 'Merkelappene (Nyhet, Feilretting osv.) vises nå sentrert over hver endring i stedet for ved siden av teksten, og "Nyhet" sorteres alltid øverst.'
+      }
+    ]
+  },
+  {
+    version: '2.8.0',
+    date: '27. august 2026',
     highlights: [
       {
         type: 'fix',
