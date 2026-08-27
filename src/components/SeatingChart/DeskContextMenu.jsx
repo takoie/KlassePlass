@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 
 /** Høyreklikk-meny på et bord: lås/lås opp (bord eller enkeltelev), sett/fjern makkergruppe, sist sammen med (per elev). */
-export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDesk, toggleLockStudent, handleUnseatStudent, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS, getRecentPartners }) {
+export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats, toggleSeatUnused, toggleLockDesk, toggleLockStudent, handleUnseatStudent, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS, getRecentPartners }) {
   const menuRef = useRef(null);
   const [pos, setPos] = useState(null);
 
@@ -22,6 +22,8 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDe
 
   const isDeskLocked = !!lockedSeats[`${contextMenu.desk.id}_seat_0`];
   const isStudentLocked = contextMenu.slotKey ? !!lockedSeats[contextMenu.slotKey] : false;
+  const isEmptySeat = !!contextMenu.slotKey && !contextMenu.student;
+  const isSeatUnused = isEmptySeat && !!unusedSeats?.[contextMenu.slotKey];
   const style = pos
     ? { left: pos.left, top: pos.top }
     : { left: contextMenu.x, top: contextMenu.y, visibility: 'hidden' };
@@ -77,6 +79,19 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, toggleLockDe
           <i className={`fa-solid ${isDeskLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4 text-center`}></i>
           {isDeskLocked ? 'Lås opp bord' : 'Lås bord'}
         </button>
+
+        {isEmptySeat && toggleSeatUnused && (
+          <button
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
+            onClick={() => {
+              toggleSeatUnused(contextMenu.slotKey);
+              setContextMenu(null);
+            }}
+          >
+            <i className={`fa-solid ${isSeatUnused ? 'fa-rotate-left text-emerald-400' : 'fa-ban text-amber-400'} w-4 text-center`}></i>
+            {isSeatUnused ? 'Fjern ubrukt-merking' : 'Merk som ubrukt'}
+          </button>
+        )}
 
         {contextMenu.student && (
           <button

@@ -61,6 +61,7 @@ export default function Toolbar({
   showHistory, setShowHistory,
   showNumbers, setShowNumbers,
   showZones, setShowZones,
+  hideEmptyDesks, setHideEmptyDesks,
   setIsProjectorMode,
   revealMode, revealedCount, revealTotal, startReveal, revealNext, revealAll, endReveal,
   activeFunMode,
@@ -224,7 +225,7 @@ export default function Toolbar({
 
           <ToggleRow
             icon="fa-solid fa-fill-drip"
-            label="Fargelagte bord"
+            label="Bordfarger"
             checked={colorSeatsByGroup}
             onChange={() => setColorSeatsByGroup(!colorSeatsByGroup)}
             disabled={hideGroups}
@@ -241,7 +242,7 @@ export default function Toolbar({
 
           <ToggleRow
             icon="fa-solid fa-hashtag"
-            label="Plassnumre"
+            label="Bordnummer"
             checked={showNumbers}
             onChange={() => setShowNumbers(!showNumbers)}
           />
@@ -251,6 +252,14 @@ export default function Toolbar({
             label="Soner"
             checked={showZones}
             onChange={() => setShowZones(!showZones)}
+          />
+
+          <ToggleRow
+            icon="fa-solid fa-eye-slash"
+            label="Skjul tomme bord"
+            checked={hideEmptyDesks}
+            onChange={() => setHideEmptyDesks(!hideEmptyDesks)}
+            tip="Skjuler bord der ingen elever sitter. Randomiser/Plasser alle unngår skjulte bord. Under en dra-handling vises skjulte bord midlertidig som gyldige mål."
           />
 
           <ToggleRow

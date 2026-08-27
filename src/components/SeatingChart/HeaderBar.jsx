@@ -13,7 +13,7 @@ export default function HeaderBar({
   classes, selectedClass, setSelectedClass,
   rooms, selectedRoom,
   seatings, selectedSeatingId, handleSelectSeating, setEditingPeriod,
-  saveState, handleDelete, handlePrint,
+  saveState, handlePrint, isOnlyPeriod,
 }) {
   const roomName = rooms.find(r => r.id === Number(selectedRoom))?.name || '—';
   return (
@@ -90,9 +90,10 @@ export default function HeaderBar({
         </button>
         <button
           className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs whitespace-nowrap"
-          onClick={handleDelete}
+          title={isOnlyPeriod ? 'Sletter hele klassekartet - klassen har ingen andre perioder' : 'Sletter kun den valgte perioden - andre perioder for klassen beholdes'}
+          onClick={() => document.getElementById('modal_delete_seating')?.showModal()}
         >
-          <i className="fa-solid fa-trash"></i> Slett kart
+          <i className="fa-solid fa-trash"></i> {isOnlyPeriod ? 'Slett kart' : 'Slett periode'}
         </button>
       </div>
     </div>

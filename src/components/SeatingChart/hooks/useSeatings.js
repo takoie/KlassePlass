@@ -12,7 +12,7 @@ const normalizeStudent = (s) => {
 // og "oppdater fra romplan", samt historikk-konflikt-beregning (elever som satt sammen
 // i en tidligere periode). `desks`/`boardObj`/`groupOverrides` eies utenfor denne hooken
 // (delt med drag-and-drop-, lasso- og fun mode-hookene), og sendes inn som parametre.
-export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides }) {
+export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides, onBack }) {
   const [classes, setClasses] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [seatings, setSeatings] = useState([]);
@@ -27,6 +27,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
 
   const [placements, setPlacements] = useState({});
   const [lockedSeats, setLockedSeats] = useState({});
+  // Seter markert "ubrukt" for DETTE klassekartet - ekskluderes fra Bordnummer-tellingen
+  // og fra Randomiser/Plasser alle/Fun Modes (se buildOpenSeatSlots i useFunModes.js),
+  // men kan fortsatt fylles manuelt (som fjerner ubrukt-merkingen automatisk).
+  const [unusedSeats, setUnusedSeats] = useState({});
   const [studentRoles, setStudentRoles] = useState({});
   const [studentNotes, setStudentNotes] = useState({});
   const [classRules, setClassRules] = useState([]);
@@ -46,14 +50,14 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   const isInitialLoadRef = useRef(true);
   const latestSeatingDataRef = useRef({
     selectedSeatingId, selectedClass, selectedRoom, chartName, chartComment,
-    placements, lockedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
+    placements, lockedSeats, unusedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
   });
   const pendingSaveRef = useRef(false);
 
   useEffect(() => {
     latestSeatingDataRef.current = {
       selectedSeatingId, selectedClass, selectedRoom, chartName, chartComment,
-      placements, lockedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
+      placements, lockedSeats, unusedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
     };
   });
 
@@ -62,7 +66,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       if (pendingSaveRef.current && latestSeatingDataRef.current) {
         const {
           selectedSeatingId: sid, selectedClass: sc, selectedRoom: sr,
-          chartName: cn, chartComment: cc, placements: pl, lockedSeats: ls,
+          chartName: cn, chartComment: cc, placements: pl, lockedSeats: ls, unusedSeats: us,
           studentRoles: sRoles, studentNotes: sNotes, groupOverrides: go,
           desks: ds, boardObj: bo
         } = latestSeatingDataRef.current;
@@ -71,6 +75,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
           const savePayload = JSON.stringify({
             placements: pl,
             lockedSeats: ls,
+            unusedSeats: us,
             studentRoles: sRoles,
             studentNotes: sNotes,
             groupOverrides: go,
@@ -130,6 +135,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
             if (extraData.placements) {
               parsedPlacements = extraData.placements;
               setLockedSeats(extraData.lockedSeats || {});
+              setUnusedSeats(extraData.unusedSeats || {});
               setStudentRoles(extraData.studentRoles || {});
               setStudentNotes(extraData.studentNotes || {});
               setGroupOverrides(extraData.groupOverrides || {});
@@ -245,7 +251,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     }, 1000);
 
     return () => clearTimeout(saveTimeoutRef.current);
-  }, [placements, lockedSeats, studentRoles, studentNotes, chartName, chartComment, selectedClass, selectedRoom, boardObj, groupOverrides]);
+  }, [placements, lockedSeats, unusedSeats, studentRoles, studentNotes, chartName, chartComment, selectedClass, selectedRoom, boardObj, groupOverrides]);
 
   const getNeighbors = (placementsObj) => {
     const pairs = [];
@@ -381,6 +387,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       setChartComment('Uke 1-4');
       setPlacements({});
       setLockedSeats({});
+      setUnusedSeats({});
       setStudentRoles({});
       setStudentNotes({});
       if (selectedClass && selectedRoom) setupNewChart(selectedClass, selectedRoom, {});
@@ -398,6 +405,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         if (extraData.placements) {
           parsedPlacements = extraData.placements;
           setLockedSeats(extraData.lockedSeats || {});
+          setUnusedSeats(extraData.unusedSeats || {});
           setStudentRoles(extraData.studentRoles || {});
           setStudentNotes(extraData.studentNotes || {});
           deskSnapshot = extraData.deskLayout || null;
@@ -495,6 +503,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       const savePayload = JSON.stringify({
         placements,
         lockedSeats,
+        unusedSeats,
         studentRoles,
         studentNotes,
         groupOverrides,
@@ -539,6 +548,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       const savePayload = JSON.stringify({
         placements,
         lockedSeats,
+        unusedSeats,
         studentRoles,
         studentNotes,
         groupOverrides,
@@ -595,14 +605,20 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
 
-      // Alltid gjennom handleSelectSeating (aldri hopp over den) — den er stedet som
-      // friskt regner ut allStudents/unplacedStudents fra klasselisten. Hopper vi over
-      // den (som før, når ingen kart var igjen) forblir "uplassert"-lista den gamle,
-      // nesten tomme verdien fra det slettede kartet i stedet for full klasseliste,
-      // og elevene så ut som de forsvant fra administrer-skuffen.
       const sameClassSeatings = newSeatings.filter(s => s.class_id === Number(selectedClass));
       if (sameClassSeatings.length > 0) {
+        // Alltid gjennom handleSelectSeating (aldri hopp over den) — den er stedet som
+        // friskt regner ut allStudents/unplacedStudents fra klasselisten. Hopper vi over
+        // den forblir "uplassert"-lista den gamle, nesten tomme verdien fra det slettede
+        // kartet i stedet for full klasseliste, og elevene så ut som de forsvant fra
+        // administrer-skuffen.
         handleSelectSeating(sameClassSeatings[0].id, newSeatings);
+      } else if (onBack) {
+        // Ingen perioder igjen for denne klassen — i stedet for å late som ingenting
+        // skjedde ved å bygge et blankt, ulagret utkast-kart i samme visning (periode-
+        // nedtrekket ville da bare vist et tomt <select> uten valg), send brukeren
+        // tilbake til klassekart-oversikten der de bevisst kan opprette en ny periode.
+        onBack();
       } else {
         handleSelectSeating('', newSeatings);
       }
@@ -632,6 +648,46 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       x: Math.max(10, Math.min(1100 - 256 - 10, Math.round((2 * centerX - prev.x - 256) / 10) * 10)),
       y: Math.max(10, Math.min(700 - 36 - 10, Math.round((2 * centerY - prev.y - 36) / 10) * 10))
     }));
+
+    // Bordets boks flyttes riktig til sitt speilede punkt over, men en 180°-rotasjon
+    // snur også venstre/høyre-rekkefølgen INNI hvert bord. Uten dette blir eleven i
+    // sete 0 værende i "sete 0" av det flyttede bordet, selv om sete 0 fysisk skal
+    // tilsvare det gamle siste setet — det er det som gjorde elevene speilvendte
+    // og fikk feil (autoberegnet) plassnummer etter snuing.
+    const reverseSeatOrder = (obj) => {
+      const next = { ...obj };
+      desks.forEach(d => {
+        const cap = d.capacity || 1;
+        if (cap < 2) return;
+        for (let i = 0; i < Math.floor(cap / 2); i++) {
+          const keyA = `${d.id}_seat_${i}`;
+          const keyB = `${d.id}_seat_${cap - 1 - i}`;
+          const hasA = Object.prototype.hasOwnProperty.call(obj, keyA);
+          const hasB = Object.prototype.hasOwnProperty.call(obj, keyB);
+          if (hasA) next[keyB] = obj[keyA]; else delete next[keyB];
+          if (hasB) next[keyA] = obj[keyB]; else delete next[keyA];
+        }
+      });
+      return next;
+    };
+
+    setPlacements(prev => reverseSeatOrder(prev));
+    setLockedSeats(prev => reverseSeatOrder(prev));
+    setUnusedSeats(prev => reverseSeatOrder(prev));
+  };
+
+  // Merker/fjerner "ubrukt"-status på ett sete. Brukes fra høyreklikk-menyen på et
+  // tomt sete for å bevisst holde det utenfor Bordnummer-tellingen og utenfor
+  // Randomiser/Plasser alle/Fun Modes (se buildOpenSeatSlots i useFunModes.js) - f.eks.
+  // for å lage et tomrom mellom to rader uten at randomisering fyller det igjen.
+  const toggleSeatUnused = (slotKey) => {
+    if (!slotKey) return;
+    setUnusedSeats(prev => {
+      const next = { ...prev };
+      if (next[slotKey]) delete next[slotKey];
+      else next[slotKey] = true;
+      return next;
+    });
   };
 
   // Henter romets NÅVÆRENDE oppsett og erstatter bord-snapshotet i dette klassekartet.
@@ -679,6 +735,14 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         }
         return next;
       });
+
+      setUnusedSeats(prev => {
+        const next = {};
+        for (const [slotKey, val] of Object.entries(prev)) {
+          if (validSlotKeys.has(slotKey)) next[slotKey] = val;
+        }
+        return next;
+      });
     } catch (e) {}
     document.getElementById('modal_sync_room')?.close();
   };
@@ -688,6 +752,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     selectedClass, setSelectedClass, selectedRoom, setSelectedRoom, selectedSeatingId,
     chartName, setChartName, chartComment, setChartComment, saveState,
     placements, setPlacements, lockedSeats, setLockedSeats,
+    unusedSeats, setUnusedSeats, toggleSeatUnused,
     studentRoles, setStudentRoles, studentNotes, setStudentNotes, classRules,
     allStudents, unplacedStudents, setUnplacedStudents,
     showHistory, setShowHistory, historyConflicts,

@@ -3,7 +3,8 @@ import { useState } from 'react';
 // Drag-and-drop av elever mellom seteplasser og elevskuffen (venstre kant).
 export function useStudentDragAndDrop({
   canvasRef, scale, desks, placements, setPlacements,
-  unplacedStudents, setUnplacedStudents, getStudentByIdOrName
+  unplacedStudents, setUnplacedStudents, getStudentByIdOrName,
+  unusedSeats, setUnusedSeats
 }) {
   const [draggedStudent, setDraggedStudent] = useState(null);
   const [hoverSlotKey, setHoverSlotKey] = useState(null);
@@ -96,6 +97,16 @@ export function useStudentDragAndDrop({
         }
       }
       newPlacements[targetSlotKey] = studentObj.id;
+
+      // Manuell plassering på et sete markert "ubrukt" overstyrer merkingen - setet
+      // er nå tydelig i bruk, i stedet for å blokkere den manuelle handlingen.
+      if (unusedSeats?.[targetSlotKey] && setUnusedSeats) {
+        setUnusedSeats(prev => {
+          const next = { ...prev };
+          delete next[targetSlotKey];
+          return next;
+        });
+      }
     } else if (cx < -50) {
       // Dratt ut til venstre (over elevskuffen eller verktøymenyen)
       if (fromSlotKey) {

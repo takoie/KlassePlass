@@ -5,9 +5,40 @@
 
 export const CHANGELOG = [
   {
+    version: '2.8.0',
+    date: '27. august 2026',
+    isLatest: true,
+    highlights: [
+      {
+        type: 'fix',
+        title: 'Snu klasserommet plasserte elever speilvendt',
+        desc: 'Snuing av klasserom (bord og elever) ga tidligere feil rekkefølge innad i par-/gruppebord og feil plassnummer. Rettet i både rombygger og klassekart-visning.'
+      },
+      {
+        type: 'feature',
+        title: 'Skjul tomme bord og merk seter som ubrukt',
+        desc: 'Ny "Skjul tomme bord"-visning i klassekartet skjuler bord uten elever automatisk (og unngås av Randomiser/Plasser alle/Fun Modes). Enkeltseter kan nå høyreklikkes og merkes "ubrukt" for å lage bevisste tomrom mellom rader uten at randomisering fyller dem igjen.'
+      },
+      {
+        type: 'feature',
+        title: 'Snu klasserommet i prosjektormodus',
+        desc: 'Ny knapp i prosjektorvisningens verktøylinje for å snu klasserommet uten å måtte gå ut av fullskjerm.'
+      },
+      {
+        type: 'improvement',
+        title: 'Tryggere og tydeligere sletting av klassekart',
+        desc: 'Slett-knappen viser nå "Slett periode" eller "Slett kart" avhengig av om klassen har flere perioder, spør alltid om bekreftelse først, og sender deg tilbake til klassekart-oversikten i stedet for et tomt utkast når siste periode for en klasse slettes.'
+      },
+      {
+        type: 'ui',
+        title: 'Ryddigere visningsmeny i klassekartet',
+        desc: '"Fargelagte bord" og "Plassnumre" heter nå "Bordfarger" og "Bordnummer". Makkergrupper, Bordfarger og Historikk er slått på som standard.'
+      }
+    ]
+  },
+  {
     version: '2.7.5',
     date: '24. august 2026',
-    isLatest: true,
     highlights: [
       {
         type: 'feature',

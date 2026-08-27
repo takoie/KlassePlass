@@ -8,7 +8,7 @@ import { findBestPlacement } from '../../../lib/seatingSolver.mjs';
 // selve `placements` (og dermed autolagringen) røres ikke før resultatet er
 // avgjort, bortsett fra Roulette som committer én elev om gangen.
 export function useFunModes({
-  desks, boardObj, placements, setPlacements, lockedSeats,
+  desks, boardObj, placements, setPlacements, lockedSeats, unusedSeats, hideEmptyDesks,
   allStudents, unplacedStudents, setUnplacedStudents, classRules,
   groupOverrides, getStudentByIdOrName
 }) {
@@ -151,9 +151,18 @@ export function useFunModes({
     const seatSlots = [];
     desks.forEach(d => {
       const cap = d.capacity || 1;
+      // "Skjul tomme bord": et bord der ALLE setene er tomme regnes som midlertidig
+      // utenfor spill for automatisk plassering når toggelen er på - se
+      // Toolbar.jsx "Skjul tomme bord" og SeatingChart.jsx sin hideEmptyDesks-logikk.
+      const isDeskFullyEmpty = Array.from({ length: cap }, (_, s) => `${d.id}_seat_${s}`)
+        .every(slotKey => !placements[slotKey]);
+      if (hideEmptyDesks && isDeskFullyEmpty) return;
+
       for (let s = 0; s < cap; s++) {
         const slotKey = `${d.id}_seat_${s}`;
-        if (!lockedSeats[slotKey]) seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
+        if (!lockedSeats[slotKey] && !(unusedSeats && unusedSeats[slotKey])) {
+          seatSlots.push({ slotKey, deskId: d.id, slotIdx: s, desk: d });
+        }
       }
     });
     return seatSlots;

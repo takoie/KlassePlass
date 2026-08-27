@@ -3,7 +3,7 @@ import React from 'react';
 /** Alle bekreftelses-/redigeringsdialoger for klassekart-editoren, samlet ett sted. */
 export default function Modals({
   editingNoteStudent, noteInputValue, setNoteInputValue, saveStudentNote,
-  chartName, handleDelete,
+  chartName, handleDelete, isOnlyPeriod,
   editingPeriod, setEditingPeriod, handleSaveEditedPeriod,
   newPeriodWeeks, setNewPeriodWeeks, handleStartNewPeriod,
   syncFromRoom,
@@ -36,13 +36,17 @@ export default function Modals({
       <dialog id="modal_delete_seating" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
           <h3 className="font-bold text-red-400 text-lg flex items-center gap-2">
-            <i className="fa-solid fa-triangle-exclamation"></i> Slett klassekart?
+            <i className="fa-solid fa-triangle-exclamation"></i> {isOnlyPeriod ? 'Slett kart?' : 'Slett periode?'}
           </h3>
-          <p className="py-4 text-sm text-slate-300">Er du helt sikker på at du vil slette <strong>{chartName}</strong>?</p>
+          <p className="py-4 text-sm text-slate-300">
+            {isOnlyPeriod
+              ? <>Er du helt sikker på at du vil slette klassekartet <strong>{chartName}</strong>? Klassen har ingen andre perioder.</>
+              : <>Er du helt sikker på at du vil slette perioden <strong>{chartName}</strong>? Andre perioder for denne klassen beholdes.</>}
+          </p>
           <div className="modal-action">
             <form method="dialog">
               <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
-              <button className="btn btn-error" onClick={handleDelete}>Ja, slett</button>
+              <button className="btn btn-error" onClick={handleDelete}>{isOnlyPeriod ? 'Ja, slett kart' : 'Ja, slett periode'}</button>
             </form>
           </div>
         </div>

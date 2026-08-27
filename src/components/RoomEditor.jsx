@@ -121,10 +121,15 @@ export default function RoomEditor({ onBack, initialId }) {
   let seatCounter = 0;
   sortedDesks.forEach((d) => {
     const cap = d.capacity || 1;
-    const nums = [];
+    const nums = new Array(cap);
+    // Når tavla er i bunnen telles bordene fra høyre mot venstre (se sorteringen
+    // over), så setene INNI hvert bord må også telles fra høyre mot venstre —
+    // ellers får det synlig venstre setet lavest nummer uansett, og nummerering
+    // stemmer ikke med hvilken side som faktisk er nærmest tavla.
     for (let i = 0; i < cap; i++) {
       seatCounter += 1;
-      nums.push(seatCounter);
+      const slotIdx = isBoardAtTop ? i : (cap - 1 - i);
+      nums[slotIdx] = seatCounter;
     }
     deskNumberMap[d.id] = nums;
   });

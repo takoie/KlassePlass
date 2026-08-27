@@ -49,7 +49,8 @@ export default function SeatingChart({ onBack, initialId }) {
   const [hideGroups, setHideGroups] = useState(false);
   const [showGroupNumbers, setShowGroupNumbers] = useState(false);
   const [removeStudentsMode, setRemoveStudentsMode] = useState(false);
-  const [colorSeatsByGroup, setColorSeatsByGroup] = useState(false);
+  const [colorSeatsByGroup, setColorSeatsByGroup] = useState(true);
+  const [hideEmptyDesks, setHideEmptyDesks] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showStudentDrawer, setShowStudentDrawer] = useState(false);
   const [showPeriodsDrawer, setShowPeriodsDrawer] = useState(false);
@@ -108,6 +109,7 @@ export default function SeatingChart({ onBack, initialId }) {
     selectedClass, setSelectedClass, selectedRoom, setSelectedRoom, selectedSeatingId,
     chartName, setChartName, chartComment, setChartComment, saveState,
     placements, setPlacements, lockedSeats, setLockedSeats,
+    unusedSeats, setUnusedSeats, toggleSeatUnused,
     studentRoles, setStudentRoles, studentNotes, setStudentNotes, classRules,
     allStudents, unplacedStudents, setUnplacedStudents,
     showHistory, setShowHistory, historyConflicts,
@@ -116,8 +118,12 @@ export default function SeatingChart({ onBack, initialId }) {
     handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
     flipRoom, syncFromRoom,
     canvasLight, toggleCanvasLight
-  } = useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides });
+  } = useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides, onBack });
 
+  // Når klassen kun har én periode er den perioden reelt sett HELE klassekartet -
+  // "Slett periode" ville da vært misvisende (antyder at kartet lever videre med
+  // andre perioder), så knappen/dialogen kaller det "Slett kart" i stedet.
+  const isOnlyPeriod = seatings.filter(s => s.class_id === Number(selectedClass)).length <= 1;
 
   // Speiler isProjectorMode mot native OS-fullskjerm. Kjøres KUN på faktisk
   // endring (ikke som cleanup+body-par), for å unngå to overlappende
@@ -218,7 +224,8 @@ export default function SeatingChart({ onBack, initialId }) {
     handleMouseUp: handleDragMouseUp
   } = useStudentDragAndDrop({
     canvasRef, scale, desks, placements, setPlacements,
-    unplacedStudents, setUnplacedStudents, getStudentByIdOrName
+    unplacedStudents, setUnplacedStudents, getStudentByIdOrName,
+    unusedSeats, setUnusedSeats
   });
 
   const handleMouseMove = (e) => {
@@ -242,7 +249,7 @@ export default function SeatingChart({ onBack, initialId }) {
     startSpotlight, dismissSpotlight,
     startReveal, revealNext, revealAll, endReveal
   } = useFunModes({
-    desks, boardObj, placements, setPlacements, lockedSeats,
+    desks, boardObj, placements, setPlacements, lockedSeats, unusedSeats, hideEmptyDesks,
     allStudents, unplacedStudents, setUnplacedStudents, classRules,
     groupOverrides, getStudentByIdOrName
   });
@@ -393,10 +400,22 @@ export default function SeatingChart({ onBack, initialId }) {
   let seatCounter = 0;
   sortedDesks.forEach((d) => {
     const cap = d.capacity || 1;
-    const nums = [];
+    const nums = new Array(cap);
+    // Bord som er helt skjult (tomme + "Skjul tomme bord" på) skal heller ikke
+    // "bruke opp" plassnumre de aldri viser - samme resonnement som ubrukte seter.
+    const isFullyEmptyDesk = hideEmptyDesks &&
+      Array.from({ length: cap }, (_, s) => placements[`${d.id}_seat_${s}`]).every(val => !val);
+    // Når tavla er i bunnen telles bordene fra høyre mot venstre (se sorteringen
+    // over), så setene INNI hvert bord må også telles fra høyre mot venstre —
+    // ellers får det synlig venstre setet lavest nummer uansett, og nummerering
+    // stemmer ikke med hvilken side som faktisk er nærmest tavla.
     for (let i = 0; i < cap; i++) {
+      const slotIdx = isBoardAtTop ? i : (cap - 1 - i);
+      // Ubrukte seter og skjulte tomme bord hopper HELT over tellingen (ikke bare
+      // "vises ikke") slik at resten av plassene forblir sammenhengende (1,2,3...).
+      if (isFullyEmptyDesk || unusedSeats[`${d.id}_seat_${slotIdx}`]) continue;
       seatCounter += 1;
-      nums.push(seatCounter);
+      nums[slotIdx] = seatCounter;
     }
     deskNumberMap[d.id] = nums;
   });
@@ -419,7 +438,8 @@ export default function SeatingChart({ onBack, initialId }) {
           rooms={rooms} selectedRoom={selectedRoom} setSelectedRoom={setSelectedRoom}
           seatings={seatings} selectedSeatingId={selectedSeatingId} handleSelectSeating={handleSelectSeating}
           setEditingPeriod={setEditingPeriod}
-          saveState={saveState} handleDelete={handleDelete} handlePrint={handlePrint}
+          saveState={saveState} handlePrint={handlePrint}
+          isOnlyPeriod={isOnlyPeriod}
         />
       )}
 
@@ -440,6 +460,7 @@ export default function SeatingChart({ onBack, initialId }) {
             showHistory={showHistory} setShowHistory={setShowHistory}
             showNumbers={showNumbers} setShowNumbers={setShowNumbers}
             showZones={showZones} setShowZones={setShowZones}
+            hideEmptyDesks={hideEmptyDesks} setHideEmptyDesks={setHideEmptyDesks}
             hideSensitiveInfo={hideSensitiveInfo} setHideSensitiveInfo={setHideSensitiveInfo}
             setIsProjectorMode={setIsProjectorMode}
             revealMode={revealMode} revealedCount={revealedSlots.size} revealTotal={revealOrder.length}
@@ -497,6 +518,10 @@ export default function SeatingChart({ onBack, initialId }) {
                 <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Nullstill visning" onClick={handleProjectorZoomReset} disabled={projectorZoom === PROJECTOR_ZOOM_MIN && projectorPan.x === 0 && projectorPan.y === 0}>
                   <i className="fa-solid fa-compress"></i>
                 </button>
+                <div className="w-px h-5 bg-slate-700 mx-0.5"></div>
+                <button className="btn btn-sm btn-square btn-ghost text-cyan-400" title="Snu klasserommet" onClick={flipRoom}>
+                  <i className="fa-solid fa-rotate"></i>
+                </button>
               </div>
             </>
           )}
@@ -541,9 +566,17 @@ export default function SeatingChart({ onBack, initialId }) {
                       const gId = groupOverrides[d.id] || d.groupId;
                       const groupColor = (gId && !hideGroups) ? GROUP_COLORS[(gId - 1) % GROUP_COLORS.length] : null;
                       const seatNumbers = deskNumberMap[d.id] || [];
-                      
+
+                      // "Skjul tomme bord": bord uten en eneste elev forsvinner helt fra
+                      // visningen når toggelen er på. Under en aktiv dra-handling vises de
+                      // likevel midlertidig (lav opacity) som gyldige mål, se Toolbar.jsx.
+                      const isDeskFullyEmpty = Array.from({ length: cap }, (_, s) => placements[`${d.id}_seat_${s}`])
+                        .every(val => !val);
+                      const isHiddenEmptyDesk = hideEmptyDesks && isDeskFullyEmpty;
+                      if (isHiddenEmptyDesk && !draggedStudent) return null;
+
                       let borderStyle = groupColor ? { borderWidth: '3px', borderColor: groupColor } : {};
-                      
+
                       // Highlight if inside lasso
                       if (activeGroupId !== null && lasso) {
                         const minX = Math.min(lasso.startX, lasso.currentX);
@@ -556,10 +589,10 @@ export default function SeatingChart({ onBack, initialId }) {
                       }
 
                       return (
-                        <div 
+                        <div
                           key={d.id}
                           onContextMenu={(e) => { e.preventDefault(); handleDeskContextMenu(e, d); }}
-                          className={`absolute h-[60px] rounded-xl bg-base-200 flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-slate-700/70 z-10`}
+                          className={`absolute h-[60px] rounded-xl bg-base-200 flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-slate-700/70 z-10 ${isHiddenEmptyDesk ? 'opacity-40 border-dashed' : ''}`}
                           style={{ left: d.x - offsetX, top: d.y, width: `${visualWidth}px`, ...borderStyle }}
                         >
                           {gId && !hideGroups && showGroupNumbers && (
@@ -578,15 +611,18 @@ export default function SeatingChart({ onBack, initialId }) {
                               const studentVal = isGhostSeat ? ghostVal : placements[slotKey];
                               const studentObj = studentVal ? getStudentByIdOrName(studentVal) : null;
                               const isLocked = lockedSeats[slotKey];
+                              const isUnused = !studentObj && !!unusedSeats[slotKey];
                               const role = studentObj ? studentRoles[studentObj.id] : null;
                               const note = studentObj ? studentNotes[studentObj.id] : null;
                               const fontSizeClass = studentObj ? getFontSizeClass(studentObj.name) : '';
-                              
+
                               const isHoverTarget = hoverSlotKey === slotKey;
 
                               const conflictColor = showHistory && studentObj ? historyConflicts[studentObj.id] : null;
                               let bgClass = conflictColor
                                 ? `${conflictColor} text-white shadow-md border-2`
+                                : isUnused
+                                ? 'bg-slate-950/60 text-slate-600 border border-dashed border-slate-700/60'
                                 : (studentObj ? 'bg-emerald-500/10 text-white shadow-md border border-emerald-500/20' : 'bg-surface-raised text-slate-500 border border-slate-700/30');
 
                               // Makkergruppe-farge på selve setet: lysere fyll-tone (via lightenHex)
@@ -621,7 +657,7 @@ export default function SeatingChart({ onBack, initialId }) {
                                   key={slotIdx}
                                   className={`flex-1 h-full rounded-lg flex items-center justify-center relative transition-colors ${bgClass}`}
                                   style={groupFillStyle || undefined}
-                                  onContextMenu={(e) => { if (studentObj) { e.preventDefault(); e.stopPropagation(); handleDeskContextMenu(e, d, studentObj, slotKey); } }}
+                                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); handleDeskContextMenu(e, d, studentObj, slotKey); }}
                                 >
                                   {showNumbers && seatNumbers[slotIdx] !== undefined && (
                                     <div className="absolute -top-3 -left-2 z-20 pointer-events-none">
@@ -665,7 +701,9 @@ export default function SeatingChart({ onBack, initialId }) {
                                       <span className={`truncate ${fontSizeClass} tracking-wide`}>{studentObj.name}</span>
                                     </div>
                                   ) : !isHoverTarget ? (
-                                    <span className="text-[10px] uppercase tracking-widest opacity-30 font-bold">Ledig</span>
+                                    <span className={`text-[10px] uppercase tracking-widest font-bold ${isUnused ? 'opacity-50' : 'opacity-30'}`}>
+                                      {isUnused ? 'Ubrukt' : 'Ledig'}
+                                    </span>
                                   ) : null}
                                 </div>
                               );
@@ -726,6 +764,7 @@ export default function SeatingChart({ onBack, initialId }) {
         saveStudentNote={saveStudentNote}
         chartName={chartName}
         handleDelete={handleDelete}
+        isOnlyPeriod={isOnlyPeriod}
         editingPeriod={editingPeriod}
         setEditingPeriod={setEditingPeriod}
         handleSaveEditedPeriod={handleSaveEditedPeriod}
@@ -736,6 +775,8 @@ export default function SeatingChart({ onBack, initialId }) {
       <DeskContextMenu
         contextMenu={contextMenu}
         lockedSeats={lockedSeats}
+        unusedSeats={unusedSeats}
+        toggleSeatUnused={toggleSeatUnused}
         toggleLockDesk={toggleLockDesk}
         toggleLockStudent={toggleLockStudent}
         handleUnseatStudent={handleUnseatStudent}
