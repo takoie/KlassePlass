@@ -102,15 +102,6 @@ function App() {
       <UpdateModal isOpen={showUpdateModal} onClose={() => setShowUpdateModal(false)} />
       <WhatsNewModal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
       {showOnboarding && <OnboardingGuide onClose={handleCloseOnboarding} />}
-
-      {/* Midlertidig testknapp for "Hva er nytt"-popupen - se WhatsNewModal.jsx */}
-      <button
-        className="btn btn-xs btn-ghost fixed bottom-2 right-2 z-[9997] text-slate-600 hover:text-slate-300 opacity-50 hover:opacity-100"
-        onClick={() => setShowWhatsNew(true)}
-        title="Test: vis 'Hva er nytt'-popup"
-      >
-        <i className="fa-solid fa-sparkles"></i> Test popup
-      </button>
     </div>
   );
 }
