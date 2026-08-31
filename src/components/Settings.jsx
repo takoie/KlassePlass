@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { showToast } from '../shared/utils';
+import Select from './Select';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('visning');
@@ -138,14 +139,17 @@ export default function Settings() {
               <p className="text-xs text-slate-400 mb-4">Velg om tavlen skal ligge øverst eller nederst i klasserommet som standard.</p>
               
               <div className="form-control max-w-xs">
-                <select
-                  className="select select-bordered bg-base-200 border-slate-700 text-slate-200 focus:border-emerald-500"
+                <Select
+                  size="md"
+                  className="w-full"
+                  ariaLabel="Standard tavleplassering"
                   value={settings.boardPosition || 'top'}
-                  onChange={(e) => handleSaveSetting('boardPosition', e.target.value)}
-                >
-                  <option value="top">Tavle øverst</option>
-                  <option value="bottom">Tavle nederst</option>
-                </select>
+                  onChange={(v) => handleSaveSetting('boardPosition', v)}
+                  options={[
+                    { value: 'top', label: 'Tavle øverst' },
+                    { value: 'bottom', label: 'Tavle nederst' },
+                  ]}
+                />
               </div>
             </div>
 

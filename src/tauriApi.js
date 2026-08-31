@@ -80,6 +80,7 @@ const tauriApi = {
   getSeating: (id) => invoke('get_seating', { id }),
   saveSeating: (data) => invoke('save_seating', { record: data }),
   deleteSeating: (id) => invoke('delete_seating', { id }),
+  setSeatingChartGroup: (id, chartGroup) => invoke('set_seating_chart_group', { id, chartGroup }),
 
   // Constraints
   getConstraints: (cid) => invoke('get_constraints', { classId: cid }),

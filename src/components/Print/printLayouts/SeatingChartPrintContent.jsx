@@ -5,10 +5,10 @@ import { BOARD_W, BOARD_H, DESK_H, CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX, computeC
 export { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX };
 
 export default function SeatingChartPrintContent({
-  boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
+  boardObj, desks, deskNumberMap, placements, unusedSeats = {}, getStudentByIdOrName,
   groupColors, zoneMeta, groupOverrides, settings,
 }) {
-  const { showNumbers, showZones, showGroups, showColors, colorSeats } = settings;
+  const { showNumbers, showZones, showGroups, showColors, colorSeats, hideEmptyDesks } = settings;
   const offset = computeCenteringOffset(boardObj, desks);
   return (
     <div style={{ position: 'relative', width: CONTENT_WIDTH_PX, height: CONTENT_HEIGHT_PX }}>
@@ -23,8 +23,22 @@ export default function SeatingChartPrintContent({
       </div>
       {desks.map((d) => {
         const cap = d.capacity || 1;
-        const deskW = cap * 100;
         const seatNumbers = deskNumberMap[d.id] || [];
+        // "Skjul denne plassen"-seter (tomme) kollapses i utskrift: bordet krymper
+        // til gjenværende seter, mens makkergruppefarge/border beholdes rundt dem.
+        // "Ledig" (ikke merket) beholdes, slik at læreren kan vise hvor noen skal sitte.
+        // Kollaps kun når minst én plass blir igjen (ellers er det et vanlig tomt bord).
+        const allSlots = Array.from({ length: cap }, (_, i) => i);
+        const hasStudents = allSlots.some((i) => placements[`${d.id}_seat_${i}`]);
+        const visibleSlots = allSlots.filter(
+          (i) => !(unusedSeats[`${d.id}_seat_${i}`] && !placements[`${d.id}_seat_${i}`])
+        );
+        // "Skjul tomme bord": bord uten en eneste elev utelates helt.
+        if (hideEmptyDesks && !hasStudents) return null;
+        // Alle ledige plasser skjult + ingen elever = bordet utelates uansett.
+        if (visibleSlots.length === 0 && !hasStudents) return null;
+        const renderSlots = visibleSlots.length > 0 && visibleSlots.length < cap ? visibleSlots : allSlots;
+        const deskW = renderSlots.length * 100;
         // NB: denne gruppefarge-oppløsningen (groupOverrides-fallback + palett-indeksering)
         // er duplisert i buildSeatingChartPrintPayload.js for PDF-eksport, siden Rust ikke
         // kan kjøre JS-domenelogikk. Endres logikken her, må den speiles der også.
@@ -43,17 +57,21 @@ export default function SeatingChartPrintContent({
             }}
           >
             <div style={{ display: 'flex', width: '100%', height: '100%' }}>
-              {Array.from({ length: cap }).map((_, slotIdx) => {
+              {renderSlots.map((slotIdx, visibleIdx) => {
                 const slotKey = `${d.id}_seat_${slotIdx}`;
                 const studentVal = placements[slotKey];
                 const studentObj = studentVal ? getStudentByIdOrName(studentVal) : null;
                 return (
                   <div
                     key={slotIdx}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: slotIdx > 0 ? '1px solid #e5e7eb' : 'none', overflow: 'hidden', position: 'relative' }}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', borderLeft: visibleIdx > 0 ? '1px solid #e5e7eb' : 'none', overflow: 'hidden', position: 'relative' }}
                   >
                     {showNumbers && seatNumbers[slotIdx] !== undefined && (
-                      <span style={{ position: 'absolute', top: -14, left: -2, fontSize: 10, fontWeight: 700, color: '#555' }}>
+                      <span style={{
+                        position: 'absolute', top: 1, left: 2, fontSize: 9, lineHeight: 1.1,
+                        fontWeight: 700, color: '#64748b', background: 'rgba(255,255,255,0.85)',
+                        padding: '0 2px', borderRadius: 3,
+                      }}>
                         {seatNumbers[slotIdx]}
                       </span>
                     )}

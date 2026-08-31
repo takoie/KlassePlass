@@ -17,7 +17,9 @@ use commands::groups::{
 };
 use commands::print_export::{export_seating_chart_pdf, open_file_native, show_in_folder_native};
 use commands::rooms::{delete_room, get_room, get_rooms, save_room};
-use commands::seatings::{delete_seating, get_seating, get_seatings, save_seating};
+use commands::seatings::{
+  delete_seating, get_seating, get_seatings, save_seating, set_seating_chart_group,
+};
 use commands::settings::{get_settings, save_settings};
 use commands::stations::{
   delete_station_session, get_station_session, get_station_sessions, save_station_session,
@@ -47,6 +49,7 @@ pub fn run() {
       get_seating,
       save_seating,
       delete_seating,
+      set_seating_chart_group,
       get_constraints,
       import_constraints,
       get_group_assignments,
@@ -107,6 +110,7 @@ pub fn run() {
 
       schema::run_migrations(&conn)?;
       schema::migrate_room_layouts(&conn)?;
+      schema::backfill_chart_group(&conn)?;
 
       app.manage(db::CurrentDbPathState(Mutex::new(db_path)));
       app.manage(db::DbState(Mutex::new(conn)));

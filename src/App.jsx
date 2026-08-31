@@ -12,6 +12,7 @@ import UpdateBanner from './components/UpdateBanner';
 import UpdateModal from './components/UpdateModal';
 import WhatsNewModal from './components/WhatsNewModal';
 import OnboardingGuide from './components/OnboardingGuide';
+import GlobalTooltip from './components/GlobalTooltip';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
 import { showToast } from './shared/utils';
 
@@ -102,6 +103,7 @@ function App() {
       <UpdateModal isOpen={showUpdateModal} onClose={() => setShowUpdateModal(false)} />
       <WhatsNewModal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
       {showOnboarding && <OnboardingGuide onClose={handleCloseOnboarding} />}
+      <GlobalTooltip />
     </div>
   );
 }

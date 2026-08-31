@@ -204,8 +204,15 @@ export function focusAfterRender(el) {
   setTimeout(() => el?.focus(), 50);
 }
 
-/** Toast-melding i UI */
-export function showToast(message, type = 'info') {
+/**
+ * Toast-melding i UI.
+ * @param {string} message
+ * @param {string} [type='info']  — info | success | error | warning
+ * @param {Object} [opts]
+ * @param {string} [opts.key]     — hvis satt, erstattes en eksisterende toast med
+ *   samme key i stedet for å stable en ny (f.eks. gjentatt autolagring).
+ */
+export function showToast(message, type = 'info', opts = {}) {
   const portal = getPortal();
   const existing = document.getElementById('toast-container');
   const container = existing ?? (() => {
@@ -217,9 +224,14 @@ export function showToast(message, type = 'info') {
     return c;
   })();
 
+  if (opts.key) {
+    container.querySelector(`[data-toast-key="${CSS.escape(opts.key)}"]`)?.remove();
+  }
+
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.setAttribute('role', 'status');
+  if (opts.key) toast.setAttribute('data-toast-key', opts.key);
   toast.textContent = message;
   container.appendChild(toast);
 

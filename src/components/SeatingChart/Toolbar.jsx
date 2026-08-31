@@ -1,45 +1,6 @@
 import React from 'react';
-
-/** Info-ikon med egen hover-boks som åpner under ikonet og holder seg innenfor panelet */
-function InfoTip({ text }) {
-  return (
-    <span className="relative inline-flex group/tip flex-shrink-0">
-      <i className="fa-solid fa-circle-info text-xs text-slate-400 opacity-60 group-hover/tip:opacity-100 transition-opacity cursor-help"></i>
-      <div className="absolute right-0 top-full mt-1.5 w-52 p-2.5 rounded-xl bg-slate-950/95 border border-slate-700 shadow-2xl text-[11px] leading-relaxed text-slate-200 text-left normal-case font-normal tracking-normal whitespace-pre-line opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all duration-150 z-[9999] pointer-events-none">
-        {text}
-      </div>
-    </span>
-  );
-}
-
-/** Tydelig rad for visningsbrytere med fast ikon, fast tekst og moderne iOS/macOS toggle-bryter */
-function ToggleRow({ icon, label, checked, onChange, disabled, tip }) {
-  return (
-    <button
-      type="button"
-      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-        disabled
-          ? 'opacity-35 cursor-not-allowed bg-transparent text-slate-500'
-          : checked
-          ? 'bg-slate-800/80 text-slate-100 shadow-sm'
-          : 'bg-transparent text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
-      }`}
-      onClick={disabled ? undefined : onChange}
-      disabled={disabled}
-    >
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-        <i className={`${icon} fa-fw text-xs flex-shrink-0 ${checked ? 'text-emerald-400' : 'text-slate-500'}`}></i>
-        <span className="truncate text-left">{label}</span>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        {tip && <InfoTip text={tip} />}
-        <div className={`w-7 h-4 rounded-full transition-colors relative flex items-center p-0.5 ${checked ? 'bg-emerald-500' : 'bg-slate-700'}`}>
-          <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 shadow-sm ${checked ? 'translate-x-3' : 'translate-x-0'}`}></div>
-        </div>
-      </div>
-    </button>
-  );
-}
+import { InfoTip } from '../HoverTip';
+import { ActionRow, ToggleRow, Chevron, SectionLabel } from '../SidebarRow';
 
 /**
  * Venstre verktøypanel for klassekart:
@@ -81,54 +42,37 @@ export default function Toolbar({
         </h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-3 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto flex flex-col gap-5 p-3 custom-scrollbar">
         {/* Seksjon 1: Plassering & Makkergrupper */}
-        <div className="flex flex-col gap-1.5">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-0.5">
-            Plassering & Grupper
-          </div>
-          
-          {/* Elever */}
-          <button 
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
-              showStudentDrawer 
-                ? 'bg-slate-800 text-slate-100 border border-slate-600/70' 
-                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
-            }`}
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Plassering & Grupper</SectionLabel>
+
+          <ActionRow
+            icon="fa-solid fa-users"
+            iconColor="text-emerald-400"
+            label="Elever"
+            active={showStudentDrawer}
+            badge={unplacedStudents.length > 0 ? unplacedStudents.length : null}
             onClick={() => { setShowStudentDrawer(!showStudentDrawer); setShowGroupDrawer(false); setShowFunDrawer(false); }}
-          >
-            <i className="fa-solid fa-users fa-fw text-xs text-emerald-400"></i>
-            <span className="flex-1 text-left">Elever</span>
-            {unplacedStudents.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white ml-auto">
-                {unplacedStudents.length}
-              </span>
-            )}
-          </button>
+          />
 
-          {/* Plasser alle */}
-          <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900/60 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
-            onClick={handleAutoFill} 
-            disabled={unplacedStudents.length === 0} 
+          <ActionRow
+            icon="fa-solid fa-people-arrows"
+            iconColor="text-emerald-400"
+            label="Plasser alle"
+            disabled={unplacedStudents.length === 0}
             title="Fyll alle ledige plasser med uplasserte elever"
-          >
-            <i className="fa-solid fa-people-arrows fa-fw text-xs text-emerald-400"></i>
-            <span>Plasser alle</span>
-          </button>
+            onClick={handleAutoFill}
+          />
 
-          {/* Fjern elever (lasso) */}
-          <button
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
-              removeStudentsMode
-                ? 'bg-rose-950/60 text-rose-200 border border-rose-500/50'
-                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
-            }`}
+          <ActionRow
+            icon="fa-solid fa-user-xmark"
+            iconColor="text-rose-400"
+            label={removeStudentsMode ? 'Avslutt fjerne-modus' : 'Fjern elever'}
+            active={removeStudentsMode}
+            activeTone="rose"
             onClick={toggleRemoveStudentsMode}
-          >
-            <i className={`fa-solid fa-user-xmark fa-fw text-xs ${removeStudentsMode ? 'text-rose-400' : 'text-rose-400/80'}`}></i>
-            <span className="flex-1 text-left">{removeStudentsMode ? 'Avslutt fjerne-modus' : 'Fjern elever'}</span>
-          </button>
+          />
 
           {removeStudentsMode && (
             <div className="px-2.5 py-2 rounded-xl bg-rose-950/30 border border-rose-500/30 text-[10px] text-rose-200 leading-snug">
@@ -136,28 +80,21 @@ export default function Toolbar({
             </div>
           )}
 
-          {/* Randomiser */}
-          <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+          <ActionRow
+            icon="fa-solid fa-shuffle"
+            iconColor="text-amber-400"
+            label="Randomiser"
             onClick={handleRuleBasedFunSpin}
-          >
-            <i className="fa-solid fa-shuffle fa-fw text-xs text-amber-400"></i>
-            <span>Randomiser</span>
-          </button>
+          />
 
-          {/* Makkergrupper */}
-          <button 
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
-              showGroupDrawer 
-                ? 'bg-slate-800 text-slate-100 border border-slate-600/70' 
-                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
-            }`} 
+          <ActionRow
+            icon="fa-solid fa-object-group"
+            iconColor="text-fuchsia-400"
+            label="Makkergrupper"
+            active={showGroupDrawer}
+            trailing={<Chevron open={showGroupDrawer} />}
             onClick={() => { setShowGroupDrawer(!showGroupDrawer); if (showGroupDrawer) setActiveGroupId(null); setShowStudentDrawer(false); setShowFunDrawer(false); }}
-          >
-            <i className="fa-solid fa-object-group fa-fw text-xs text-fuchsia-400"></i>
-            <span className="flex-1 text-left">Makkergrupper</span>
-            <i className={`fa-solid fa-chevron-${showGroupDrawer ? 'up' : 'down'} text-[10px] opacity-60`}></i>
-          </button>
+          />
 
           {/* Makkergrupper ekspanderbar boks */}
           {showGroupDrawer && (
@@ -200,21 +137,17 @@ export default function Toolbar({
             </div>
           )}
 
-          {/* Snu klasserommet */}
-          <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/70 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+          <ActionRow
+            icon="fa-solid fa-rotate"
+            iconColor="text-cyan-400"
+            label="Snu klasserommet"
             onClick={flipRoom}
-          >
-            <i className="fa-solid fa-rotate fa-fw text-xs text-cyan-400"></i>
-            <span>Snu klasserommet</span>
-          </button>
+          />
         </div>
 
         {/* Seksjon 2: Visning */}
         <div className="flex flex-col gap-1">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-0.5">
-            Visning
-          </div>
+          <SectionLabel>Visning</SectionLabel>
 
           <ToggleRow
             icon="fa-solid fa-eye"
@@ -259,7 +192,7 @@ export default function Toolbar({
             label="Skjul tomme bord"
             checked={hideEmptyDesks}
             onChange={() => setHideEmptyDesks(!hideEmptyDesks)}
-            tip="Skjuler bord der ingen elever sitter. Randomiser/Plasser alle unngår skjulte bord. Under en dra-handling vises skjulte bord midlertidig som gyldige mål."
+            tip={'Skjuler bord der ingen elever sitter i det hele tatt. Randomiser/Plasser alle unngår skjulte bord. Under en dra-handling vises skjulte bord midlertidig som gyldige mål.\n\nEnkeltplasser: høyreklikk en ledig plass → «Skjul denne plassen» (virker også i utskrift).'}
           />
 
           <ToggleRow
@@ -271,43 +204,35 @@ export default function Toolbar({
         </div>
 
         {/* Seksjon 3: Rom & Prosjektor */}
-        <div className="flex flex-col gap-1.5">
-          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-0.5">
-            Rom & Visningsmodus
-          </div>
+        <div className="flex flex-col gap-1">
+          <SectionLabel>Rom & Visningsmodus</SectionLabel>
 
-          <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+          <ActionRow
+            icon="fa-solid fa-expand"
+            iconColor="text-fuchsia-400"
+            label="Prosjektor-modus"
             onClick={() => setIsProjectorMode(true)}
-          >
-            <i className="fa-solid fa-expand fa-fw text-xs text-fuchsia-400"></i>
-            <span>Prosjektor-modus</span>
-          </button>
+          />
 
-          <button 
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700 transition-all text-xs font-semibold shadow-sm" 
+          <ActionRow
+            icon="fa-solid fa-arrows-rotate"
+            iconColor="text-orange-400"
+            label="Oppdater romplan"
+            tip={'Klassekartet bruker et fastfrosset øyeblikksbilde av bordoppsettet.\n\nHar du gjort endringer i rommet i Rom-editoren, må du trykke her for å hente inn det nye oppsettet.'}
             onClick={() => document.getElementById('modal_sync_room')?.showModal()}
-          >
-            <i className="fa-solid fa-arrows-rotate fa-fw text-xs text-orange-400"></i>
-            <span className="flex-1 text-left">Oppdater romplan</span>
-            <InfoTip text={'Klassekartet bruker et fastfrosset øyeblikksbilde av bordoppsettet.\n\nHar du gjort endringer i rommet i Rom-editoren, må du trykke her for å hente inn det nye oppsettet.'} />
-          </button>
+          />
         </div>
 
         {/* Seksjon 4: Fun mode (Nederst) */}
-        <div className="flex flex-col gap-1.5 pt-1">
-          <button 
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all text-xs font-semibold shadow-sm ${
-              showFunDrawer 
-                ? 'bg-slate-800 text-slate-100 border border-slate-600/70' 
-                : 'bg-slate-900/60 hover:bg-slate-800 text-slate-200 border border-slate-800/80 hover:border-slate-700'
-            }`} 
+        <div className="flex flex-col gap-1">
+          <ActionRow
+            icon="fa-solid fa-wand-magic-sparkles"
+            iconColor="text-pink-400"
+            label="Fun mode"
+            active={showFunDrawer}
+            trailing={<Chevron open={showFunDrawer} />}
             onClick={() => { setShowFunDrawer(!showFunDrawer); setShowStudentDrawer(false); setShowGroupDrawer(false); }}
-          >
-            <i className="fa-solid fa-wand-magic-sparkles fa-fw text-xs text-pink-400"></i>
-            <span className="flex-1 text-left">Fun mode</span>
-            <i className={`fa-solid fa-chevron-${showFunDrawer ? 'up' : 'down'} text-[10px] opacity-60`}></i>
-          </button>
+          />
 
           {showFunDrawer && (
             <div className="flex flex-col gap-2.5 p-2.5 rounded-xl bg-slate-900/80 border border-pink-500/30 animate-[fadeIn_0.15s_ease-out]">
@@ -326,7 +251,7 @@ export default function Toolbar({
                     <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5 font-bold" onClick={revealNext} disabled={revealedCount >= revealTotal}>
                       <i className="fa-solid fa-eye"></i> Avslør neste
                     </button>
-                    <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={revealAll} disabled={revealedCount >= revealTotal}>
+                    <button className="btn btn-xs btn-ghost border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white" onClick={revealAll} disabled={revealedCount >= revealTotal}>
                       Avslør alle
                     </button>
                     <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={endReveal}>
@@ -364,7 +289,7 @@ export default function Toolbar({
                 {activeFunMode === 'randombomb' ? (
                   <>
                     <p className="text-[10px] text-center text-rose-300 font-semibold">{bombBoom ? 'BOOM!' : `Nedtelling: ${bombCountdown}`}</p>
-                    <button className="btn btn-xs btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={cancelRandombomb} disabled={bombBoom}>
+                    <button className="btn btn-xs btn-ghost border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white" onClick={cancelRandombomb} disabled={bombBoom}>
                       <i className="fa-solid fa-xmark"></i> Avbryt
                     </button>
                   </>

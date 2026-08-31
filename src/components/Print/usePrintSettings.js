@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react';
 const COLORS_KEY = 'print_show_colors';
 const GROUP_LAYOUT_KEY = 'print_group_layout';
 
-export function usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats }) {
+export function usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats, initialHideEmptyDesks }) {
   const [showNumbers, setShowNumbers] = useState(initialShowNumbers);
   const [showZones, setShowZones] = useState(initialShowZones);
   const [showGroups, setShowGroups] = useState(initialShowGroups);
   const [colorSeats, setColorSeats] = useState(!!initialColorSeats);
+  const [hideEmptyDesks, setHideEmptyDesks] = useState(!!initialHideEmptyDesks);
   const [showColors, setShowColors] = useState(() => {
     const stored = localStorage.getItem(COLORS_KEY);
     return stored === null ? true : stored === 'true';
@@ -28,7 +29,7 @@ export function usePrintSettings({ initialShowNumbers, initialShowZones, initial
   }, [groupLayout]);
 
   return {
-    settings: { showNumbers, showZones, showGroups, showColors, colorSeats, groupLayout },
-    setShowNumbers, setShowZones, setShowGroups, setShowColors, setColorSeats, setGroupLayout,
+    settings: { showNumbers, showZones, showGroups, showColors, colorSeats, groupLayout, hideEmptyDesks },
+    setShowNumbers, setShowZones, setShowGroups, setShowColors, setColorSeats, setGroupLayout, setHideEmptyDesks,
   };
 }

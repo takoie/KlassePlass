@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { normalizeStudents, showToast } from '../../shared/utils';
 import { generateGroups } from '../../shared/groupRandomizer';
+import Select from '../Select';
 
 /**
  * Modal for å opprette en ny gruppeinndeling: velg klasse, antall grupper,
@@ -11,8 +12,8 @@ export default function CreateGroupModal({ classes, onCreated }) {
   const [name, setName] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [numGroups, setNumGroups] = useState(4);
-  const [useConstraints, setUseConstraints] = useState(true);
-  const [avoidHistory, setAvoidHistory] = useState(true);
+  const [useConstraints, setUseConstraints] = useState(false);
+  const [avoidHistory, setAvoidHistory] = useState(false);
   const [avoidLastN, setAvoidLastN] = useState(3);
   const [requireLeaders, setRequireLeaders] = useState(false);
   const [leaderIds, setLeaderIds] = useState([]);
@@ -39,8 +40,8 @@ export default function CreateGroupModal({ classes, onCreated }) {
     setName('');
     setSelectedClass('');
     setNumGroups(4);
-    setUseConstraints(true);
-    setAvoidHistory(true);
+    setUseConstraints(false);
+    setAvoidHistory(false);
     setAvoidLastN(3);
     setRequireLeaders(false);
     setLeaderIds([]);
@@ -132,14 +133,15 @@ export default function CreateGroupModal({ classes, onCreated }) {
 
           <div>
             <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klasse</label>
-            <select
-              className="select select-bordered w-full bg-surface-field border-slate-700 text-white"
+            <Select
+              size="sm"
+              className="w-full"
+              ariaLabel="Klasse"
+              placeholder="Velg klasse …"
               value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-            >
-              <option value="">Velg klasse...</option>
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+              onChange={setSelectedClass}
+              options={classes.map(c => ({ value: c.id, label: c.name }))}
+            />
           </div>
 
           <div>

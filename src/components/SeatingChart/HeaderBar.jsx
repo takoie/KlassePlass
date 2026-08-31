@@ -1,4 +1,6 @@
 import React from 'react';
+import Select from '../Select';
+import { HeaderBarShell, HeaderButton, HeaderField, HeaderDivider, SaveStatus } from '../HeaderControls';
 
 /**
  * Toppbar: klasse-valg, periode-valg, lagre-status og slett-knapp.
@@ -8,94 +10,100 @@ import React from 'react';
  * og vises derfor kun som info her, ikke som en egen nedtrekksmeny å endre
  * løpende.
  */
+
 export default function HeaderBar({
   onBack,
   classes, selectedClass, setSelectedClass,
   rooms, selectedRoom,
-  seatings, selectedSeatingId, handleSelectSeating, setEditingPeriod,
+  seatings, selectedSeatingId, handleSelectSeating, chartGroup, setEditingPeriod,
   saveState, handlePrint, isOnlyPeriod,
 }) {
   const roomName = rooms.find(r => r.id === Number(selectedRoom))?.name || '—';
+  // Periode-nedtrekket viser BARE periodene som hører til det aktive
+  // klassekartet, ikke alle rader for klassen (som ville blandet inn et helt
+  // annet kart på samme klasse). Fallback for rader fra før v12-backfyllingen.
+  const groupKey = (s) => s.chart_group || (s.class_id != null ? `c${s.class_id}` : null);
+
   return (
-    <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0 shadow-md">
+    <HeaderBarShell>
+      {/* Venstre: navigasjon + kontekst */}
       <div className="flex items-center gap-2 flex-wrap">
         {onBack && (
-          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
-            <i className="fa-solid fa-arrow-left"></i> Tilbake
-          </button>
+          <HeaderButton tone="ghost" icon="fa-solid fa-arrow-left" onClick={onBack}>Tilbake</HeaderButton>
         )}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Klasse:</span>
-          <select
-            className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold max-w-28"
+        <HeaderDivider />
+        <HeaderField label="Klasse">
+          <Select
+            size="bar"
+            className="w-36"
+            ariaLabel="Klasse"
             value={selectedClass}
-            onChange={(e) => setSelectedClass(Number(e.target.value))}
-          >
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-1.5" title="Rommet er knyttet til klassen og endres i rom-editoren">
-          <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Rom:</span>
-          <span className="text-xs font-bold text-slate-300 px-2 py-1 bg-surface-field border border-slate-700 rounded">{roomName}</span>
-        </div>
+            onChange={(v) => setSelectedClass(Number(v))}
+            options={classes.map(c => ({ value: c.id, label: c.name }))}
+          />
+        </HeaderField>
+        <HeaderField label="Rom" title="Rommet er knyttet til klassen og endres i rom-editoren">
+          <span className="h-9 flex items-center px-3 rounded-md bg-surface-field border border-slate-700 text-xs font-semibold text-slate-300 max-w-40 truncate">
+            {roomName}
+          </span>
+        </HeaderField>
       </div>
 
+      {/* Midten: periode */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Periode:</span>
-        <select
-          className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold max-w-32"
-          value={selectedSeatingId}
-          onChange={(e) => handleSelectSeating(e.target.value)}
-        >
-          {seatings
-            .filter(s => s.class_id === Number(selectedClass))
-            .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-            .map(s => <option key={s.id} value={s.id}>{s.comment || s.name}</option>)}
-        </select>
-        <button
-          className="btn btn-ghost btn-xs text-slate-400 hover:text-white"
+        <HeaderField label="Periode">
+          <Select
+            size="bar"
+            className="w-40"
+            ariaLabel="Periode"
+            value={selectedSeatingId}
+            onChange={(v) => handleSelectSeating(v)}
+            options={seatings
+              .filter(s => groupKey(s) === chartGroup)
+              .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+              .map(s => ({ value: s.id, label: s.comment || s.name }))}
+          />
+        </HeaderField>
+        <HeaderButton
+          tone="neutral"
+          icon="fa-solid fa-pen"
           title="Rediger navn og periode"
           onClick={() => {
             const existing = seatings.find(s => s.id === Number(selectedSeatingId));
             if (existing) setEditingPeriod({ id: existing.id, name: existing.name, comment: existing.comment || '' });
             document.getElementById('modal_edit_period')?.showModal();
           }}
-        >
-          <i className="fa-solid fa-pen"></i>
-        </button>
-        <button
-          className="btn btn-outline btn-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+        />
+        <HeaderButton
+          tone="neutral"
+          icon="fa-solid fa-plus"
           title="Start ny periode (beholder dette kartet som historikk)"
           onClick={() => document.getElementById('modal_new_period')?.showModal()}
         >
-          <i className="fa-solid fa-plus"></i> Ny periode
-        </button>
+          Ny periode
+        </HeaderButton>
       </div>
 
-      <div className="flex items-center gap-2">
-        {saveState === 'saving' ? (
-          <span className="text-amber-400 opacity-80 text-xs font-semibold flex items-center gap-1 whitespace-nowrap">
-            <i className="fa-solid fa-spinner fa-spin"></i> Lagrer...
-          </span>
-        ) : (
-          <span className="text-[#34d399] text-xs font-semibold flex items-center gap-1 whitespace-nowrap">
-            <i className="fa-solid fa-circle-check text-[#34d399]"></i> Lagret
-          </span>
-        )}
-        <button
-          className="btn btn-outline btn-xs border-slate-700 text-slate-300 hover:bg-slate-800 whitespace-nowrap"
+      {/* Høyre: status + handlinger */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <SaveStatus saveState={saveState} />
+        <HeaderButton
+          tone="neutral"
+          icon="fa-solid fa-print"
+          iconClass="text-indigo-300"
           onClick={handlePrint}
         >
-          <i className="fa-solid fa-print text-indigo-400"></i> Skriv ut / PDF
-        </button>
-        <button
-          className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs whitespace-nowrap"
+          Skriv ut / PDF
+        </HeaderButton>
+        <HeaderButton
+          tone="danger"
+          icon="fa-solid fa-trash"
           title={isOnlyPeriod ? 'Sletter hele klassekartet - klassen har ingen andre perioder' : 'Sletter kun den valgte perioden - andre perioder for klassen beholdes'}
           onClick={() => document.getElementById('modal_delete_seating')?.showModal()}
         >
-          <i className="fa-solid fa-trash"></i> {isOnlyPeriod ? 'Slett kart' : 'Slett periode'}
-        </button>
+          {isOnlyPeriod ? 'Slett kart' : 'Slett periode'}
+        </HeaderButton>
       </div>
-    </div>
+    </HeaderBarShell>
   );
 }

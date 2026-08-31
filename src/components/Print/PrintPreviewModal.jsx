@@ -8,23 +8,24 @@ import SeatingChartPrintContent, { CONTENT_WIDTH_PX, CONTENT_HEIGHT_PX } from '.
 import buildSeatingChartPrintPayload from './printLayouts/buildSeatingChartPrintPayload';
 import StationPrintContent, { paginateStationRotations, getStationPageWidthPx, estimateStationPageHeight } from './printLayouts/StationPrintContent';
 import GroupPrintContent, { paginateGroups, GROUP_CONTENT_WIDTH_PX, estimateGroupsPageHeight } from './printLayouts/GroupPrintContent';
+import { ToggleRow, SectionLabel } from '../SidebarRow';
 
 const ROOM_ZOOM_MIN = 1;
 const ROOM_ZOOM_MAX = 2.5;
 
 export default function PrintPreviewModal({
   contentType = 'seatingChart',
-  chartName, className, chartComment, boardObj, desks, deskNumberMap, placements,
+  chartName, className, chartComment, boardObj, desks, deskNumberMap, placements, unusedSeats = {},
   getStudentByIdOrName, groupColors, zoneMeta, groupOverrides, stationProps, groupWorkProps,
-  initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats,
+  initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats, initialHideEmptyDesks,
   onClose,
 }) {
   const isStation = contentType === 'station';
   const isGroupWork = contentType === 'groupWork';
   const isSeatingChart = !isStation && !isGroupWork;
 
-  const { settings, setShowNumbers, setShowZones, setShowGroups, setShowColors, setColorSeats, setGroupLayout } =
-    usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats });
+  const { settings, setShowNumbers, setShowZones, setShowGroups, setShowColors, setColorSeats, setGroupLayout, setHideEmptyDesks } =
+    usePrintSettings({ initialShowNumbers, initialShowZones, initialShowGroups, initialColorSeats, initialHideEmptyDesks });
   const [exportState, setExportState] = useState({ status: 'idle' }); // idle | working | done | error
   const dialogRef = useRef(null);
   const previewPaneRef = useRef(null);
@@ -127,6 +128,7 @@ export default function PrintPreviewModal({
       node: (
         <SeatingChartPrintContent
           boardObj={boardObj} desks={desks} deskNumberMap={deskNumberMap} placements={placements}
+          unusedSeats={unusedSeats}
           getStudentByIdOrName={getStudentByIdOrName} groupColors={groupColors} zoneMeta={zoneMeta}
           groupOverrides={groupOverrides} settings={settings}
         />
@@ -188,7 +190,7 @@ export default function PrintPreviewModal({
     const suggestedName = buildPrintFilename({ className, chartName, chartComment, prefix: filenamePrefix });
     const payload = isSeatingChart
       ? buildSeatingChartPrintPayload({
-          boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
+          boardObj, desks, deskNumberMap, placements, unusedSeats, getStudentByIdOrName,
           groupColors, zoneMeta, groupOverrides, settings, chartName, periodText,
           roomZoom, roomPan,
         })
@@ -209,54 +211,73 @@ export default function PrintPreviewModal({
         <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl w-[95vw] max-w-[95vw] h-[92vh] max-h-[92vh] overflow-y-auto flex flex-col">
           <h3 className="font-bold text-lg mb-4">{titleText}</h3>
           <div className="flex gap-4 flex-1 min-h-0">
-            <div className="w-44 flex-shrink-0 flex flex-col gap-2 bg-base-200 border border-slate-800 rounded-xl p-3">
-              <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
-                <span>Farger</span>
-                <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showColors} onChange={(e) => setShowColors(e.target.checked)} />
-              </label>
-              {isSeatingChart && (
-                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
-                  <span>Numre</span>
-                  <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showNumbers} onChange={(e) => setShowNumbers(e.target.checked)} />
-                </label>
-              )}
-              <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
-                <span>{groupsToggleLabel}</span>
-                <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showGroups} onChange={(e) => setShowGroups(e.target.checked)} />
-              </label>
-              {isSeatingChart && (
-                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
-                  <span>Fargelegg bord</span>
-                  <input
-                    type="checkbox" className="toggle toggle-sm toggle-primary"
-                    checked={settings.colorSeats}
-                    onChange={(e) => setColorSeats(e.target.checked)}
-                    disabled={!settings.showGroups}
-                  />
-                </label>
-              )}
-              {isSeatingChart && (
-                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
-                  <span>Soner</span>
-                  <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={settings.showZones} onChange={(e) => setShowZones(e.target.checked)} />
-                </label>
-              )}
-              {isGroupWork && (
-                <label className="flex items-center justify-between cursor-pointer text-sm text-slate-300">
-                  <span>Vannrett</span>
-                  <input
-                    type="checkbox" className="toggle toggle-sm toggle-primary"
-                    checked={settings.groupLayout === 'horizontal'}
-                    onChange={(e) => setGroupLayout(e.target.checked ? 'horizontal' : 'vertical')}
-                  />
-                </label>
-              )}
-              <div className="border-t border-slate-800 my-1"></div>
+            <div className="w-52 flex-shrink-0 flex flex-col gap-3 bg-base-200 border border-slate-800 rounded-xl p-3 overflow-y-auto custom-scrollbar">
               <div className="flex flex-col gap-1">
-                <span className="flex justify-between text-sm text-slate-300">
+                <SectionLabel>Visning</SectionLabel>
+                <ToggleRow
+                  icon="fa-solid fa-fill-drip"
+                  label="Farger"
+                  checked={settings.showColors}
+                  onChange={() => setShowColors(!settings.showColors)}
+                />
+                {isSeatingChart && (
+                  <ToggleRow
+                    icon="fa-solid fa-hashtag"
+                    label="Bordnummer"
+                    checked={settings.showNumbers}
+                    onChange={() => setShowNumbers(!settings.showNumbers)}
+                  />
+                )}
+                <ToggleRow
+                  icon="fa-solid fa-object-group"
+                  label={groupsToggleLabel}
+                  checked={settings.showGroups}
+                  onChange={() => setShowGroups(!settings.showGroups)}
+                />
+                {isSeatingChart && (
+                  <ToggleRow
+                    icon="fa-solid fa-palette"
+                    label="Fargelegg bord"
+                    checked={settings.colorSeats}
+                    disabled={!settings.showGroups}
+                    onChange={() => setColorSeats(!settings.colorSeats)}
+                  />
+                )}
+                {isSeatingChart && (
+                  <ToggleRow
+                    icon="fa-solid fa-map"
+                    label="Soner"
+                    checked={settings.showZones}
+                    onChange={() => setShowZones(!settings.showZones)}
+                  />
+                )}
+                {isSeatingChart && (
+                  <ToggleRow
+                    icon="fa-solid fa-eye-slash"
+                    label="Skjul tomme bord"
+                    checked={settings.hideEmptyDesks}
+                    onChange={() => setHideEmptyDesks(!settings.hideEmptyDesks)}
+                    tip="Utelater bord der ingen elever sitter fra utskriften. Enkeltplasser skjules ved å høyreklikke plassen i klassekartet."
+                  />
+                )}
+                {isGroupWork && (
+                  <ToggleRow
+                    icon="fa-solid fa-arrows-left-right"
+                    label="Vannrett"
+                    checked={settings.groupLayout === 'horizontal'}
+                    onChange={() => setGroupLayout(settings.groupLayout === 'horizontal' ? 'vertical' : 'horizontal')}
+                  />
+                )}
+              </div>
+
+              <div className="border-t border-slate-800"></div>
+
+              <div className="flex flex-col gap-1.5">
+                <SectionLabel>Utsnitt</SectionLabel>
+                <div className="flex justify-between text-xs font-semibold text-slate-300 px-1">
                   <span>Zoom</span>
                   <span className="text-slate-500">{Math.round(roomZoom * 100)}%</span>
-                </span>
+                </div>
                 <input
                   type="range"
                   className="range range-xs range-primary"
@@ -270,18 +291,24 @@ export default function PrintPreviewModal({
                     if (next <= 1) setRoomPan({ x: 0, y: 0 });
                   }}
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-[11px] text-slate-500 px-1 leading-snug">
                   {roomZoom > 1 ? 'Dra i forhåndsvisningen for å flytte utsnittet.' : 'Zoom inn for å kunne dra i utsnittet.'}
                 </p>
                 {(roomZoom !== 1 || roomPan.x !== 0 || roomPan.y !== 0) && (
-                  <button className="btn btn-ghost btn-xs self-start" onClick={resetRoomView}>Nullstill utsnitt</button>
+                  <button
+                    className="self-start h-7 px-2.5 rounded-md border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                    onClick={resetRoomView}
+                  >
+                    Nullstill utsnitt
+                  </button>
                 )}
               </div>
+
               {pages.length > 1 && (
                 <>
-                  <div className="border-t border-slate-800 my-1"></div>
-                  <p className="text-xs text-slate-400">
-                    <i className="fa-solid fa-file-lines mr-1"></i>{pages.length} sider ved utskrift
+                  <div className="border-t border-slate-800"></div>
+                  <p className="text-[11px] text-slate-400 px-1">
+                    <i className="fa-solid fa-file-lines mr-1.5"></i>{pages.length} sider ved utskrift
                   </p>
                 </>
               )}
@@ -348,7 +375,7 @@ export default function PrintPreviewModal({
           <div className="modal-action flex justify-between items-center">
             <button className="btn btn-ghost text-slate-400 hover:text-white" onClick={onClose}>Lukk</button>
             <div className="flex items-center gap-2">
-              <button className="btn btn-outline border-slate-700 text-slate-200 hover:bg-slate-800 gap-2" onClick={handlePrint}>
+              <button className="btn btn-ghost border border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white gap-2" onClick={handlePrint}>
                 <i className="fa-solid fa-print"></i> Skriv ut
               </button>
               <button className="btn btn-primary gap-2" onClick={handleExportPdf} disabled={exportState.status === 'working'}>

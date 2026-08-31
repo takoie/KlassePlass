@@ -5,9 +5,70 @@
 
 export const CHANGELOG = [
   {
+    version: '2.9.0',
+    date: '31. august 2026',
+    isLatest: true,
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Skjul ubrukte plasser og bord i klassekartet',
+        desc: 'Høyreklikk en ledig plass og velg «Skjul denne plassen» for å trekke bordet sammen rundt elevene som faktisk sitter der – på skjerm, i utskrift og PDF. Makkergruppe-fargen og kanten beholdes, og et lite øye-ikon henter plassene fram igjen. Ny «Skjul tomme bord»-bryter i utskrift/PDF-vinduet utelater bord uten elever fra papiret.'
+      },
+      {
+        type: 'feature',
+        title: 'Hold fraværende elever utenfor gruppefordelingen',
+        desc: 'Ny «Ikke med i fordelingen»-sone i gruppearbeidmodulen. Dra en elev dit – eller høyreklikk og velg «Sett som fraværende» – så holdes vedkommende utenfor når du genererer på nytt eller jevner ut grupper. «Ta med alle» henter dem inn igjen. Sonen kan felles sammen som en skuff så navnene ikke vises (f.eks. på prosjektor), og valget huskes per gruppeinndeling. Autolagringen viser nå én diskré «Lagret»-toast i stedet for en stabel med bokser, og de to reglene i «Ny gruppeinndeling» starter avslått.'
+      },
+      {
+        type: 'feature',
+        title: 'Dra elever av kartet for å fjerne dem',
+        desc: 'Dra en plassert elev vekk fra setet og slipp hvor som helst som ikke er et sete – på gulvet, over menyene – så tas eleven av kartet og legges i elevlista. Navneboksen blir rød med «Fjern» mens du drar, så du ser hva som skjer. Du kan fortsatt dra rett til elevlista, eller høyreklikke en elev og velge «Fjern fra bord».'
+      },
+      {
+        type: 'fix',
+        title: '«Plasser alle» flyttet elever som allerede satt',
+        desc: '«Plasser alle» byttet tidligere om på elevene i lista og de som allerede var plassert. Nå fyller den kun ledige plasser og lar elever som sitter være i fred – «Randomiser» stokker fortsatt om på alle.'
+      },
+      {
+        type: 'fix',
+        title: 'Uleselig tekst på knapper ved musepeker',
+        desc: 'Rettet mørk tekst på mørk bakgrunn ved musepeker over «Skriv ut / PDF» og en rekke andre knapper i hele programmet.'
+      },
+      {
+        type: 'ui',
+        title: 'Nye, tema-tilpassede nedtrekksmenyer',
+        desc: 'Alle nedtrekksmenyer (klasse-, rom- og periodevalg m.fl.) har fått en egen mørk meny som matcher resten av appen, i stedet for operativsystemets lyse standardliste. De virker nå også inne i popup-vinduer (bl.a. «Ny gruppeinndeling»), der lista tidligere ikke lot seg åpne.'
+      },
+      {
+        type: 'ui',
+        title: 'Ensartet design i klassekart, rombygger og utskrift',
+        desc: 'Sidemenyene og topplinjene i klassekart og rombygger, samt venstremenyen i utskrift/PDF-vinduet, bruker nå samme flate og kompakte knappe- og bryterstil. Hjelpetekstene (info-boblene) er stilt likt og klippes ikke lenger av vinduskanten. Rombyggerens topplinje er forenklet: når du er inne i et rom vises romnavnet som tittel (endres med penn-ikonet), uten rom-nedtrekk eller «nytt/dupliser rom»-knapper.'
+      },
+      {
+        type: 'improvement',
+        title: 'Bordnummer huskes og er av som standard',
+        desc: 'Bryteren for bordnummer i klassekartet starter nå avslått og husker valget ditt mellom økter. Bordnumrene vises igjen som de skal i utskrifts­forhåndsvisningen.'
+      },
+      {
+        type: 'feature',
+        title: 'Dupliser rom',
+        desc: 'Lag et nytt rom fra en kopi av et eksisterende bord- og tavleoppsett rett fra kortet i «Mine rom» – du får en dialog for å skrive inn navnet på det nye rommet. Originalrommet og klassekartene som bruker det påvirkes ikke.'
+      },
+      {
+        type: 'fix',
+        title: 'Flere klassekart på samme klasse og rom blandet seg sammen',
+        desc: 'To klassekart laget av samme klasse og rom (f.eks. ett vanlig og ett til klassefest) delte tidligere periode-nedtrekk og elevhistorikk, så plasseringer og uker fra det ene lekket inn i det andre. Nå holdes hvert klassekart helt for seg selv, med egne perioder og egen historikk. Eksisterende kart beholdes – kart som ikke lot seg skille automatisk kan løsrives med «Skill ut som eget klassekart» i rediger-vinduet.'
+      },
+      {
+        type: 'improvement',
+        title: 'Mange små finjusteringer',
+        desc: 'En rekke mindre justeringer og opprydninger i grensesnittet – blant annet lik størrelse på nedtrekksmenyer og knapper i topplinjene (med litt mindre tekst enn før), at verktøypanelet i rombyggeren alltid kan scrolles selv når mange seksjoner er åpne samtidig, og at navneboksen når du drar en elev nå henger ned til høyre for musepekeren (med en liten ring på selve slippunktet) i stedet for å dekke det.'
+      }
+    ]
+  },
+  {
     version: '2.8.1',
     date: '27. august 2026',
-    isLatest: true,
     highlights: [
       {
         type: 'feature',

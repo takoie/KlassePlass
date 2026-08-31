@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import CreateGroupModal from './GroupWork/CreateGroupModal';
 import { ExportModal, ImportModal } from './DataTransfer/ExportImportModal';
 import { showToast } from '../shared/utils';
+import Select from './Select';
 
 export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
   <div
@@ -242,14 +243,33 @@ export const ClassesOverview = ({ onEdit }) => {
   );
 };
 
+// "Rom A" -> "Rom A (kopi)", så "(kopi 2)", "(kopi 3)" … En eksisterende
+// "(kopi)"-hale strippes først så man ikke får "(kopi) (kopi)".
+const suggestCopyName = (base, existing) => {
+  const taken = new Set((existing || []).map(r => r.name));
+  const root = (base || 'Rom').replace(/\s*\(kopi(?:\s+\d+)?\)\s*$/i, '').trim() || 'Rom';
+  let candidate = `${root} (kopi)`;
+  let n = 2;
+  while (taken.has(candidate)) { candidate = `${root} (kopi ${n})`; n += 1; }
+  return candidate;
+};
+
 export const RoomsOverview = ({ onEdit, onAdd }) => {
   const [rooms, setRooms] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [exportTarget, setExportTarget] = useState(null); // { id, name } | null
+  const [duplicateTarget, setDuplicateTarget] = useState(null); // rom som skal dupliseres
+  const [dupName, setDupName] = useState('');
 
   const openExport = (room) => {
     setExportTarget(room);
     document.getElementById('modal_export_room')?.showModal();
+  };
+
+  const openDuplicate = (room) => {
+    setDuplicateTarget(room);
+    setDupName(suggestCopyName(room.name, rooms));
+    document.getElementById('modal_duplicate_room')?.showModal();
   };
 
   useEffect(() => { loadRooms(); }, []);
@@ -269,6 +289,30 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
       showToast('Kunne ikke slette rommet.', 'error');
     }
     setDeleteTarget(null);
+  };
+
+  const handleConfirmDuplicate = async () => {
+    if (!duplicateTarget) return;
+    const name = dupName.trim();
+    if (!name) return;
+    if (rooms.some(r => r.name === name)) {
+      showToast('Det finnes allerede et rom med dette navnet.', 'error');
+      return;
+    }
+    try {
+      await window.api.saveRoom({
+        id: null,
+        name,
+        // Rå layout-streng kopieres uendret — bord og tavle blir identiske.
+        layoutData: duplicateTarget.layout_data || '{}'
+      });
+      document.getElementById('modal_duplicate_room')?.close();
+      setDuplicateTarget(null);
+      await loadRooms();
+      showToast(`Rommet ble duplisert som «${name}».`, 'success');
+    } catch (e) {
+      showToast('Kunne ikke duplisere rommet.', 'error');
+    }
   };
 
   return (
@@ -298,13 +342,22 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
             onClick={() => onEdit(rm.id)}
             onDelete={() => setDeleteTarget(rm)}
             actions={
-              <button
-                className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-purple-950/60 hover:text-purple-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
-                onClick={(e) => { e.stopPropagation(); openExport(rm); }}
-                title="Eksporter rom"
-              >
-                <i className="fa-solid fa-file-export text-xs"></i>
-              </button>
+              <>
+                <button
+                  className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-purple-950/60 hover:text-purple-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); openDuplicate(rm); }}
+                  title="Dupliser rom"
+                >
+                  <i className="fa-solid fa-copy text-xs"></i>
+                </button>
+                <button
+                  className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-purple-950/60 hover:text-purple-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); openExport(rm); }}
+                  title="Eksporter rom"
+                >
+                  <i className="fa-solid fa-file-export text-xs"></i>
+                </button>
+              </>
             }
           />
         );
@@ -317,6 +370,49 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <dialog id="modal_duplicate_room" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-lg text-purple-400 mb-6 flex items-center gap-2">
+            <i className="fa-solid fa-copy"></i> Dupliser rom
+          </h3>
+
+          <p className="text-sm text-slate-400 mb-4">
+            Lager et nytt rom med en kopi av bord- og tavleoppsettet fra
+            {' '}<strong className="text-slate-200">{duplicateTarget?.name}</strong>.
+            Originalrommet og klassekartene som bruker det påvirkes ikke.
+          </p>
+
+          <div>
+            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på det nye rommet</label>
+            <input
+              type="text"
+              className="input input-bordered w-full bg-surface-field border-slate-600 focus:border-purple-500"
+              value={dupName}
+              onChange={e => setDupName(e.target.value)}
+              placeholder="F.eks. Naturfagrom (kopi)"
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleConfirmDuplicate(); } }}
+            />
+          </div>
+
+          <div className="modal-action mt-8">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 hover:text-slate-100" onClick={() => setDuplicateTarget(null)}>Avbryt</button>
+            </form>
+            <button
+              className="btn bg-purple-600 hover:bg-purple-500 text-white border-none font-bold px-8 shadow-lg shadow-purple-900/50 disabled:opacity-40"
+              onClick={handleConfirmDuplicate}
+              disabled={!dupName.trim()}
+            >
+              Dupliser rom
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setDuplicateTarget(null)}>close</button>
+        </form>
+      </dialog>
 
       <ExportModal
         modalId="modal_export_room"
@@ -583,10 +679,17 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasse</label>
-                <select className="select select-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500" value={selectedClass} onChange={e => setSelectedClass(e.target.value)}>
-                  {classes.length === 0 && <option value="" disabled>Ingen klasser funnet</option>}
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <Select
+                  size="sm"
+                  className="w-full"
+                  ariaLabel="Velg klasse"
+                  placeholder="Velg klasse …"
+                  value={selectedClass}
+                  onChange={setSelectedClass}
+                  options={classes.length
+                    ? classes.map(c => ({ value: c.id, label: c.name }))
+                    : [{ value: '', label: 'Ingen klasser funnet', disabled: true }]}
+                />
                 {selectedClass && (
                   <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
                     <i className="fa-solid fa-users w-3 text-emerald-400"></i> {modalStudentCount} elever
@@ -596,10 +699,17 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
 
               <div>
                 <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasserom</label>
-                <select className="select select-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500" value={selectedRoom} onChange={e => setSelectedRoom(e.target.value)}>
-                  {rooms.length === 0 && <option value="" disabled>Ingen rom funnet</option>}
-                  {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
+                <Select
+                  size="sm"
+                  className="w-full"
+                  ariaLabel="Velg klasserom"
+                  placeholder="Velg rom …"
+                  value={selectedRoom}
+                  onChange={setSelectedRoom}
+                  options={rooms.length
+                    ? rooms.map(r => ({ value: r.id, label: r.name }))
+                    : [{ value: '', label: 'Ingen rom funnet', disabled: true }]}
+                />
                 {selectedRoom && (
                   <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
                     <i className="fa-solid fa-chair w-3 text-purple-400"></i> {modalSeatCount} elevplasser

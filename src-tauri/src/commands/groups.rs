@@ -79,6 +79,7 @@ pub struct GroupAssignmentRecord {
   pub created_at: Option<String>,
   pub locked_ids: Option<String>,
   pub use_custom_names: i64,
+  pub excluded_ids: Option<String>,
 }
 
 /// Rad returnert av `get_group_assignments` (LIST-visningen) - inkluderer
@@ -99,6 +100,7 @@ pub struct GroupAssignmentListItem {
   pub created_at: Option<String>,
   pub locked_ids: Option<String>,
   pub use_custom_names: i64,
+  pub excluded_ids: Option<String>,
   pub class_name: Option<String>,
   pub group_count: i64,
 }
@@ -162,6 +164,8 @@ pub struct GroupAssignmentInput {
   #[serde(default)]
   pub use_custom_names: bool,
   #[serde(default)]
+  pub excluded_ids: Option<Value>,
+  #[serde(default)]
   pub groups: Option<Vec<GroupInput>>,
 }
 
@@ -188,6 +192,7 @@ fn row_to_group_assignment(row: &rusqlite::Row) -> rusqlite::Result<GroupAssignm
     created_at: row.get(8)?,
     locked_ids: row.get(9)?,
     use_custom_names: row.get(10)?,
+    excluded_ids: row.get(11)?,
   })
 }
 
@@ -204,8 +209,9 @@ fn row_to_group_assignment_list_item(row: &rusqlite::Row) -> rusqlite::Result<Gr
     created_at: row.get(8)?,
     locked_ids: row.get(9)?,
     use_custom_names: row.get(10)?,
-    class_name: row.get(11)?,
-    group_count: row.get(12)?,
+    excluded_ids: row.get(11)?,
+    class_name: row.get(12)?,
+    group_count: row.get(13)?,
   })
 }
 
@@ -231,7 +237,7 @@ fn row_to_group_history(row: &rusqlite::Row) -> rusqlite::Result<GroupHistoryRec
 
 const GROUP_ASSIGNMENT_LIST_SELECT: &str = "SELECT ga.id, ga.name, ga.class_id, ga.source_seating_id, \
    ga.use_constraints, ga.avoid_last_n, ga.require_leaders, ga.leader_ids, ga.created_at, \
-   ga.locked_ids, ga.use_custom_names, c.name as class_name, \
+   ga.locked_ids, ga.use_custom_names, ga.excluded_ids, c.name as class_name, \
    (SELECT COUNT(*) FROM group_assignment_groups g WHERE g.assignment_id = ga.id) as group_count \
    FROM group_assignments ga \
    LEFT JOIN classes c ON ga.class_id = c.id";
@@ -266,7 +272,7 @@ pub fn get_group_assignment_impl(
   conn
     .query_row(
       "SELECT id, name, class_id, source_seating_id, use_constraints, avoid_last_n, \
-       require_leaders, leader_ids, created_at, locked_ids, use_custom_names \
+       require_leaders, leader_ids, created_at, locked_ids, use_custom_names, excluded_ids \
        FROM group_assignments WHERE id = ?1",
       [id],
       row_to_group_assignment,
@@ -286,6 +292,7 @@ pub fn save_group_assignment_impl(
 ) -> rusqlite::Result<i64> {
   let leader_ids_json = encode_json_field(input.leader_ids.as_ref());
   let locked_ids_json = encode_json_field(input.locked_ids.as_ref());
+  let excluded_ids_json = encode_json_field(input.excluded_ids.as_ref());
   let use_constraints = input.use_constraints as i64;
   let require_leaders = input.require_leaders as i64;
   let use_custom_names = input.use_custom_names as i64;
@@ -298,8 +305,9 @@ pub fn save_group_assignment_impl(
       // setter IKKE class_id - kun INSERT-grenen gjør det.
       tx.execute(
         "UPDATE group_assignments SET name = ?1, use_constraints = ?2, avoid_last_n = ?3, \
-         require_leaders = ?4, leader_ids = ?5, locked_ids = ?6, use_custom_names = ?7 \
-         WHERE id = ?8",
+         require_leaders = ?4, leader_ids = ?5, locked_ids = ?6, use_custom_names = ?7, \
+         excluded_ids = ?8 \
+         WHERE id = ?9",
         rusqlite::params![
           input.name,
           use_constraints,
@@ -308,6 +316,7 @@ pub fn save_group_assignment_impl(
           leader_ids_json,
           locked_ids_json,
           use_custom_names,
+          excluded_ids_json,
           id
         ],
       )?;
@@ -320,8 +329,8 @@ pub fn save_group_assignment_impl(
     None => {
       tx.execute(
         "INSERT INTO group_assignments (name, class_id, source_seating_id, use_constraints, \
-         avoid_last_n, require_leaders, leader_ids, locked_ids, use_custom_names) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+         avoid_last_n, require_leaders, leader_ids, locked_ids, use_custom_names, excluded_ids) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         rusqlite::params![
           input.name,
           input.class_id,
@@ -331,7 +340,8 @@ pub fn save_group_assignment_impl(
           require_leaders,
           leader_ids_json,
           locked_ids_json,
-          use_custom_names
+          use_custom_names,
+          excluded_ids_json
         ],
       )?;
       tx.last_insert_rowid()
@@ -505,6 +515,7 @@ mod tests {
       leader_ids: None,
       locked_ids: None,
       use_custom_names: false,
+      excluded_ids: None,
       groups: None,
     }
   }
@@ -675,6 +686,30 @@ mod tests {
     assert_eq!(reparsed_leaders, serde_json::json!(["leader-1", "leader-2"]));
     let reparsed_locked: Value = serde_json::from_str(&parent.locked_ids.unwrap()).unwrap();
     assert_eq!(reparsed_locked, serde_json::json!(["locked-1"]));
+  }
+
+  #[test]
+  fn save_group_assignment_excluded_ids_round_trips_and_defaults_to_empty_array() {
+    let mut conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+
+    // Omitted -> "[]" på både insert og oppdatert lesing.
+    let insert_id = save_group_assignment_impl(&mut conn, &base_input(class_id)).unwrap();
+    let inserted = get_group_assignment_impl(&conn, insert_id).unwrap().unwrap();
+    assert_eq!(inserted.excluded_ids, Some("[]".to_string()));
+
+    // Eksplisitt verdi lagres friskt og leses rått tilbake.
+    let mut input = base_input(class_id);
+    input.id = Some(insert_id);
+    input.excluded_ids = Some(serde_json::json!(["absent-1", "absent-2"]));
+    save_group_assignment_impl(&mut conn, &input).unwrap();
+
+    let updated = get_group_assignment_impl(&conn, insert_id).unwrap().unwrap();
+    assert_eq!(updated.excluded_ids, Some(r#"["absent-1","absent-2"]"#.to_string()));
+
+    // Vises også i LIST-varianten.
+    let list = get_group_assignments_impl(&conn, Some(class_id)).unwrap();
+    assert_eq!(list[0].excluded_ids, Some(r#"["absent-1","absent-2"]"#.to_string()));
   }
 
   #[test]

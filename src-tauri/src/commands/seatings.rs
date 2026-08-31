@@ -38,6 +38,11 @@ pub struct SeatingRecord {
   pub room_id: Option<i64>,
   pub placements: Value,
   pub comment: Option<String>,
+  /// Grupperer periode-rader som hører til samme klassekart (se
+  /// schema::backfill_chart_group). Utelates av frontend ved oppretting av et
+  /// helt nytt kart — INSERT-grenen tildeler da `"s{id}"` selv.
+  #[serde(default)]
+  pub chart_group: Option<String>,
 }
 
 /// Rad returnert av `get_seatings` - inkluderer LEFT JOIN-ede visningsnavn
@@ -60,6 +65,7 @@ pub struct SeatingListItem {
   pub created_at: Option<String>,
   pub class_name: Option<String>,
   pub room_name: Option<String>,
+  pub chart_group: Option<String>,
 }
 
 /// Rad returnert av `get_seating` - se `SeatingListItem` over for
@@ -74,6 +80,7 @@ pub struct SeatingReadRecord {
   pub room_id: Option<i64>,
   pub placements: Option<String>,
   pub comment: Option<String>,
+  pub chart_group: Option<String>,
 }
 
 /// Speiler JS sin `typeof placements === 'string' ? placements : JSON.stringify(placements)`.
@@ -99,6 +106,7 @@ fn row_to_seating(row: &rusqlite::Row) -> rusqlite::Result<SeatingReadRecord> {
     room_id: row.get(3)?,
     placements: decode_placements(row.get(4)?),
     comment: row.get(5)?,
+    chart_group: row.get(6)?,
   })
 }
 
@@ -113,11 +121,12 @@ fn row_to_seating_list_item(row: &rusqlite::Row) -> rusqlite::Result<SeatingList
     created_at: row.get(6)?,
     class_name: row.get(7)?,
     room_name: row.get(8)?,
+    chart_group: row.get(9)?,
   })
 }
 
 const SEATING_LIST_SELECT: &str = "SELECT s.id, s.name, s.class_id, s.room_id, s.placements, s.comment, \
-   s.created_at, c.name as class_name, r.name as room_name \
+   s.created_at, c.name as class_name, r.name as room_name, s.chart_group \
    FROM seatings s \
    LEFT JOIN classes c ON s.class_id = c.id \
    LEFT JOIN rooms r ON s.room_id = r.id";
@@ -147,7 +156,7 @@ pub fn get_seatings_impl(
 pub fn get_seating_impl(conn: &Connection, id: i64) -> rusqlite::Result<Option<SeatingReadRecord>> {
   conn
     .query_row(
-      "SELECT id, name, class_id, room_id, placements, comment FROM seatings WHERE id = ?1",
+      "SELECT id, name, class_id, room_id, placements, comment, chart_group FROM seatings WHERE id = ?1",
       [id],
       row_to_seating,
     )
@@ -174,12 +183,38 @@ pub fn save_seating_impl(conn: &Connection, record: &SeatingRecord) -> rusqlite:
     }
     None => {
       conn.execute(
-        "INSERT INTO seatings (name, class_id, room_id, placements, comment) VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![record.name, record.class_id, record.room_id, placements_json, comment],
+        "INSERT INTO seatings (name, class_id, room_id, placements, comment, chart_group) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![record.name, record.class_id, record.room_id, placements_json, comment, record.chart_group],
       )?;
-      Ok(conn.last_insert_rowid())
+      let new_id = conn.last_insert_rowid();
+      // Et helt nytt klassekart (ingen chart_group sendt inn) blir sin egen
+      // isolerte gruppe. "Ny periode" sender derimot forelderens chart_group
+      // og havner i samme gruppe.
+      if record.chart_group.is_none() {
+        conn.execute(
+          "UPDATE seatings SET chart_group = ?1 WHERE id = ?2",
+          rusqlite::params![format!("s{new_id}"), new_id],
+        )?;
+      }
+      Ok(new_id)
     }
   }
+}
+
+/// Flytter én seating-rad til en annen `chart_group`. Brukes av "Skill ut som
+/// eget klassekart" (frontend sender `"s{id}"`) og eventuell framtidig
+/// flytting mellom eksisterende kart. Bevisst adskilt fra `save_seating_impl`
+/// slik at dennes UPDATE-quirk (rører kun name/placements/comment) står urørt.
+pub fn set_seating_chart_group_impl(
+  conn: &Connection,
+  id: i64,
+  chart_group: &str,
+) -> rusqlite::Result<()> {
+  conn.execute(
+    "UPDATE seatings SET chart_group = ?1 WHERE id = ?2",
+    rusqlite::params![chart_group, id],
+  )?;
+  Ok(())
 }
 
 /// Sletter tilhørende `seating_history` (via `chart_id`) FØR seatingen selv
@@ -219,6 +254,16 @@ pub fn save_seating(state: State<DbState>, record: SeatingRecord) -> Result<Save
 pub fn delete_seating(state: State<DbState>, id: i64) -> Result<(), String> {
   let conn = state.0.lock().map_err(|e| e.to_string())?;
   delete_seating_impl(&conn, id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_seating_chart_group(
+  state: State<DbState>,
+  id: i64,
+  chart_group: String,
+) -> Result<(), String> {
+  let conn = state.0.lock().map_err(|e| e.to_string())?;
+  set_seating_chart_group_impl(&conn, id, &chart_group).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -344,6 +389,7 @@ mod tests {
       room_id: Some(room_id),
       placements: serde_json::json!([]),
       comment: Some("hello".to_string()),
+      chart_group: None,
     };
     let id = save_seating_impl(&conn, &record).unwrap();
 
@@ -368,6 +414,7 @@ mod tests {
       room_id: Some(room_1),
       placements: serde_json::json!([]),
       comment: Some("orig comment".to_string()),
+      chart_group: None,
     };
     let id = save_seating_impl(&conn, &record).unwrap();
 
@@ -380,6 +427,7 @@ mod tests {
       room_id: Some(room_2),
       placements: serde_json::json!(["p1"]),
       comment: Some("new comment".to_string()),
+      chart_group: None,
     };
     save_seating_impl(&conn, &update_attempt).unwrap();
 
@@ -403,6 +451,7 @@ mod tests {
       room_id: None,
       placements: serde_json::json!([{"deskId": 1, "studentId": "s1"}]),
       comment: None,
+      chart_group: None,
     };
     let id = save_seating_impl(&conn, &record).unwrap();
 
@@ -436,6 +485,7 @@ mod tests {
       room_id: None,
       placements: Value::String(r#"[{"deskId":1}]"#.to_string()),
       comment: None,
+      chart_group: None,
     };
     let id = save_seating_impl(&conn, &record).unwrap();
 
@@ -457,6 +507,7 @@ mod tests {
       room_id: None,
       placements: serde_json::json!([]),
       comment: None,
+      chart_group: None,
     };
     let id = save_seating_impl(&conn, &record).unwrap();
     let wrapped = SaveResult::new(id);
@@ -475,6 +526,7 @@ mod tests {
       room_id: None,
       placements: serde_json::json!([]),
       comment: None,
+      chart_group: None,
     };
     let id = save_seating_impl(&conn, &record).unwrap();
 
@@ -547,6 +599,7 @@ mod tests {
       room_id: None,
       placements: serde_json::json!([]),
       comment: None,
+      chart_group: None,
     };
     let seating_id = save_seating_impl(&conn, &record).unwrap();
 
@@ -576,5 +629,58 @@ mod tests {
       )
       .unwrap();
     assert_eq!(history_count, 0);
+  }
+
+  #[test]
+  fn insert_without_chart_group_assigns_own_s_id_group() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let room_id = insert_room(&conn, "Room 1");
+
+    let record = SeatingRecord {
+      id: None,
+      name: Some("Klassefest".to_string()),
+      class_id: Some(class_id),
+      room_id: Some(room_id),
+      placements: serde_json::json!([]),
+      comment: None,
+      chart_group: None,
+    };
+    let id = save_seating_impl(&conn, &record).unwrap();
+
+    let fetched = get_seating_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.chart_group, Some(format!("s{id}")));
+  }
+
+  #[test]
+  fn insert_with_explicit_chart_group_keeps_it() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+
+    let record = SeatingRecord {
+      id: None,
+      name: Some("Uke 5-8".to_string()),
+      class_id: Some(class_id),
+      room_id: None,
+      placements: serde_json::json!([]),
+      comment: None,
+      chart_group: Some("s42".to_string()),
+    };
+    let id = save_seating_impl(&conn, &record).unwrap();
+
+    let fetched = get_seating_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.chart_group, Some("s42".to_string()));
+  }
+
+  #[test]
+  fn set_seating_chart_group_moves_the_row() {
+    let conn = setup();
+    let class_id = insert_class(&conn, "Class A");
+    let id = insert_seating_with_timestamp(&conn, "S", class_id, class_id, "2024-01-01 10:00:00");
+
+    set_seating_chart_group_impl(&conn, id, &format!("s{id}")).unwrap();
+
+    let fetched = get_seating_impl(&conn, id).unwrap().unwrap();
+    assert_eq!(fetched.chart_group, Some(format!("s{id}")));
   }
 }

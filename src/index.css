@@ -113,6 +113,17 @@ html, body {
   font-weight: 700 !important;
 }
 
+/* DaisyUI sin .btn-outline inverterer tekst- og bakgrunnsfarge på hover
+   (lys bakgrunn / mørk tekst). I dette mørke temaet ga det mørk, uleselig
+   tekst på en mørk flate. Overstyr til én dempet, alltid lesbar hover for
+   alle outline-knapper – fargen deres vises fortsatt i hviletilstand. */
+.btn.btn-outline:not(:disabled):hover,
+.btn.btn-outline:not(:disabled):focus-visible {
+  background-color: rgb(30 41 59 / 0.92); /* slate-800 */
+  border-color: rgb(100 116 139);         /* slate-500 */
+  color: #f1f5f9;                          /* slate-100 */
+}
+
 /* Custom mørke, tynne og elegante scrollbars */
 * {
   scrollbar-width: thin;

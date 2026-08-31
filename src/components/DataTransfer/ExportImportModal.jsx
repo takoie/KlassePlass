@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { showToast } from '../../shared/utils';
+import Select from '../Select';
 
 const BUNDLE_VERSION = 1;
 
@@ -258,19 +259,29 @@ export function ImportModal({ modalId, onImported }) {
             {needsExistingClass && (
               <div>
                 <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klassekartet trenger en klasse</label>
-                <select className="select select-bordered select-sm w-full bg-surface-field border-slate-600" value={existingClassId} onChange={e => setExistingClassId(e.target.value)}>
-                  <option value="">Velg klasse...</option>
-                  {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <Select
+                  size="sm"
+                  className="w-full"
+                  ariaLabel="Klasse"
+                  placeholder="Velg klasse …"
+                  value={existingClassId}
+                  onChange={setExistingClassId}
+                  options={classes.map(c => ({ value: c.id, label: c.name }))}
+                />
               </div>
             )}
             {needsExistingRoom && (
               <div>
                 <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klassekartet trenger et rom</label>
-                <select className="select select-bordered select-sm w-full bg-surface-field border-slate-600" value={existingRoomId} onChange={e => setExistingRoomId(e.target.value)}>
-                  <option value="">Velg rom...</option>
-                  {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
+                <Select
+                  size="sm"
+                  className="w-full"
+                  ariaLabel="Rom"
+                  placeholder="Velg rom …"
+                  value={existingRoomId}
+                  onChange={setExistingRoomId}
+                  options={rooms.map(r => ({ value: r.id, label: r.name }))}
+                />
               </div>
             )}
           </div>

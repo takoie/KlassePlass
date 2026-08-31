@@ -1,4 +1,40 @@
 import React from 'react';
+import Select from '../Select';
+import { ActionRow, ToggleRow } from '../SidebarRow';
+
+/**
+ * Sammenleggbart panel med samme uttrykk som de utvidbare boksene i klassekart-menyen.
+ * `flex-shrink-0` er kritisk: uten den ville et panel med `overflow-hidden` få
+ * "automatisk min-høyde 0" og bli klemt sammen (og klippe eget innhold) i stedet
+ * for at scroll-området over får overflyt og scrollbar.
+ */
+const Panel = ({ icon, iconColor, title, open, children }) => (
+  <details className="group flex-shrink-0 rounded-xl bg-slate-900/40 border border-slate-800 overflow-hidden" open={open}>
+    <summary className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-colors">
+      <i className={`${icon} fa-fw text-xs ${iconColor}`}></i>
+      <span className="flex-1">{title}</span>
+      <i className="fa-solid fa-chevron-down text-[10px] opacity-50 transition-transform group-open:rotate-180"></i>
+    </summary>
+    <div className="flex flex-col gap-1 px-2 pb-2.5">{children}</div>
+  </details>
+);
+
+const capBtnCls =
+  'h-8 rounded-lg border border-slate-700 bg-slate-800/50 text-slate-200 text-xs font-bold ' +
+  'hover:bg-slate-700 hover:border-slate-600 disabled:opacity-30 disabled:hover:bg-slate-800/50 ' +
+  'disabled:hover:border-slate-700 transition-colors';
+
+const subLabelCls = 'text-[10px] font-bold uppercase tracking-wider text-slate-500 px-1 pt-1';
+
+const STRUCTURE_OPTIONS = [
+  { value: '2-2', label: '2 - 2' },
+  { value: '2-2-2', label: '2 - 2 - 2' },
+  { value: '2-3-2', label: '2 - 3 - 2' },
+  { value: '3-3-3', label: '3 - 3 - 3' },
+  { value: '4-2-4', label: '4 - 2 - 4' },
+  { value: '4-4', label: '4 - 4' },
+  { value: '1-1-1-1-1', label: 'Eksamen (1 og 1)' },
+];
 
 export default function RoomToolsDrawer({
   setShowToolsDrawer,
@@ -22,152 +58,130 @@ export default function RoomToolsDrawer({
   centerDesks,
   flipRoom,
   canvasLight,
-  toggleCanvasLight
+  toggleCanvasLight,
 }) {
   return (
-    <div className="flex flex-col gap-3 w-64 text-white p-4 h-full overflow-y-auto overflow-x-hidden">
-      <div className="flex justify-between items-center pb-2 border-b border-slate-700 mb-2">
-        <span className="text-sm font-extrabold uppercase tracking-wider text-emerald-400">
+    <>
+      {/* Header */}
+      <div className="flex-shrink-0 min-w-[16rem] px-4 py-3 border-b border-slate-800 flex justify-between items-center">
+        <h3 className="font-extrabold text-xs text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
           <i className="fa-solid fa-toolbox"></i> Verktøy
-        </span>
-        <button className="btn btn-ghost btn-xs btn-square hover:bg-slate-800 text-slate-400" onClick={() => setShowToolsDrawer(false)}>
+        </h3>
+        <button
+          className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          onClick={() => setShowToolsDrawer(false)}
+        >
           <i className="fa-solid fa-xmark"></i>
         </button>
       </div>
 
-      {/* Visning & Kontroll (Collapse) */}
-      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
-        <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
-          <i className="fa-solid fa-eye text-[#34d399] mr-1.5"></i> Visning & kontroll
-        </summary>
-        <div className="collapse-content flex flex-col gap-2 pb-3">
-          <button 
-            className={`btn btn-xs w-full justify-start ${showZones ? 'btn-neutral bg-slate-800 text-amber-300' : 'btn-outline border-slate-600 text-slate-400'} gap-2`}
-            onClick={() => setShowZones(!showZones)}
-          >
-            <i className={`fa-solid w-4 text-center ${showZones ? 'fa-eye' : 'fa-eye-slash'}`}></i>
-            {showZones ? 'Viser soner' : 'Skjuler soner'}
-          </button>
+      <div className="flex-1 min-h-0 min-w-[16rem] overflow-y-auto flex flex-col gap-3 p-3 custom-scrollbar">
+        <Panel icon="fa-solid fa-eye" iconColor="text-emerald-400" title="Visning & kontroll" open>
+          <ToggleRow
+            icon="fa-solid fa-map"
+            iconColor="text-amber-400"
+            label="Soner"
+            checked={showZones}
+            onChange={() => setShowZones(!showZones)}
+          />
+          <ToggleRow
+            icon="fa-solid fa-hashtag"
+            label="Bordnummer"
+            checked={showNumbers}
+            onChange={() => setShowNumbers(!showNumbers)}
+          />
+          <ToggleRow
+            icon={canvasLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon'}
+            iconColor="text-amber-200"
+            label="Lys bakgrunn"
+            checked={canvasLight}
+            onChange={toggleCanvasLight}
+          />
+          <ActionRow icon="fa-solid fa-arrows-to-dot" iconColor="text-slate-300" label="Sentrer bord" onClick={centerDesks} />
+          <ActionRow icon="fa-solid fa-rotate-left" iconColor="text-cyan-400" label="Flipp rommet 180°" onClick={flipRoom} />
+        </Panel>
 
-          <button 
-            className={`btn btn-xs w-full justify-start ${showNumbers ? 'btn-neutral bg-slate-800 text-emerald-300' : 'btn-outline border-slate-600 text-slate-400'} gap-2`}
-            onClick={() => setShowNumbers(!showNumbers)}
-          >
-            <i className="fa-solid w-4 text-center fa-hashtag text-[#34d399]"></i>
-            {showNumbers ? 'Viser nr.' : 'Skjuler nr.'}
-          </button>
-
+        <Panel icon="fa-solid fa-table-cells" iconColor="text-cyan-400" title="Autogenerering" open>
+          <div className="grid grid-cols-2 gap-2 px-1 pt-1">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mønster</span>
+              <Select
+                size="xs"
+                className="w-full"
+                ariaLabel="Mønster"
+                value={genStructure}
+                onChange={setGenStructure}
+                options={STRUCTURE_OPTIONS}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rader</span>
+              <input
+                type="number"
+                className="input input-xs input-bordered h-7 min-h-0 bg-surface-field border-slate-700 text-slate-100 font-semibold text-center focus:border-emerald-500 focus:outline-none"
+                value={genRows}
+                onChange={e => setGenRows(Number(e.target.value))}
+                min="1"
+                max="10"
+              />
+            </div>
+          </div>
           <button
-            className={`btn btn-xs w-full justify-start ${canvasLight ? 'btn-neutral bg-slate-800 text-amber-200' : 'btn-outline border-slate-600 text-slate-400'} gap-2`}
-            onClick={toggleCanvasLight}
+            className="mt-2 h-8 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors"
+            onClick={generateStructure}
           >
-            <i className={`fa-solid w-4 text-center ${canvasLight ? 'fa-sun' : 'fa-moon'}`}></i>
-            {canvasLight ? 'Lys flate' : 'Mørk flate'}
+            Generer bord-struktur
           </button>
+        </Panel>
 
-          <button className="btn btn-xs w-full justify-start btn-outline border-slate-600 text-slate-300 hover:bg-slate-800 gap-2" onClick={centerDesks}>
-            <i className="fa-solid w-4 text-center fa-arrows-to-dot"></i> Sentrer bord
-          </button>
-
-          <button className="btn btn-xs w-full justify-start btn-outline border-slate-600 text-slate-300 hover:bg-slate-800 gap-2" onClick={flipRoom}>
-            <i className="fa-solid w-4 text-center fa-rotate-left"></i> Flipp 1:1 (180°)
-          </button>
-        </div>
-      </details>
-
-      {/* Oppsett & Generering (Collapse) */}
-      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
-        <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
-          <i className="fa-solid fa-table-cells text-cyan-400 mr-1.5"></i> Autogenerering
-        </summary>
-        <div className="collapse-content flex flex-col gap-3 pb-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-extrabold uppercase text-slate-300 px-1">Mønster</label>
-              <select className="select select-xs select-bordered bg-base-200 border-slate-600 text-white font-bold" value={genStructure} onChange={e => setGenStructure(e.target.value)}>
-                <option value="2-2">2 - 2</option>
-                <option value="2-2-2">2 - 2 - 2</option>
-                <option value="2-3-2">2 - 3 - 2</option>
-                <option value="3-3-3">3 - 3 - 3</option>
-                <option value="4-2-4">4 - 2 - 4</option>
-                <option value="4-4">4 - 4</option>
-                <option value="1-1-1-1-1">Eksamen (1 og 1)</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-extrabold uppercase text-slate-300 px-1">Rader</label>
-              <input type="number" className="input input-xs input-bordered bg-base-200 border-slate-600 text-white font-bold text-center" value={genRows} onChange={e => setGenRows(Number(e.target.value))} min="1" max="10" />
-            </div>
+        <Panel icon="fa-solid fa-chair" iconColor="text-amber-400" title="Legg til bord" open>
+          <span className={subLabelCls}>Antall plasser</span>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[1, 2, 3, 4].map(n => (
+              <button key={n} className={capBtnCls} onClick={() => addDesk(n)}>{n}</button>
+            ))}
           </div>
-          <button className="btn btn-xs btn-primary font-extrabold w-full" onClick={generateStructure}>Generer bord-struktur</button>
-        </div>
-      </details>
+        </Panel>
 
-      {/* Legg til Bord (Collapse) */}
-      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open>
-        <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
-          <i className="fa-solid fa-chair text-amber-400 mr-1.5"></i> Legg til bord
-        </summary>
-        <div className="collapse-content flex flex-col gap-2 pb-3">
-          <span className="text-[10px] font-bold uppercase text-slate-400 px-1">Antall plasser</span>
-          <div className="grid grid-cols-4 gap-1">
-            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(1)}>1</button>
-            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(2)}>2</button>
-            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(3)}>3</button>
-            <button className="btn btn-xs bg-indigo-600 hover:bg-indigo-700 text-white border-none font-extrabold" onClick={() => addDesk(4)}>4</button>
-          </div>
-        </div>
-      </details>
-
-      {/* Valgte Bord (Collapse) - Kun åpen hvis bord er valgt */}
-      <details className="collapse collapse-arrow bg-surface-field border border-slate-700 shadow-inner rounded-xl overflow-visible" open={selectedDesksCount > 0}>
-        <summary className="collapse-title text-xs font-bold text-slate-200 min-h-0 py-3">
-          <i className="fa-solid fa-pen-to-square text-fuchsia-400 mr-1.5"></i> Rediger valgte ({selectedDesksCount})
-        </summary>
-        <div className="collapse-content flex flex-col gap-3 pb-3">
-          
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold uppercase text-slate-400">Antall plasser per bord</span>
-            <div className="grid grid-cols-4 gap-1">
-              <button className="btn btn-xs btn-outline border-slate-600 text-[#34d399] font-extrabold hover:bg-emerald-950/60" onClick={() => setDeskCapacity(1)} disabled={selectedDesksCount === 0}>1</button>
-              <button className="btn btn-xs btn-outline border-slate-600 text-cyan-300 font-extrabold hover:bg-cyan-950/60" onClick={() => setDeskCapacity(2)} disabled={selectedDesksCount === 0}>2</button>
-              <button className="btn btn-xs btn-outline border-slate-600 text-indigo-300 font-extrabold hover:bg-indigo-950/60" onClick={() => setDeskCapacity(3)} disabled={selectedDesksCount === 0}>3</button>
-              <button className="btn btn-xs btn-outline border-slate-600 text-purple-300 font-extrabold hover:bg-purple-950/60" onClick={() => setDeskCapacity(4)} disabled={selectedDesksCount === 0}>4</button>
-            </div>
+        <Panel
+          icon="fa-solid fa-pen-to-square"
+          iconColor="text-fuchsia-400"
+          title={`Rediger valgte (${selectedDesksCount})`}
+          open={selectedDesksCount > 0}
+        >
+          <span className={subLabelCls}>Plasser per bord</span>
+          <div className="grid grid-cols-4 gap-1.5">
+            {[1, 2, 3, 4].map(n => (
+              <button
+                key={n}
+                className={capBtnCls}
+                disabled={selectedDesksCount === 0}
+                onClick={() => setDeskCapacity(n)}
+              >
+                {n}
+              </button>
+            ))}
           </div>
 
-          <div className="flex flex-col gap-1.5 mt-2">
-            <span className="text-[10px] font-bold uppercase text-slate-400">Sone-tildeling</span>
-            <div className="flex flex-col gap-1.5">
-              <button className="btn btn-xs btn-outline border-slate-600 text-yellow-300 font-semibold hover:bg-slate-800 gap-2 justify-start" onClick={() => toggleZoneOnSelected('window')} disabled={selectedDesksCount === 0}>
-                <i className="fa-solid w-4 text-center fa-sun"></i> Vindurekke
-              </button>
-              <button className="btn btn-xs btn-outline border-slate-600 text-amber-300 font-semibold hover:bg-slate-800 gap-2 justify-start" onClick={() => toggleZoneOnSelected('door')} disabled={selectedDesksCount === 0}>
-                <i className="fa-solid w-4 text-center fa-door-open"></i> Dørsone
-              </button>
-              <button className="btn btn-xs btn-outline border-slate-600 text-emerald-300 font-semibold hover:bg-slate-800 gap-2 justify-start" onClick={() => toggleZoneOnSelected('front')} disabled={selectedDesksCount === 0}>
-                <i className="fa-solid w-4 text-center fa-location-dot"></i> Fremste rad
-              </button>
-              <button className="btn btn-xs btn-outline border-slate-600 text-purple-300 font-semibold hover:bg-slate-800 gap-2 justify-start" onClick={() => toggleZoneOnSelected('back')} disabled={selectedDesksCount === 0}>
-                <i className="fa-solid w-4 text-center fa-arrow-down"></i> Bakerste rad
-              </button>
-              <button className="btn btn-xs btn-outline border-slate-600 text-cyan-300 font-semibold hover:bg-slate-800 gap-2 justify-start" onClick={() => toggleZoneOnSelected('center')} disabled={selectedDesksCount === 0}>
-                <i className="fa-solid w-4 text-center fa-align-center"></i> Midtsone
-              </button>
-              <button className="btn btn-xs btn-outline border-red-900/60 text-red-300 font-semibold hover:bg-red-950/60 gap-2 justify-start mt-1" onClick={clearAllZones}>
-                <i className="fa-solid w-4 text-center fa-eraser"></i> Fjern alle soner
-              </button>
-            </div>
-          </div>
-
-        </div>
-      </details>
-
-      <div className="mt-auto pt-4 flex flex-col gap-2 w-full">
-        <button className="btn btn-xs btn-error hover:bg-red-700/80 font-bold opacity-80" onClick={clearDesks}>Tøm hele rommet</button>
+          <span className={`${subLabelCls} pt-2`}>Sone-tildeling</span>
+          <ActionRow icon="fa-solid fa-sun" iconColor="text-yellow-300" label="Vindurekke" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('window')} />
+          <ActionRow icon="fa-solid fa-door-open" iconColor="text-amber-300" label="Dørsone" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('door')} />
+          <ActionRow icon="fa-solid fa-location-dot" iconColor="text-emerald-300" label="Fremste rad" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('front')} />
+          <ActionRow icon="fa-solid fa-arrow-down" iconColor="text-purple-300" label="Bakerste rad" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('back')} />
+          <ActionRow icon="fa-solid fa-align-center" iconColor="text-cyan-300" label="Midtsone" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('center')} />
+          <ActionRow icon="fa-solid fa-eraser" iconColor="text-rose-300" label="Fjern alle soner" onClick={clearAllZones} />
+        </Panel>
       </div>
 
-    </div>
+      {/* Pinnet bunn – alltid synlig, konkurrerer ikke med scroll-området over. */}
+      <div className="flex-shrink-0 min-w-[16rem] border-t border-slate-800 p-3">
+        <button
+          className="w-full h-8 rounded-md border border-rose-500/30 text-rose-300 hover:bg-rose-950/40 hover:text-rose-200 text-xs font-semibold transition-colors"
+          onClick={clearDesks}
+        >
+          <i className="fa-solid fa-trash mr-1.5"></i> Tøm hele rommet
+        </button>
+      </div>
+    </>
   );
 }

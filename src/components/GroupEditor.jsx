@@ -18,6 +18,9 @@ export default function GroupEditor({ onBack, initialId }) {
   const [requireLeaders, setRequireLeaders] = useState(false);
   const [leaderIds, setLeaderIds] = useState([]);
   const [lockedIds, setLockedIds] = useState([]);
+  // Elever holdt utenfor fordelingen (fravær/sykdom): ikke med i grupper, og
+  // ignorert av "Generer på nytt" / balansering. Ligger i egen "Ikke med"-sone.
+  const [excludedIds, setExcludedIds] = useState([]);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, studentId, groupIdx }
   const [activeDragId, setActiveDragId] = useState(null);
   const [studentsById, setStudentsById] = useState({});
@@ -76,6 +79,7 @@ export default function GroupEditor({ onBack, initialId }) {
       setRequireLeaders(!!assignment.require_leaders);
       try { setLeaderIds(JSON.parse(assignment.leader_ids || '[]')); } catch (e) { setLeaderIds([]); }
       try { setLockedIds(JSON.parse(assignment.locked_ids || '[]')); } catch (e) { setLockedIds([]); }
+      try { setExcludedIds(JSON.parse(assignment.excluded_ids || '[]')); } catch (e) { setExcludedIds([]); }
       setStudentsById(byId);
       setAllStudentIds(students.map(s => s.id));
       setConstraints(mappedConstraints);
@@ -105,13 +109,13 @@ export default function GroupEditor({ onBack, initialId }) {
         })
         .filter(Boolean);
       const result = generateGroups({
-        studentIds: allStudentIds,
+        studentIds: allStudentIds.filter(id => !excludedIds.includes(id)),
         studentsById,
         numGroups: groups.length,
         constraints,
         useConstraints,
         lockedPlacements,
-        leaderIds,
+        leaderIds: leaderIds.filter(id => !excludedIds.includes(id)),
         requireLeaders,
         recentPairs,
       });
@@ -158,6 +162,35 @@ export default function GroupEditor({ onBack, initialId }) {
   const toggleLock = (studentId) => {
     setLockedIds(prev => prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]);
     setDirty(true);
+  };
+
+  // Ta en elev ut av fordelingen: fjern fra gruppa si (og som låst), legg i
+  // "Ikke med". Beholdes som eventuell leder, så statusen er der om de tas med igjen.
+  const excludeStudent = (studentId) => {
+    setGroups(prev => prev.map(g => g.filter(id => id !== studentId)));
+    setLockedIds(prev => prev.filter(id => id !== studentId));
+    setExcludedIds(prev => prev.includes(studentId) ? prev : [...prev, studentId]);
+    setDirty(true);
+  };
+
+  // Ta en elev tilbake i fordelingen. Uten mål-gruppe havner de i den minste
+  // gruppa, så fordelingen holder seg jevn.
+  const includeStudent = (studentId, targetGroupIdx = null) => {
+    setExcludedIds(prev => prev.filter(id => id !== studentId));
+    setGroups(prev => {
+      if (prev.some(g => g.includes(studentId))) return prev;
+      const idx = (targetGroupIdx != null && targetGroupIdx >= 0 && targetGroupIdx < prev.length)
+        ? targetGroupIdx
+        : prev.reduce((minI, g, i, arr) => g.length < arr[minI].length ? i : minI, 0);
+      if (prev.length === 0) return prev;
+      return prev.map((g, i) => i === idx ? [...g, studentId] : g);
+    });
+    setDirty(true);
+  };
+
+  const toggleExcluded = (studentId) => {
+    if (excludedIds.includes(studentId)) includeStudent(studentId);
+    else excludeStudent(studentId);
   };
 
   const setGroupLeader = (studentId, groupIdx) => {
@@ -209,17 +242,32 @@ export default function GroupEditor({ onBack, initialId }) {
     setActiveDragId(null);
     const { active, over } = event;
     if (!over) return;
+    const sid = active.id;
+
+    // Sluppet i "Ikke med"-sonen → hold eleven utenfor fordelingen.
+    if (over.id === 'excluded') {
+      if (!excludedIds.includes(sid)) excludeStudent(sid);
+      return;
+    }
+
     const toIdx = Number(String(over.id).slice('group-'.length));
-    const fromIdx = groups.findIndex(g => g.includes(active.id));
-    if (fromIdx === -1 || fromIdx === toIdx) return;
-    moveStudent(active.id, fromIdx, toIdx);
+    if (Number.isNaN(toIdx)) return;
+    const fromIdx = groups.findIndex(g => g.includes(sid));
+
+    // Kom fra "Ikke med" (ikke i noen gruppe) → ta med igjen i mål-gruppa.
+    if (fromIdx === -1) {
+      if (excludedIds.includes(sid)) includeStudent(sid, toIdx);
+      return;
+    }
+    if (fromIdx === toIdx) return;
+    moveStudent(sid, fromIdx, toIdx);
   };
 
   const latestGroupDataRef = useRef({});
   useEffect(() => {
     latestGroupDataRef.current = {
       assignmentId, name, classId, useConstraints, avoidLastN, requireLeaders,
-      leaderIds, lockedIds, useCustomNames, groups, groupNames, studentsById, dirty
+      leaderIds, lockedIds, excludedIds, useCustomNames, groups, groupNames, studentsById, dirty
     };
   });
 
@@ -242,6 +290,7 @@ export default function GroupEditor({ onBack, initialId }) {
           requireLeaders: data.requireLeaders,
           leaderIds: data.leaderIds,
           lockedIds: data.lockedIds,
+          excludedIds: data.excludedIds,
           useCustomNames: data.useCustomNames,
           groups: groupsPayload,
         }).catch(() => {});
@@ -251,7 +300,11 @@ export default function GroupEditor({ onBack, initialId }) {
     };
   }, []);
 
-  const handleSave = async () => {
+  // `notify` bekrefter en vellykket lagring med én toast. Autolagringen og det
+  // manuelle "Lagre"-trykket deler samme toast-key, så det blir ÉN "Lagret."-
+  // toast som friskes opp – ikke en stabel med bokser i hjørnet ved hver lille
+  // endring. "Gå tilbake" lagrer stille. Feil vises alltid.
+  const handleSave = async ({ notify = false } = {}) => {
     if (!assignmentId) return;
     try {
       const groupsPayload = groups.map((studentIds, i) => ({
@@ -261,24 +314,24 @@ export default function GroupEditor({ onBack, initialId }) {
       await window.api.saveGroupAssignment({
         id: assignmentId, name: name.trim() || 'Uten navn', classId,
         sourceSeatingId: null, useConstraints, avoidLastN, requireLeaders, leaderIds, lockedIds,
-        useCustomNames, groups: groupsPayload,
+        excludedIds, useCustomNames, groups: groupsPayload,
       });
       const pairs = buildGroupPairs(groups, studentsById);
       await window.api.saveGroupHistory({ classId, assignmentId, pairs });
       setDirty(false);
-      showToast('Lagret.', 'success');
+      if (notify) showToast('Lagret.', 'success', { key: 'group-save' });
     } catch (e) {
-      showToast('Kunne ikke lagre.', 'error');
+      showToast('Kunne ikke lagre.', 'error', { key: 'group-save' });
     }
   };
 
-  // Autolagring: lagre stille et lite øyeblikk etter siste endring, i stedet for å kreve manuelt trykk.
+  // Autolagring: lagre et lite øyeblikk etter siste endring, i stedet for å kreve manuelt trykk.
   useEffect(() => {
     if (!dirty || !assignmentId || loading) return;
-    const timer = setTimeout(() => { handleSave(); }, 1200);
+    const timer = setTimeout(() => { handleSave({ notify: true }); }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, name, groups, groupNames, useCustomNames, leaderIds, lockedIds, useConstraints, avoidLastN, requireLeaders]);
+  }, [dirty, name, groups, groupNames, useCustomNames, leaderIds, lockedIds, excludedIds, useConstraints, avoidLastN, requireLeaders]);
 
   const handleBack = async () => {
     if (dirty) {
@@ -351,7 +404,7 @@ export default function GroupEditor({ onBack, initialId }) {
             <button className="btn btn-sm btn-ghost text-slate-400 hover:text-white gap-2" onClick={() => setShowPrintPreview(true)}>
               <i className="fa-solid fa-print"></i> Skriv ut / PDF
             </button>
-            <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={handleSave}>
+            <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={() => handleSave({ notify: true })}>
               <i className="fa-solid fa-floppy-disk"></i> Lagre
             </button>
             <button className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs" onClick={() => document.getElementById('modal_delete_group_assignment')?.showModal()}>
@@ -425,7 +478,7 @@ export default function GroupEditor({ onBack, initialId }) {
                     {studentIds.length === 0 && (
                       <p className="text-xs text-slate-500 italic text-center py-3">Ingen elever</p>
                     )}
-                    {studentIds.map(sid => {
+                    {studentIds.filter(sid => !excludedIds.includes(sid)).map(sid => {
                       const student = studentsById[sid];
                       if (!student) return null;
                       return (
@@ -444,6 +497,13 @@ export default function GroupEditor({ onBack, initialId }) {
               );
             })}
           </div>
+
+          <ExcludedZone
+            studentIds={excludedIds}
+            studentsById={studentsById}
+            onContextMenu={(e, sid) => handleStudentContextMenu(e, sid, null)}
+            onIncludeAll={() => excludedIds.forEach(id => includeStudent(id))}
+          />
         </div>
         <DragOverlay>
           {activeDragId ? (
@@ -460,9 +520,11 @@ export default function GroupEditor({ onBack, initialId }) {
         studentsById={studentsById}
         leaderIds={leaderIds}
         lockedIds={lockedIds}
+        excludedIds={excludedIds}
         setGroupLeader={setGroupLeader}
         removeGroupLeader={removeGroupLeader}
         toggleLock={toggleLock}
+        toggleExcluded={toggleExcluded}
         setContextMenu={setContextMenu}
       />
 
@@ -532,6 +594,82 @@ function GroupPanel({ idx, color, children }) {
       className={`bg-base-200 border rounded-2xl overflow-hidden flex flex-col transition-colors ${isOver ? 'border-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'border-slate-800'}`}
     >
       {children}
+    </div>
+  );
+}
+
+/** "Ikke med i fordelingen"-sonen: dra elever hit (eller høyreklikk → Sett som
+ *  fraværende) for å holde dem utenfor generering/balansering. Kan felles
+ *  sammen som en skuff så elevnavnene ikke vises (f.eks. på prosjektor). Alltid
+ *  rendret – også sammenfelt er den et gyldig slippmål. Åpen/lukket huskes. */
+function ExcludedZone({ studentIds, studentsById, onContextMenu, onIncludeAll }) {
+  const { setNodeRef, isOver } = useDroppable({ id: 'excluded' });
+  const has = studentIds.length > 0;
+
+  const [open, setOpen] = useState(() => {
+    try { return localStorage.getItem('groupEditor_excludedOpen') === 'true'; } catch (e) { return false; }
+  });
+  const toggle = () => setOpen(prev => {
+    const next = !prev;
+    try { localStorage.setItem('groupEditor_excludedOpen', String(next)); } catch (e) {}
+    return next;
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`mt-6 rounded-2xl border border-dashed transition-colors ${
+        isOver ? 'border-amber-400 bg-amber-400/10' : has ? 'border-slate-700 bg-base-200/60' : 'border-slate-800 bg-transparent'
+      }`}
+    >
+      <div className={`px-4 py-2.5 flex items-center justify-between gap-2 ${open ? 'border-b border-slate-800/70' : ''}`}>
+        <button
+          type="button"
+          onClick={toggle}
+          className="flex items-center gap-2 font-bold text-sm text-slate-300 hover:text-white transition-colors min-w-0"
+          title={open ? 'Skjul navnene' : 'Vis navnene'}
+        >
+          <i className={`fa-solid fa-chevron-right text-[10px] text-slate-500 transition-transform ${open ? 'rotate-90' : ''}`}></i>
+          <i className="fa-solid fa-user-clock text-amber-400"></i>
+          <span className="truncate">Ikke med i fordelingen</span>
+          <span className="text-xs font-normal text-slate-500">({studentIds.length})</span>
+        </button>
+        {has && (
+          <button
+            className="btn btn-xs btn-ghost text-slate-400 hover:text-white gap-1 flex-shrink-0"
+            onClick={onIncludeAll}
+            title="Ta alle med i fordelingen igjen"
+          >
+            <i className="fa-solid fa-rotate-left"></i> Ta med alle
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="p-3">
+          {has ? (
+            <div className="flex flex-wrap gap-1.5">
+              {studentIds.map(sid => {
+                const student = studentsById[sid];
+                if (!student) return null;
+                return (
+                  <StudentCard
+                    key={sid}
+                    sid={sid}
+                    student={student}
+                    isLeader={false}
+                    isLocked={false}
+                    onContextMenu={(e) => onContextMenu(e, sid)}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500 italic text-center py-2">
+              Dra elever hit – eller høyreklikk en elev og velg «Sett som fraværende» – for å holde dem utenfor når du genererer eller jevner ut grupper.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

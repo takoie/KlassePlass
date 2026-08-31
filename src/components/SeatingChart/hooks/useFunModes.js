@@ -57,7 +57,10 @@ export function useFunModes({
   };
 
   const handleAutoFill = () => {
-    const seatSlots = buildOpenSeatSlots();
+    // "Plasser alle" fyller BARE ledige plasser med elevene i skuffen - elever
+    // som allerede sitter et sted skal ikke røres (i motsetning til "Randomiser",
+    // som stokker om på alle). Derfor kun tomme, åpne plasser her.
+    const seatSlots = buildOpenSeatSlots().filter(slot => !placements[slot.slotKey]);
     if (seatSlots.length === 0) return;
 
     const basePlacements = { ...placements };

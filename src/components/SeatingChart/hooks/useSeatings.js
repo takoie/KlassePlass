@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 
+// Gruppenøkkelen for en seating-rad. Etter v12-backfyllingen har hver rad en
+// ikke-tom chart_group; fallbacken ("c{class_id}") dekker bare kort tid før
+// backfyllingen har kjørt, og importerte rader uten verdi.
+const groupOf = (s) => s?.chart_group || (s?.class_id != null ? `c${s.class_id}` : null);
+
 const normalizeStudent = (s) => {
   if (typeof s === 'string') {
     return { id: `stu-${Math.random().toString(36).substr(2, 9)}`, name: s, note: '' };
@@ -20,6 +25,11 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
   const [selectedSeatingId, setSelectedSeatingId] = useState('');
+  // Hvilket klassekart (sett av periode-rader) den aktive perioden tilhører.
+  // Alle "perioder for dette kartet"-oppslag (nedtrekk, elevhistorikk, sletting)
+  // filtreres på denne, IKKE på class_id — ellers blandes to bevisst adskilte
+  // klassekart på samme klasse sammen. Se schema::backfill_chart_group.
+  const [chartGroup, setChartGroup] = useState(null);
 
   const [chartName, setChartName] = useState('');
   const [chartComment, setChartComment] = useState('Uke 1-4');
@@ -49,7 +59,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   const saveTimeoutRef = useRef(null);
   const isInitialLoadRef = useRef(true);
   const latestSeatingDataRef = useRef({
-    selectedSeatingId, selectedClass, selectedRoom, chartName, chartComment,
+    selectedSeatingId, selectedClass, selectedRoom, chartGroup, chartName, chartComment,
     placements, lockedSeats, unusedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
   });
   const pendingSaveRef = useRef(false);
@@ -65,7 +75,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     return () => {
       if (pendingSaveRef.current && latestSeatingDataRef.current) {
         const {
-          selectedSeatingId: sid, selectedClass: sc, selectedRoom: sr,
+          selectedSeatingId: sid, selectedClass: sc, selectedRoom: sr, chartGroup: cg,
           chartName: cn, chartComment: cc, placements: pl, lockedSeats: ls, unusedSeats: us,
           studentRoles: sRoles, studentNotes: sNotes, groupOverrides: go,
           desks: ds, boardObj: bo
@@ -87,7 +97,8 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
             classId: Number(sc),
             roomId: Number(sr),
             placements: savePayload,
-            comment: cc
+            comment: cc,
+            chartGroup: cg || undefined
           }).catch(() => {});
         }
       }
@@ -125,6 +136,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
           setSelectedSeatingId(seating.id);
           setSelectedClass(seating.class_id);
           setSelectedRoom(seating.room_id);
+          setChartGroup(groupOf(seating));
           setChartName(seating.name);
           setChartComment(seating.comment || 'Uke 1-4');
 
@@ -312,7 +324,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   const getRecentPartners = (studentId, maxCount = 2) => {
     if (!studentId) return [];
     const pastCharts = seatings
-      .filter(s => s.class_id === Number(selectedClass) && s.id !== Number(selectedSeatingId))
+      .filter(s => groupOf(s) === chartGroup && s.id !== Number(selectedSeatingId))
       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     const foundIds = [];
@@ -350,7 +362,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     }
 
     const pastCharts = seatings
-       .filter(s => s.class_id === Number(selectedClass) && s.id !== Number(selectedSeatingId))
+       .filter(s => groupOf(s) === chartGroup && s.id !== Number(selectedSeatingId))
        .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
        .slice(0, 5);
 
@@ -376,13 +388,14 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         }
     });
     setHistoryConflicts(conflicts);
-  }, [showHistory, placements, selectedClass, selectedSeatingId, seatings, desks]);
+  }, [showHistory, placements, selectedClass, selectedSeatingId, seatings, desks, chartGroup]);
 
   const handleSelectSeating = async (id, seatingsList = seatings) => {
     isInitialLoadRef.current = true;
     const seating = seatingsList.find(s => s.id === Number(id));
     if (!seating) {
       setSelectedSeatingId('');
+      setChartGroup(null);
       setChartName('Nytt klassekart');
       setChartComment('Uke 1-4');
       setPlacements({});
@@ -395,6 +408,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       setSelectedSeatingId(id);
       setSelectedClass(seating.class_id);
       setSelectedRoom(seating.room_id);
+      setChartGroup(groupOf(seating));
       setChartName(seating.name);
       setChartComment(seating.comment || 'Uke 1-4');
 
@@ -519,13 +533,20 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         classId: Number(selectedClass),
         roomId: Number(selectedRoom),
         placements: savePayload,
-        comment: chartComment
+        comment: chartComment,
+        // Utelates ved aller første lagring av et blankt utkast — backend
+        // tildeler da "s{id}". Ellers holder vi raden i samme gruppe.
+        chartGroup: chartGroup || undefined
       });
       if (!selectedSeatingId && result.lastID) {
         setSelectedSeatingId(result.lastID);
       }
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
+      if (!chartGroup && result.lastID) {
+        const saved = newSeatings.find(s => s.id === Number(result.lastID));
+        if (saved) setChartGroup(groupOf(saved));
+      }
       setSaveState('saved');
     } catch (e) {}
   };
@@ -541,8 +562,9 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     const nextEnd = nextStart + weeks - 1;
 
     const newComment = `Uke ${nextStart}-${nextEnd}`;
-    // Navnet er gitt av klassen — ingen fritekst å taste inn per periode.
-    const newName = classes.find(c => c.id === Number(selectedClass))?.name || chartName;
+    // Behold kartets navn på tvers av perioder, slik at et kart som ble gitt et
+    // eget navn ikke stille bytter til klassenavnet ved hver "Ny periode".
+    const newName = chartName?.trim() || classes.find(c => c.id === Number(selectedClass))?.name || 'Klassekart';
 
     try {
       const savePayload = JSON.stringify({
@@ -564,7 +586,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         classId: Number(selectedClass),
         roomId: Number(selectedRoom),
         placements: savePayload,
-        comment: newComment
+        comment: newComment,
+        // Ny periode av SAMME klassekart — arver gruppen så historikk/nedtrekk
+        // henger sammen. Faller tilbake til class-gruppa for eldre kart.
+        chartGroup: chartGroup || `c${Number(selectedClass)}`
       });
 
       const newSeatings = await window.api.getSeatings();
@@ -605,14 +630,14 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
 
-      const sameClassSeatings = newSeatings.filter(s => s.class_id === Number(selectedClass));
-      if (sameClassSeatings.length > 0) {
+      const sameChartSeatings = newSeatings.filter(s => groupOf(s) === chartGroup);
+      if (sameChartSeatings.length > 0) {
         // Alltid gjennom handleSelectSeating (aldri hopp over den) — den er stedet som
         // friskt regner ut allStudents/unplacedStudents fra klasselisten. Hopper vi over
         // den forblir "uplassert"-lista den gamle, nesten tomme verdien fra det slettede
         // kartet i stedet for full klasseliste, og elevene så ut som de forsvant fra
         // administrer-skuffen.
-        handleSelectSeating(sameClassSeatings[0].id, newSeatings);
+        handleSelectSeating(sameChartSeatings[0].id, newSeatings);
       } else if (onBack) {
         // Ingen perioder igjen for denne klassen — i stedet for å late som ingenting
         // skjedde ved å bygge et blankt, ulagret utkast-kart i samme visning (periode-
@@ -690,6 +715,21 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     });
   };
 
+  // Fjerner "skjul plass"-merkingen for alle seter på ett bord — angre-veien når
+  // et bord har kollapsede plasser og det ikke lenger finnes et sete å høyreklikke.
+  const restoreDeskSeats = (deskId) => {
+    if (deskId == null) return;
+    setUnusedSeats(prev => {
+      const next = {};
+      let changed = false;
+      for (const key of Object.keys(prev)) {
+        if (key.startsWith(`${deskId}_seat_`)) { changed = true; continue; }
+        next[key] = prev[key];
+      }
+      return changed ? next : prev;
+    });
+  };
+
   // Henter romets NÅVÆRENDE oppsett og erstatter bord-snapshotet i dette klassekartet.
   // Bord-IDer eller seter som ikke lenger finnes i rommet mister plasseringen sin (studenten havner
   // i "uplassert") — det er forventet og er selve poenget: dette er en bevisst handling,
@@ -747,12 +787,34 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     document.getElementById('modal_sync_room')?.close();
   };
 
+  // Løsriver den aktive perioden fra klassekartet den deler historikk/nedtrekk
+  // med — den blir sitt eget kart ("s{id}"). Brukes fra rediger-modalen når to
+  // bevisst adskilte kart har havnet i samme gruppe (typisk gamle kart der
+  // v12-backfyllingen ikke kunne skille dem trygt på navn).
+  const splitToNewChart = async () => {
+    if (!selectedSeatingId) return;
+    const newGroup = `s${selectedSeatingId}`;
+    try {
+      await window.api.setSeatingChartGroup(selectedSeatingId, newGroup);
+      const ns = await window.api.getSeatings();
+      setSeatings(ns);
+      setChartGroup(newGroup);
+      setSaveState('saved');
+      document.getElementById('modal_edit_period')?.close();
+    } catch (e) {}
+  };
+
+  // Antall perioder som deler kart med den aktive — > 1 betyr at "skill ut"
+  // faktisk har en effekt (og at "Slett" gjelder bare denne perioden).
+  const chartPeriodCount = seatings.filter(s => groupOf(s) === chartGroup).length;
+
   return {
     classes, rooms, seatings,
+    chartGroup, splitToNewChart, chartPeriodCount,
     selectedClass, setSelectedClass, selectedRoom, setSelectedRoom, selectedSeatingId,
     chartName, setChartName, chartComment, setChartComment, saveState,
     placements, setPlacements, lockedSeats, setLockedSeats,
-    unusedSeats, setUnusedSeats, toggleSeatUnused,
+    unusedSeats, setUnusedSeats, toggleSeatUnused, restoreDeskSeats,
     studentRoles, setStudentRoles, studentNotes, setStudentNotes, classRules,
     allStudents, unplacedStudents, setUnplacedStudents,
     showHistory, setShowHistory, historyConflicts,

@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 
 /** Høyreklikk-meny på et bord: lås/lås opp (bord eller enkeltelev), sett/fjern makkergruppe, sist sammen med (per elev). */
-export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats, toggleSeatUnused, toggleLockDesk, toggleLockStudent, handleUnseatStudent, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS, getRecentPartners }) {
+export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats, toggleSeatUnused, restoreDeskSeats, toggleLockDesk, toggleLockStudent, handleUnseatStudent, setContextMenu, handleSetGroupContextMenu, GROUP_COLORS, getRecentPartners }) {
   const menuRef = useRef(null);
   const [pos, setPos] = useState(null);
 
@@ -24,6 +24,9 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
   const isStudentLocked = contextMenu.slotKey ? !!lockedSeats[contextMenu.slotKey] : false;
   const isEmptySeat = !!contextMenu.slotKey && !contextMenu.student;
   const isSeatUnused = isEmptySeat && !!unusedSeats?.[contextMenu.slotKey];
+  const deskCap = contextMenu.desk.capacity || 1;
+  const hiddenSeatCount = Array.from({ length: deskCap }, (_, i) => `${contextMenu.desk.id}_seat_${i}`)
+    .filter((k) => unusedSeats?.[k]).length;
   const style = pos
     ? { left: pos.left, top: pos.top }
     : { left: contextMenu.x, top: contextMenu.y, visibility: 'hidden' };
@@ -88,8 +91,21 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
               setContextMenu(null);
             }}
           >
-            <i className={`fa-solid ${isSeatUnused ? 'fa-rotate-left text-emerald-400' : 'fa-ban text-amber-400'} w-4 text-center`}></i>
-            {isSeatUnused ? 'Fjern ubrukt-merking' : 'Merk som ubrukt'}
+            <i className={`fa-solid ${isSeatUnused ? 'fa-rotate-left text-emerald-400' : 'fa-eye-slash text-amber-400'} w-4 text-center`}></i>
+            {isSeatUnused ? 'Vis denne plassen' : 'Skjul denne plassen'}
+          </button>
+        )}
+
+        {!contextMenu.slotKey && hiddenSeatCount > 0 && restoreDeskSeats && (
+          <button
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
+            onClick={() => {
+              restoreDeskSeats(contextMenu.desk.id);
+              setContextMenu(null);
+            }}
+          >
+            <i className="fa-solid fa-eye text-emerald-400 w-4 text-center"></i>
+            Vis skjulte plasser ({hiddenSeatCount})
           </button>
         )}
 

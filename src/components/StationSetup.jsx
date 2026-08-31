@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { normalizeStudents } from '../shared/utils';
 import { generateGroups } from '../shared/groupRandomizer';
+import Select from './Select';
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDraggable, useDroppable } from '@dnd-kit/core';
 import PrintPreviewModal from './Print/PrintPreviewModal';
 import { GROUP_COLORS } from './StationPresenter';
@@ -90,7 +91,6 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [nameDraft, setNameDraft] = useState('');
   const [classDraft, setClassDraft] = useState('');
   const nameModalInputRef = useRef(null);
-  const classSelectRef = useRef(null);
   const hasAutoOpenedNameModalRef = useRef(false);
 
   useEffect(() => { loadInitial(); }, [initialId]);
@@ -350,7 +350,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
       <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
+          <button className="btn btn-ghost btn-sm text-slate-400 hover:text-white gap-1" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake
           </button>
           <input
@@ -358,17 +358,17 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Navn på økt..."
-            className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-orange-400 px-3 h-8 rounded text-white w-40"
+            className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-orange-400 px-3 h-9 rounded text-white w-40"
           />
-          <select
-            ref={classSelectRef}
-            className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold"
+          <Select
+            size="sm"
+            className="w-44"
+            ariaLabel="Klasse"
+            placeholder="Velg klasse …"
             value={classId}
-            onChange={(e) => handleClassChange(e.target.value)}
-          >
-            <option value="">Velg klasse...</option>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+            onChange={handleClassChange}
+            options={classes.map(c => ({ value: c.id, label: c.name }))}
+          />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -574,16 +574,15 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
 
             <div>
               <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klasse</label>
-              <select
-                className="select select-bordered w-full bg-surface-field border-slate-700 text-white"
+              <Select
+                size="sm"
+                className="w-full"
+                ariaLabel="Klasse"
+                placeholder="Velg klasse …"
                 value={classDraft}
-                onChange={(e) => setClassDraft(e.target.value)}
-              >
-                <option value="">Velg klasse...</option>
-                {classes.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={setClassDraft}
+                options={classes.map(c => ({ value: c.id, label: c.name }))}
+              />
             </div>
           </div>
 

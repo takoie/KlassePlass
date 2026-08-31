@@ -14,7 +14,7 @@
 use rusqlite::Connection;
 use serde_json::{json, Value};
 
-pub const CURRENT_VERSION: i32 = 11;
+pub const CURRENT_VERSION: i32 = 13;
 
 /// Kjør alle migrasjoner mot en åpen rusqlite-connection.
 ///
@@ -174,6 +174,13 @@ pub fn run_migrations(conn: &Connection) -> rusqlite::Result<()> {
     // v11
     "ALTER TABLE group_assignments ADD COLUMN use_custom_names INTEGER DEFAULT 0",
     "ALTER TABLE group_assignment_groups ADD COLUMN group_name TEXT",
+    // v12 — grupperer periode-rader som hører til samme klassekart. NULL på
+    // eksisterende rader; fylles av backfill_chart_group under. Nye rader får
+    // verdi via save_seating_impl (INSERT-grenen).
+    "ALTER TABLE seatings ADD COLUMN chart_group TEXT",
+    // v13 — elever holdt utenfor gruppefordelingen (fravær/sykdom). Speiler
+    // locked_ids: JSON-array av student-IDer, default tom.
+    "ALTER TABLE group_assignments ADD COLUMN excluded_ids TEXT DEFAULT '[]'",
   ];
 
   for alter in alters {
@@ -233,6 +240,85 @@ pub fn migrate_room_layouts(conn: &Connection) -> rusqlite::Result<u32> {
       updates += 1;
     }
     // ikke-array (allerede objekt-format) — hopp over uten endring
+  }
+
+  Ok(updates)
+}
+
+/// Engangs data-migrasjon (ikke skjema): fyller `seatings.chart_group` for
+/// rader der den er NULL — dvs. alle klassekart opprettet før v12.
+///
+/// Bakgrunn: før denne kolonnen fantes tolket appen ALLE seating-rader for en
+/// klasse som perioder av det samme, ene klassekartet. To bevisst adskilte
+/// klassekart på samme klasse (f.eks. "Naturfag 1ST3" og "Klassefest") delte
+/// derfor periode-nedtrekk og elevhistorikk. `chart_group` skiller dem.
+///
+/// KONSERVATIV REGEL (holder eksisterende fler-periode-kjeder intakte):
+/// - Standard: hver gammel rad får `"c{class_id}"` — nøyaktig samme gruppering
+///   som dagens oppførsel (én gruppe per klasse).
+/// - Unntak: en rad får sin egen `"s{id}"`-gruppe KUN når navnet er et tydelig,
+///   bevisst valgt merkelapp: ikke-tomt, ulikt klassenavnet, og ikke delt av
+///   noen annen rad for samme klasse. Det fanger "jeg ga dette kartet et eget
+///   navn"-tilfellet uten å splitte kart som bare er forlenget med "Ny periode"
+///   (som alltid navnga den nye raden etter klassen).
+/// - Rader uten `class_id` isoleres alltid (`"s{id}"`).
+///
+/// Prefiksene `c`/`s` er kun for å unngå at en `class_id` og en `seating.id`
+/// med samme tallverdi kolliderer i samme navnrom — de bærer ingen annen logikk.
+///
+/// Returnerer antall rader som ble oppdatert.
+pub fn backfill_chart_group(conn: &Connection) -> rusqlite::Result<u32> {
+  let mut stmt = conn.prepare(
+    "SELECT s.id, s.class_id, s.name, c.name AS class_name \
+     FROM seatings s LEFT JOIN classes c ON s.class_id = c.id \
+     WHERE s.chart_group IS NULL",
+  )?;
+  let rows: Vec<(i64, Option<i64>, Option<String>, Option<String>)> = stmt
+    .query_map([], |row| {
+      Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+    })?
+    .collect::<Result<Vec<_>, _>>()?;
+
+  // Tell hvor mange rader per (class_id, name) — brukes for "ikke delt av noen
+  // annen rad"-sjekken.
+  let mut name_counts: std::collections::HashMap<(i64, String), u32> =
+    std::collections::HashMap::new();
+  for (_, class_id, name, _) in &rows {
+    if let (Some(cid), Some(nm)) = (class_id, name) {
+      let key = nm.trim().to_string();
+      if !key.is_empty() {
+        *name_counts.entry((*cid, key)).or_insert(0) += 1;
+      }
+    }
+  }
+
+  let mut updates = 0u32;
+  for (id, class_id, name, class_name) in &rows {
+    let group = match class_id {
+      None => format!("s{id}"),
+      Some(cid) => {
+        let name_trimmed = name.as_deref().unwrap_or("").trim().to_string();
+        let differs_from_class = match class_name {
+          Some(cn) => !name_trimmed.is_empty() && name_trimmed != cn.trim(),
+          None => !name_trimmed.is_empty(),
+        };
+        let unique = name_counts
+          .get(&(*cid, name_trimmed.clone()))
+          .copied()
+          .unwrap_or(0)
+          <= 1;
+        if differs_from_class && unique {
+          format!("s{id}")
+        } else {
+          format!("c{cid}")
+        }
+      }
+    };
+    conn.execute(
+      "UPDATE seatings SET chart_group = ?1 WHERE id = ?2",
+      rusqlite::params![group, id],
+    )?;
+    updates += 1;
   }
 
   Ok(updates)
@@ -353,7 +439,7 @@ mod tests {
         |row| row.get(0),
       )
       .unwrap();
-    assert_eq!(version, 11);
+    assert_eq!(version, CURRENT_VERSION);
   }
 
   #[test]
@@ -426,6 +512,61 @@ mod tests {
       })
       .unwrap();
     assert_eq!(layout_data, None);
+  }
+
+  #[test]
+  fn backfill_chart_group_groups_legacy_periods_but_splits_named_charts() {
+    let conn = Connection::open_in_memory().unwrap();
+    run_migrations(&conn).unwrap();
+
+    conn
+      .execute("INSERT INTO classes (name, students) VALUES ('7A', '[]')", [])
+      .unwrap();
+    let class_id: i64 = conn
+      .query_row("SELECT id FROM classes LIMIT 1", [], |r| r.get(0))
+      .unwrap();
+
+    // Ongoing chart: created "7A", extended twice via "Ny periode" (named after
+    // the class). All three must land in the SAME group (c{class_id}).
+    for comment in ["Uke 1-4", "Uke 5-8", "Uke 9-12"] {
+      conn
+        .execute(
+          "INSERT INTO seatings (name, class_id, room_id, placements, comment) VALUES ('7A', ?1, 1, '{}', ?2)",
+          rusqlite::params![class_id, comment],
+        )
+        .unwrap();
+    }
+    // A deliberately separate chart with its own distinct name -> own group.
+    conn
+      .execute(
+        "INSERT INTO seatings (name, class_id, room_id, placements, comment) VALUES ('Klassefest', ?1, 1, '{}', 'Uke 1-4')",
+        rusqlite::params![class_id],
+      )
+      .unwrap();
+    let fest_id = conn.last_insert_rowid();
+
+    let updated = backfill_chart_group(&conn).unwrap();
+    assert_eq!(updated, 4);
+
+    let groups: Vec<(String, Option<String>)> = {
+      let mut stmt = conn
+        .prepare("SELECT name, chart_group FROM seatings ORDER BY id")
+        .unwrap();
+      stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+    };
+
+    let class_group = format!("c{class_id}");
+    let ongoing: Vec<_> = groups.iter().filter(|(n, _)| n == "7A").collect();
+    assert!(ongoing.iter().all(|(_, g)| g.as_deref() == Some(class_group.as_str())));
+    let fest = groups.iter().find(|(n, _)| n == "Klassefest").unwrap();
+    assert_eq!(fest.1.as_deref(), Some(format!("s{fest_id}").as_str()));
+
+    // Idempotent: a second pass touches nothing (all rows now non-NULL).
+    assert_eq!(backfill_chart_group(&conn).unwrap(), 0);
   }
 
   #[test]

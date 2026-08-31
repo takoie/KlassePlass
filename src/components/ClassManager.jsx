@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from '../shared/utils';
+import Select from './Select';
 
 const normalizeStudent = (s) => {
   if (typeof s === 'string') {
@@ -269,24 +270,25 @@ export default function ClassManager({ onBack, initialId }) {
       <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           {onBack && (
-            <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
+            <button className="btn btn-ghost btn-sm text-slate-400 hover:text-white gap-1" onClick={onBack}>
               <i className="fa-solid fa-arrow-left"></i> Tilbake
             </button>
           )}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Klasse:</span>
-            <select 
-              className="select select-bordered select-xs bg-surface-field border-slate-700 text-white font-bold min-w-40"
+            <Select
+              size="sm"
+              className="min-w-40"
+              ariaLabel="Klasse"
               value={selectedClass?.id || ''}
-              onChange={(e) => {
-                const found = classes.find(c => c.id === Number(e.target.value));
+              onChange={(v) => {
+                const found = classes.find(c => c.id === Number(v));
                 if (found) handleSelectClass(found);
               }}
-            >
-              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+              options={classes.map(c => ({ value: c.id, label: c.name }))}
+            />
           </div>
-          <button className="btn btn-primary btn-xs gap-1" onClick={handleCreateNew}>
+          <button className="btn btn-primary btn-sm gap-1" onClick={handleCreateNew}>
             <i className="fa-solid fa-plus"></i> Ny klasse
           </button>
         </div>
@@ -421,18 +423,30 @@ export default function ClassManager({ onBack, initialId }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div>
                       <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Regel-type</label>
-                      <select className="select select-xs select-bordered bg-surface-field border-slate-700 text-white font-bold w-full" value={ruleType} onChange={e => { setRuleType(e.target.value); setSelectedRuleStudentIds([]); }}>
-                        {ruleOptions.map(opt => <option key={opt.type} value={opt.type}>{opt.label}</option>)}
-                      </select>
+                      <Select
+                        size="xs"
+                        className="w-full"
+                        ariaLabel="Regel-type"
+                        value={ruleType}
+                        onChange={(v) => { setRuleType(v); setSelectedRuleStudentIds([]); }}
+                        options={ruleOptions.map(opt => ({ value: opt.type, label: opt.label }))}
+                      />
                     </div>
 
                     <div>
                       <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Viktighetsgrad (prioritet)</label>
-                      <select className="select select-xs select-bordered bg-surface-field border-slate-700 text-white font-bold w-full" value={rulePriority} onChange={e => setRulePriority(e.target.value)}>
-                        <option value="critical">🔴 Kritisk (Må oppfylles)</option>
-                        <option value="important">🟡 Viktig (Bør oppfylles)</option>
-                        <option value="wish">🟢 Ønske (Om det går)</option>
-                      </select>
+                      <Select
+                        size="xs"
+                        className="w-full"
+                        ariaLabel="Viktighetsgrad"
+                        value={rulePriority}
+                        onChange={setRulePriority}
+                        options={[
+                          { value: 'critical', label: '🔴 Kritisk (Må oppfylles)' },
+                          { value: 'important', label: '🟡 Viktig (Bør oppfylles)' },
+                          { value: 'wish', label: '🟢 Ønske (Om det går)' },
+                        ]}
+                      />
                     </div>
                   </div>
 
@@ -532,15 +546,18 @@ export default function ClassManager({ onBack, initialId }) {
             </label>
             <label className="flex items-center gap-2 text-xs text-slate-300">
               Etternavn
-              <select
-                className="select select-bordered select-xs bg-surface-field border-slate-700 text-white"
+              <Select
+                size="xs"
+                className="w-44"
+                ariaLabel="Etternavn"
                 value={importLastNameMode}
-                onChange={(e) => setImportLastNameMode(e.target.value)}
-              >
-                <option value="keep">Behold fullt</option>
-                <option value="initial">Vis kun forbokstav</option>
-                <option value="remove">Fjern</option>
-              </select>
+                onChange={setImportLastNameMode}
+                options={[
+                  { value: 'keep', label: 'Behold fullt' },
+                  { value: 'initial', label: 'Vis kun forbokstav' },
+                  { value: 'remove', label: 'Fjern' },
+                ]}
+              />
             </label>
           </div>
           <div className="modal-action">

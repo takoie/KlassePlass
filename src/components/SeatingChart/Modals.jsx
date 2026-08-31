@@ -6,6 +6,7 @@ export default function Modals({
   chartName, handleDelete, isOnlyPeriod,
   editingPeriod, setEditingPeriod, handleSaveEditedPeriod,
   newPeriodWeeks, setNewPeriodWeeks, handleStartNewPeriod,
+  canSplitChart, splitToNewChart,
   syncFromRoom,
 }) {
   return (
@@ -78,6 +79,23 @@ export default function Modals({
               />
             </div>
           </div>
+
+          {canSplitChart && (
+            <div className="border-t border-slate-800 pt-3 mt-1">
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost border border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white gap-2"
+                onClick={splitToNewChart}
+              >
+                <i className="fa-solid fa-code-branch"></i> Skill ut som eget klassekart
+              </button>
+              <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                Løsriver denne perioden fra de andre periodene den deler periode-nedtrekk
+                og elevhistorikk med. Kan ikke angres automatisk.
+              </p>
+            </div>
+          )}
+
           <div className="modal-action">
             <form method="dialog">
               <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>

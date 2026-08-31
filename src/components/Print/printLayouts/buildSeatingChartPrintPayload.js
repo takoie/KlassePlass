@@ -24,11 +24,11 @@ const DEFAULT_ZONE_COLOR = '#555';
  * Tar de SAMME props som SeatingChartPrintContent mottar.
  */
 export function buildSeatingChartPrintPayload({
-  boardObj, desks, deskNumberMap, placements, getStudentByIdOrName,
+  boardObj, desks, deskNumberMap, placements, unusedSeats = {}, getStudentByIdOrName,
   groupColors, zoneMeta, groupOverrides, settings, chartName, periodText,
   roomZoom = 1, roomPan = { x: 0, y: 0 },
 }) {
-  const { showNumbers, showZones, showGroups, showColors, colorSeats } = settings;
+  const { showNumbers, showZones, showGroups, showColors, colorSeats, hideEmptyDesks } = settings;
   const offset = computeCenteringOffset(boardObj, desks);
 
   const centerX = 1100 / 2;
@@ -45,7 +45,22 @@ export function buildSeatingChartPrintPayload({
     const groupColor = (gId && showGroups) ? groupColors[(gId - 1) % groupColors.length] : null;
     const activeZones = showZones ? (d.zones || []) : [];
 
-    const seats = Array.from({ length: cap }).map((_, slotIdx) => {
+    // "Skjul denne plassen"-seter (tomme) kollapses: bordet krymper til gjenværende
+    // seter (capacity nedjusteres), men gruppefarge/border beholdes rundt dem.
+    // "Ledig" (ikke merket) beholdes for å vise hvor noen skal sitte.
+    // Kollaps kun når minst én plass blir igjen (ellers er det et vanlig tomt bord).
+    const allSlots = Array.from({ length: cap }, (_, i) => i);
+    const hasStudents = allSlots.some((i) => placements[`${d.id}_seat_${i}`]);
+    const visibleSlots = allSlots.filter(
+      (i) => !(unusedSeats[`${d.id}_seat_${i}`] && !placements[`${d.id}_seat_${i}`])
+    );
+    // "Skjul tomme bord": bord uten en eneste elev utelates helt.
+    if (hideEmptyDesks && !hasStudents) return null;
+    // Alle ledige plasser skjult + ingen elever = bordet utelates uansett.
+    if (visibleSlots.length === 0 && !hasStudents) return null;
+    const renderSlots = visibleSlots.length > 0 && visibleSlots.length < cap ? visibleSlots : allSlots;
+
+    const seats = renderSlots.map((slotIdx) => {
       const slotKey = `${d.id}_seat_${slotIdx}`;
       const studentVal = placements[slotKey];
       const studentObj = studentVal ? getStudentByIdOrName(studentVal) : null;
@@ -70,13 +85,13 @@ export function buildSeatingChartPrintPayload({
     return {
       x: pos.x,
       y: pos.y,
-      capacity: cap,
+      capacity: seats.length,
       borderColorHex: (showColors && groupColor) ? groupColor : DEFAULT_DESK_BORDER,
       fillColorHex: (showColors && groupColor && colorSeats) ? lightenHex(groupColor, 0.65) : null,
       seats,
       zoneChips,
     };
-  });
+  }).filter(Boolean);
 
   const boardPos = transformPos(boardObj.x, boardObj.y);
 

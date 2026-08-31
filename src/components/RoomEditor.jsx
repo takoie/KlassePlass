@@ -22,6 +22,7 @@ export default function RoomEditor({ onBack, initialId }) {
   const [showNumbers, setShowNumbers] = useState(true);
   const [showZones, setShowZones] = useState(false);
   const [showToolsDrawer, setShowToolsDrawer] = useState(true);
+  const [renameValue, setRenameValue] = useState('');
 
   const { scale, offset, containerRef, canvasRef } = useCanvasFit(showToolsDrawer);
 
@@ -88,7 +89,7 @@ export default function RoomEditor({ onBack, initialId }) {
   };
 
   const {
-    rooms, selectedRoom,
+    selectedRoom, roomName,
     newRoomModalName, setNewRoomModalName,
     selectedPreset, setSelectedPreset,
     isCreatingRoom, setIsCreatingRoom,
@@ -96,10 +97,15 @@ export default function RoomEditor({ onBack, initialId }) {
     genStructure, setGenStructure,
     genRows, setGenRows,
     inputModalRef,
-    handleSelectRoom, handleOpenNewModal, handleConfirmCreateNew, handleDelete,
+    handleOpenNewModal, handleConfirmCreateNew, handleRenameRoom, handleDelete,
     generateStructure, centerDesks, flipRoom, addDesk, clearDesks,
     canvasLight, toggleCanvasLight
   } = useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, setSelectedDesks });
+
+  const openRenameModal = () => {
+    setRenameValue(roomName || '');
+    document.getElementById('modal_rename_room')?.showModal();
+  };
 
   const isBoardAtTop = (boardObj?.y || 25) < 350;
 
@@ -146,15 +152,15 @@ export default function RoomEditor({ onBack, initialId }) {
     <div className="flex flex-col h-full w-full bg-base-300 overflow-hidden" onMouseUp={handleCanvasMouseUp}>
       <HeaderBar
         onBack={onBack}
-        rooms={rooms} selectedRoom={selectedRoom} handleSelectRoom={handleSelectRoom}
-        handleOpenNewModal={handleOpenNewModal} saveState={saveState}
+        selectedRoom={selectedRoom} roomName={roomName} onEditName={openRenameModal}
+        saveState={saveState}
         showToolsDrawer={showToolsDrawer} setShowToolsDrawer={setShowToolsDrawer}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
         {selectedRoom ? (
           <>
-            <div className={`bg-base-200 border-slate-800 flex flex-col z-10 flex-shrink-0 shadow-xl transition-all duration-300 ease-in-out overflow-hidden ${showToolsDrawer ? 'w-64 border-r' : 'w-0 border-r-0'}`}>
+            <div className={`bg-base-200 border-slate-800 flex flex-col min-h-0 z-10 flex-shrink-0 shadow-xl transition-all duration-300 ease-in-out overflow-hidden ${showToolsDrawer ? 'w-64 border-r' : 'w-0 border-r-0'}`}>
               <RoomToolsDrawer
                 setShowToolsDrawer={setShowToolsDrawer}
                 showNumbers={showNumbers}
@@ -251,7 +257,13 @@ export default function RoomEditor({ onBack, initialId }) {
           <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
             <i className="fa-solid fa-school text-5xl mb-3 opacity-20"></i>
             <h2 className="text-lg font-bold text-white">Ingen rom funnet</h2>
-            <p className="text-sm">Klikk "+ Nytt rom" i toppbaren for å opprette ditt første rom.</p>
+            <p className="text-sm mb-4">Opprett ditt første klasserom for å komme i gang.</p>
+            <button
+              className="btn btn-sm bg-[#34d399] hover:bg-[#10b981] text-slate-950 border-none font-bold gap-2"
+              onClick={handleOpenNewModal}
+            >
+              <i className="fa-solid fa-plus"></i> Nytt rom
+            </button>
           </div>
         )}
       </div>
@@ -276,6 +288,7 @@ export default function RoomEditor({ onBack, initialId }) {
         presetsList={presetsList} selectedPreset={selectedPreset} setSelectedPreset={setSelectedPreset}
         selectedRoom={selectedRoom} handleDelete={handleDelete}
         setIsCreatingRoom={setIsCreatingRoom}
+        renameValue={renameValue} setRenameValue={setRenameValue} handleRenameRoom={handleRenameRoom}
       />
     </div>
   );

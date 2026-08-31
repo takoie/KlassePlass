@@ -5,9 +5,44 @@ export default function Modals({
   inputModalRef, newRoomModalName, setNewRoomModalName, handleConfirmCreateNew,
   presetsList, selectedPreset, setSelectedPreset,
   selectedRoom, handleDelete, setIsCreatingRoom,
+  renameValue, setRenameValue, handleRenameRoom,
 }) {
+  const saveRename = () => {
+    if (!renameValue.trim()) return;
+    handleRenameRoom(renameValue);
+    document.getElementById('modal_rename_room')?.close();
+  };
+
   return (
     <>
+      <dialog id="modal_rename_room" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-lg text-white flex items-center gap-2">
+            <i className="fa-solid fa-pen text-slate-400"></i> Endre romnavn
+          </h3>
+          <div className="py-4">
+            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn</label>
+            <input
+              type="text"
+              className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
+              value={renameValue ?? ''}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveRename(); } }}
+              autoFocus
+            />
+          </div>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
+            </form>
+            <button className="btn btn-primary" onClick={saveRename} disabled={!renameValue?.trim()}>Lagre</button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
+
       <dialog id="modal_create_new_room" className="modal modal-bottom sm:modal-middle" onClose={() => setIsCreatingRoom(false)}>
         <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
           <h3 className="font-bold text-lg flex items-center gap-2 text-white">
