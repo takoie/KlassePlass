@@ -5,9 +5,25 @@
 
 export const CHANGELOG = [
   {
+    version: '2.9.1',
+    date: '1. september 2026',
+    isLatest: true,
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Bytt klassekart direkte fra topplinja',
+        desc: 'Nedtrekket øverst i klassekart-visningen bytter nå mellom hele klassekart – ikke bare klasser. Velg et annet kart, så lastes klasse, rom, bordoppsett og elevliste automatisk, uten å gå ut i oversikten. En ventende autolagring skylles først, så du ikke mister en endring gjort rett før byttet.'
+      },
+      {
+        type: 'ui',
+        title: 'Topplinja bryter ikke lenger over flere linjer',
+        desc: 'Topplinjene i klassekart og rombygger holdes alltid på én rad. Nedtrekkene er litt smalere, «Skriv ut / PDF» er kortet til «PDF», og ved ekstremt smal vindusbredde scrolles linja vannrett i stedet for å hoppe ned i to rader.'
+      }
+    ]
+  },
+  {
     version: '2.9.0',
     date: '31. august 2026',
-    isLatest: true,
     highlights: [
       {
         type: 'feature',

@@ -7,8 +7,8 @@ import React from 'react';
 
 /** Etikett + kontroll på samme rad ("Klasse:", "Rom:", "Periode:" …). */
 export const HeaderField = ({ label, title, children }) => (
-  <div className="flex items-center gap-1.5" title={title}>
-    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</span>
+  <div className="flex items-center gap-1.5 flex-shrink-0" title={title}>
+    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">{label}</span>
     {children}
   </div>
 );
@@ -27,7 +27,7 @@ export const HeaderButton = ({ onClick, title, tone = 'neutral', icon, iconClass
     title={title}
     onClick={onClick}
     disabled={disabled}
-    className={`h-9 inline-flex items-center gap-2 px-3 rounded-md border text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+    className={`h-9 inline-flex flex-shrink-0 items-center gap-2 px-3 rounded-md border text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
       active ? 'border-slate-600 bg-slate-800 text-white' : TONES[tone]
     }`}
   >
@@ -38,7 +38,7 @@ export const HeaderButton = ({ onClick, title, tone = 'neutral', icon, iconClass
 
 /** Lagre-status i fast bredde-slot. saveState: 'saving' | 'error' | annet (= lagret). */
 export const SaveStatus = ({ saveState }) => (
-  <div className="w-[104px] flex items-center justify-end">
+  <div className="w-[92px] flex-shrink-0 flex items-center justify-end">
     {saveState === 'saving' ? (
       <span className="text-amber-400 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
         <i className="fa-solid fa-spinner fa-spin"></i> Lagrer…
@@ -55,9 +55,11 @@ export const SaveStatus = ({ saveState }) => (
   </div>
 );
 
-/** Felles ytre skall for en modul-toppbar. */
+/** Felles ytre skall for en modul-toppbar. Holdes alltid på ÉN linje
+ *  (flex-nowrap) – ved ekstrem smal bredde scrolles den horisontalt i stedet
+ *  for å bryte over flere rader. */
 export const HeaderBarShell = ({ children }) => (
-  <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-20 flex-shrink-0 shadow-md">
+  <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-nowrap justify-between items-center gap-x-3 z-20 flex-shrink-0 shadow-md overflow-x-auto">
     {children}
   </div>
 );

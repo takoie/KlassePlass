@@ -111,7 +111,7 @@ export default function SeatingChart({ onBack, initialId }) {
 
   const {
     classes, rooms, seatings,
-    selectedClass, setSelectedClass, selectedRoom, setSelectedRoom, selectedSeatingId,
+    selectedClass, selectedRoom, selectedSeatingId,
     chartName, setChartName, chartComment, setChartComment, saveState,
     placements, setPlacements, lockedSeats, setLockedSeats,
     unusedSeats, setUnusedSeats, toggleSeatUnused, restoreDeskSeats,
@@ -456,8 +456,8 @@ export default function SeatingChart({ onBack, initialId }) {
       {!isProjectorMode && (
         <HeaderBar
           onBack={onBack}
-          classes={classes} selectedClass={selectedClass} setSelectedClass={setSelectedClass}
-          rooms={rooms} selectedRoom={selectedRoom} setSelectedRoom={setSelectedRoom}
+          classes={classes}
+          rooms={rooms} selectedRoom={selectedRoom}
           seatings={seatings} selectedSeatingId={selectedSeatingId} handleSelectSeating={handleSelectSeating}
           chartGroup={chartGroup}
           setEditingPeriod={setEditingPeriod}

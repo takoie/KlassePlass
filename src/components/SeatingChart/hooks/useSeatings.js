@@ -391,6 +391,14 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   }, [showHistory, placements, selectedClass, selectedSeatingId, seatings, desks, chartGroup]);
 
   const handleSelectSeating = async (id, seatingsList = seatings) => {
+    // Skyll en ventende autolagring FØR vi bytter kart, ellers ryddes den
+    // debouncede timeren under (via isInitialLoadRef) og en endring gjort det
+    // siste sekundet på DET FORRIGE kartet ville gått tapt.
+    if (pendingSaveRef.current) {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      await saveCurrentSeating();
+      pendingSaveRef.current = false;
+    }
     isInitialLoadRef.current = true;
     const seating = seatingsList.find(s => s.id === Number(id));
     if (!seating) {

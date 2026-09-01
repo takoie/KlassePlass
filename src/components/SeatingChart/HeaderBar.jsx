@@ -3,17 +3,18 @@ import Select from '../Select';
 import { HeaderBarShell, HeaderButton, HeaderField, HeaderDivider, SaveStatus } from '../HeaderControls';
 
 /**
- * Toppbar: klasse-valg, periode-valg, lagre-status og slett-knapp.
- * Perioden identifiseres kun av ukeangivelsen, som vises direkte i
- * nedtrekksmenyen — kartets eget navn redigeres via blyant-ikonet
- * (modal_edit_period). Rommet knyttes til klassen én gang (ved opprettelse)
- * og vises derfor kun som info her, ikke som en egen nedtrekksmeny å endre
- * løpende.
+ * Toppbar: klassekart-valg, periode-valg, lagre-status og slett-knapp.
+ *
+ * «Klassekart»-nedtrekket bytter mellom ulike klassekart (chart_group) uten å
+ * gå ut av editoren — `handleSelectSeating` laster hele kartet på nytt, så
+ * klasse, rom, bord og elevliste følger med automatisk. Rommet vises kun som
+ * info (bindes til kartet ved opprettelse). Perioden identifiseres av
+ * ukeangivelsen; kartets navn redigeres via blyant-ikonet (modal_edit_period).
  */
 
 export default function HeaderBar({
   onBack,
-  classes, selectedClass, setSelectedClass,
+  classes,
   rooms, selectedRoom,
   seatings, selectedSeatingId, handleSelectSeating, chartGroup, setEditingPeriod,
   saveState, handlePrint, isOnlyPeriod,
@@ -24,37 +25,57 @@ export default function HeaderBar({
   // annet kart på samme klasse). Fallback for rader fra før v12-backfyllingen.
   const groupKey = (s) => s.chart_group || (s.class_id != null ? `c${s.class_id}` : null);
 
+  // Ett valg per klassekart (chart_group), representert av den nyeste perioden.
+  const chartsByGroup = new Map();
+  for (const s of seatings) {
+    const g = groupKey(s);
+    if (g == null) continue;
+    const cur = chartsByGroup.get(g);
+    if (!cur || new Date(s.created_at || 0) > new Date(cur.created_at || 0)) chartsByGroup.set(g, s);
+  }
+  const chartReps = [...chartsByGroup.values()];
+  // Vis klassenavn i tillegg når to kart har samme navn (ellers ikke til bry).
+  const nameCounts = chartReps.reduce((m, s) => m.set(s.name, (m.get(s.name) || 0) + 1), new Map());
+  const chartOptions = chartReps
+    .map(s => {
+      const cls = classes.find(c => c.id === Number(s.class_id))?.name;
+      const ambiguous = nameCounts.get(s.name) > 1 && cls;
+      return { value: s.id, label: ambiguous ? `${cls} · ${s.name}` : (s.name || 'Uten navn') };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, 'nb'));
+  const currentChartValue = chartsByGroup.get(chartGroup)?.id ?? '';
+
   return (
     <HeaderBarShell>
       {/* Venstre: navigasjon + kontekst */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {onBack && (
           <HeaderButton tone="ghost" icon="fa-solid fa-arrow-left" onClick={onBack}>Tilbake</HeaderButton>
         )}
         <HeaderDivider />
-        <HeaderField label="Klasse">
+        <HeaderField label="Klassekart">
           <Select
             size="bar"
             className="w-36"
-            ariaLabel="Klasse"
-            value={selectedClass}
-            onChange={(v) => setSelectedClass(Number(v))}
-            options={classes.map(c => ({ value: c.id, label: c.name }))}
+            ariaLabel="Klassekart"
+            value={currentChartValue}
+            onChange={(v) => handleSelectSeating(v)}
+            options={chartOptions}
           />
         </HeaderField>
-        <HeaderField label="Rom" title="Rommet er knyttet til klassen og endres i rom-editoren">
-          <span className="h-9 flex items-center px-3 rounded-md bg-surface-field border border-slate-700 text-xs font-semibold text-slate-300 max-w-40 truncate">
+        <HeaderField label="Rom" title="Rommet er knyttet til klassekartet og settes ved opprettelse">
+          <span className="h-9 flex items-center px-3 rounded-md bg-surface-field border border-slate-700 text-xs font-semibold text-slate-300 max-w-28 truncate">
             {roomName}
           </span>
         </HeaderField>
       </div>
 
       {/* Midten: periode */}
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         <HeaderField label="Periode">
           <Select
             size="bar"
-            className="w-40"
+            className="w-28"
             ariaLabel="Periode"
             value={selectedSeatingId}
             onChange={(v) => handleSelectSeating(v)}
@@ -85,15 +106,16 @@ export default function HeaderBar({
       </div>
 
       {/* Høyre: status + handlinger */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <SaveStatus saveState={saveState} />
         <HeaderButton
           tone="neutral"
           icon="fa-solid fa-print"
           iconClass="text-indigo-300"
+          title="Skriv ut / PDF"
           onClick={handlePrint}
         >
-          Skriv ut / PDF
+          PDF
         </HeaderButton>
         <HeaderButton
           tone="danger"
