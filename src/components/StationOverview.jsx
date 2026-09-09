@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, PageLayout, ConfirmDeleteModal } from './OverviewViews';
+import { Card, PageLayout, ConfirmDeleteModal, cardActionBtnClass } from './OverviewViews';
 
 export default function StationOverview({ onEdit, onAdd, onPrint }) {
   const [sessions, setSessions] = useState([]);
@@ -33,7 +33,7 @@ export default function StationOverview({ onEdit, onAdd, onPrint }) {
   };
 
   return (
-    <PageLayout title="Stasjoner" icon="fa-solid fa-arrows-rotate" onAdd={onAdd}>
+    <PageLayout title="Stasjoner" icon="fa-solid fa-arrows-rotate" accent="amber" onAdd={onAdd}>
       {sessions.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen stasjonsøkter opprettet enda.</p> : null}
 
       {classes.map(cls => {
@@ -56,7 +56,7 @@ export default function StationOverview({ onEdit, onAdd, onPrint }) {
             key={cls.id}
             title={latest.name}
             badgeText={cls.name}
-            badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
+            accent="amber"
             infoList={[
               { icon: 'fa-solid fa-signs-post', text: `${stationCount} stasjoner · ${groupCount} grupper` },
               { icon: 'fa-solid fa-layer-group', text: `Historikk: ${classSessions.length} økter` }
@@ -65,8 +65,8 @@ export default function StationOverview({ onEdit, onAdd, onPrint }) {
             onClick={() => onEdit(latest.id)}
             onDelete={() => setDeleteTarget({ ...cls, isClassGroup: true, name: `Klasse ${cls.name}` })}
             actions={
-              <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handlePrint} title="Skriv ut / PDF">
-                <i className="fa-solid fa-print text-xs"></i>
+              <button className={cardActionBtnClass} onClick={handlePrint} title="Skriv ut / PDF">
+                <i className="fa-solid fa-print text-[11px]"></i>
               </button>
             }
           />

@@ -4,57 +4,96 @@ import { ExportModal, ImportModal } from './DataTransfer/ExportImportModal';
 import { showToast } from '../shared/utils';
 import Select from './Select';
 
-export const Card = ({ title, badgeText, badgeColor = 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30', infoList = [], icon, onClick, onDelete, actions }) => (
-  <div
-    className="relative overflow-hidden rounded-2xl border border-[oklch(var(--p)/0.35)] bg-[oklch(var(--p)/0.10)] backdrop-blur-xl p-5 flex flex-col justify-between cursor-pointer shadow-[inset_0_1px_0_oklch(var(--p)/0.3),0_12px_28px_-10px_rgba(0,0,0,0.6)] transition-all duration-200 group hover:border-[oklch(var(--p)/0.6)] hover:bg-[oklch(var(--p)/0.16)] hover:shadow-[inset_0_1px_0_oklch(var(--p)/0.4),0_18px_36px_-10px_rgba(0,0,0,0.7)]"
-    onClick={onClick}
-  >
-    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[oklch(var(--p)/0.7)] to-transparent"></div>
-    <div className="flex items-start gap-3 mb-4">
-      <div className="w-10 h-10 rounded-xl bg-[oklch(var(--p)/0.14)] backdrop-blur-sm border border-[oklch(var(--p)/0.3)] flex items-center justify-center text-[oklch(var(--p))] group-hover:scale-105 transition-all flex-shrink-0 mt-0.5">
-        <i className={`${icon} text-base`}></i>
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <h3 className="font-bold text-base text-white truncate group-hover:text-[oklch(var(--p))] transition-colors">{title}</h3>
-        {badgeText && (
-          <div className="mt-1">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeColor}`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-              {badgeText}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
+// Navngitte aksentfarger per modul. Kortet får identitet fra denne ene fargen
+// (ikonflis, hover-kant, pil-fyll, info-ikoner) i stedet for at alt tegnes i
+// temaets primærfarge. Rå hex godtas også.
+const CARD_ACCENTS = {
+  emerald: '#34d399',
+  violet: '#a78bfa',
+  sky: '#38bdf8',
+  indigo: '#818cf8',
+  amber: '#fbbf24',
+};
 
-    <div className="flex justify-between items-end pt-3 border-t border-white/10 text-xs text-slate-300">
-      <div className="flex flex-col gap-1">
-        {infoList.map((info, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-xs">
-            <i className={`${info.icon} text-[11px] opacity-80 w-4 text-center text-[oklch(var(--p))]`}></i>
-            <span className="font-medium">{info.text}</span>
-          </div>
-        ))}
+const hexToRgbTriplet = (hex) => {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
+};
+
+// Delt knappestil for de valgfrie `actions`-knappene (eksporter, dupliser,
+// skriv ut). Ligger inne i Card sitt `group` og arver `--ca-rgb`.
+export const cardActionBtnClass =
+  'grid place-items-center w-7 h-7 rounded-md text-slate-400 opacity-0 transition-colors ' +
+  'hover:bg-[rgb(var(--ca-rgb)/0.16)] hover:text-[rgb(var(--ca-rgb))] group-hover:opacity-100 ' +
+  'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--ca-rgb)/0.6)]';
+
+export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, onClick, onDelete, actions }) => {
+  const accentColor = CARD_ACCENTS[accent] || accent;
+  const handleKeyDown = (e) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick(); }
+  };
+
+  return (
+    <div
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      style={{ '--ca': accentColor, '--ca-rgb': hexToRgbTriplet(accentColor) }}
+      className="group relative flex flex-col rounded-xl border border-white/[0.06] bg-[#232838] p-4
+                 shadow-[0_1px_2px_rgba(0,0,0,0.28),0_12px_32px_-18px_rgba(0,0,0,0.6)]
+                 cursor-pointer transition-[transform,border-color,box-shadow,background-color] duration-200 ease-out
+                 hover:-translate-y-0.5 hover:border-[rgb(var(--ca-rgb)/0.45)] hover:bg-[#262c3d]
+                 hover:shadow-[0_2px_4px_rgba(0,0,0,0.34),0_22px_48px_-20px_rgba(0,0,0,0.72)]
+                 focus-visible:outline-none focus-visible:border-[rgb(var(--ca-rgb)/0.55)]
+                 focus-visible:ring-2 focus-visible:ring-[rgb(var(--ca-rgb)/0.4)]"
+    >
+      <div className="flex items-start gap-3">
+        <span className="grid place-items-center w-9 h-9 rounded-lg shrink-0 border transition-transform duration-200 group-hover:scale-105"
+          style={{ backgroundColor: 'rgb(var(--ca-rgb)/0.13)', borderColor: 'rgb(var(--ca-rgb)/0.28)', color: 'var(--ca)' }}>
+          <i className={`${icon} text-sm`}></i>
+        </span>
+        <div className="min-w-0 flex-1 pt-px">
+          <h3 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-slate-50 transition-colors group-hover:text-[rgb(var(--ca-rgb))]">
+            {title}
+          </h3>
+          {badgeText && (
+            <p className="mt-0.5 truncate text-[11px] font-medium text-[rgb(var(--ca-rgb)/0.8)]">{badgeText}</p>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      {infoList.length > 0 && (
+        <div className="mt-3 flex flex-col gap-1.5">
+          {infoList.map((info, i) => (
+            <div key={i} className="flex items-center gap-2 min-w-0 text-[12.5px] leading-tight text-slate-300">
+              <i className={`${info.icon} w-4 shrink-0 text-center text-[11px] text-[rgb(var(--ca-rgb)/0.6)]`}></i>
+              <span className="min-w-0 truncate">{info.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex-1 min-h-[0.875rem]"></div>
+
+      <div className="flex items-center justify-end gap-1.5 border-t border-white/[0.06] pt-3">
         {actions}
         {onDelete && (
           <button
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-red-500/15 hover:text-red-400 text-slate-400 border border-white/10 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+            className="grid place-items-center w-7 h-7 rounded-md text-slate-400 opacity-70 transition-colors hover:bg-red-500/20 hover:text-red-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400/60"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             title="Slett"
           >
-            <i className="fa-solid fa-trash text-xs"></i>
+            <i className="fa-solid fa-trash-can text-[11px]"></i>
           </button>
         )}
-        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 text-slate-300 group-hover:bg-[oklch(var(--p))] group-hover:border-transparent group-hover:text-[oklch(var(--pc))] flex items-center justify-center transition-all shadow">
-          <i className="fa-solid fa-arrow-right text-xs"></i>
-        </div>
+        <span className="grid place-items-center w-7 h-7 rounded-md ml-0.5 bg-white/[0.04] text-slate-400 transition-colors group-hover:bg-[rgb(var(--ca-rgb))] group-hover:text-[#0b0d14]">
+          <i className="fa-solid fa-arrow-right text-[11px]"></i>
+        </span>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCancel }) => {
   if (!isOpen) return null;
@@ -77,11 +116,11 @@ export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCance
   );
 };
 
-export const PageLayout = ({ title, icon, onAdd, onImport, children }) => (
+export const PageLayout = ({ title, icon, accent = 'emerald', onAdd, onImport, children }) => (
   <div className="h-full flex flex-col p-8 module-content-bg overflow-y-auto">
     <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
       <div className="flex items-center gap-3">
-        <i className={`${icon} text-2xl text-[#34d399]`}></i>
+        <i className={`${icon} text-2xl`} style={{ color: CARD_ACCENTS[accent] || accent }}></i>
         <h1 className="text-3xl font-extrabold text-white tracking-tight">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
@@ -157,6 +196,7 @@ export const ClassesOverview = ({ onEdit }) => {
     <PageLayout
       title="Mine klasser"
       icon="fa-solid fa-users"
+      accent="emerald"
       onAdd={handleOpenCreate}
       onImport={() => document.getElementById('modal_import_class')?.showModal()}
     >
@@ -171,21 +211,20 @@ export const ClassesOverview = ({ onEdit }) => {
           <Card
             key={cls.id}
             title={cls.name}
-            badgeText="KLASSE"
-            badgeColor="bg-emerald-950/60 text-emerald-400 border-emerald-500/30"
+            accent="emerald"
             infoList={[
-              { icon: 'fa-solid fa-user-graduate', text: `${count} elever registrert` }
+              { icon: 'fa-solid fa-user-graduate', text: `${count} ${count === 1 ? 'elev' : 'elever'}` }
             ]}
             icon="fa-solid fa-users"
             onClick={() => onEdit(cls.id)}
             onDelete={() => setDeleteTarget(cls)}
             actions={
               <button
-                className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                className={cardActionBtnClass}
                 onClick={(e) => { e.stopPropagation(); openExport(cls); }}
                 title="Eksporter klasse"
               >
-                <i className="fa-solid fa-file-export text-xs"></i>
+                <i className="fa-solid fa-file-export text-[11px]"></i>
               </button>
             }
           />
@@ -319,6 +358,7 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
     <PageLayout
       title="Mine rom"
       icon="fa-solid fa-school"
+      accent="violet"
       onAdd={onAdd}
       onImport={() => document.getElementById('modal_import_room')?.showModal()}
     >
@@ -333,10 +373,9 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
           <Card
             key={rm.id}
             title={rm.name}
-            badgeText="ROM-OPPSETT"
-            badgeColor="bg-purple-950/60 text-purple-400 border-purple-500/30"
+            accent="violet"
             infoList={[
-              { icon: 'fa-solid fa-chair', text: `${seatCount} plasser` }
+              { icon: 'fa-solid fa-chair', text: `${seatCount} ${seatCount === 1 ? 'plass' : 'plasser'}` }
             ]}
             icon="fa-solid fa-school"
             onClick={() => onEdit(rm.id)}
@@ -344,18 +383,18 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
             actions={
               <>
                 <button
-                  className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-purple-950/60 hover:text-purple-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                  className={cardActionBtnClass}
                   onClick={(e) => { e.stopPropagation(); openDuplicate(rm); }}
                   title="Dupliser rom"
                 >
-                  <i className="fa-solid fa-copy text-xs"></i>
+                  <i className="fa-solid fa-copy text-[11px]"></i>
                 </button>
                 <button
-                  className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-purple-950/60 hover:text-purple-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                  className={cardActionBtnClass}
                   onClick={(e) => { e.stopPropagation(); openExport(rm); }}
                   title="Eksporter rom"
                 >
-                  <i className="fa-solid fa-file-export text-xs"></i>
+                  <i className="fa-solid fa-file-export text-[11px]"></i>
                 </button>
               </>
             }
@@ -424,6 +463,30 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
   );
 };
 
+// Gruppenøkkel for en klassekart-periode. Speiler HeaderBar.jsx og
+// useSeatings.js: etter v12-backfyllingen har hver rad en ikke-tom chart_group;
+// class-fallbacken dekker importerte/eldre rader, og s{id}-fallbacken holder
+// rader helt uten klasse adskilt (ellers ville de smeltet sammen til ett kort).
+const groupKey = (s) => s.chart_group || (s.class_id != null ? `c${s.class_id}` : `s${s.id}`);
+
+// Slår periode-radene sammen til ett objekt per klassekart. `newest` (nyeste
+// created_at) representerer kortet: navn, klasse, rom og elevtall leses derfra,
+// og klikk på kortet åpner den perioden.
+const buildCharts = (rows) => {
+  const byGroup = new Map();
+  for (const s of rows) {
+    const key = groupKey(s);
+    if (!byGroup.has(key)) byGroup.set(key, []);
+    byGroup.get(key).push(s);
+  }
+  return Array.from(byGroup.entries()).map(([key, periods]) => {
+    const sorted = periods.slice().sort(
+      (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+    );
+    return { groupKey: key, periods: sorted, newest: sorted[0], periodCount: sorted.length };
+  });
+};
+
 export const SeatingOverview = ({ onEdit, onAdd }) => {
   const [seatings, setSeatings] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -484,9 +547,11 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      if (deleteTarget.isClassGroup) {
-        const classSeatings = seatings.filter(s => s.class_id === deleteTarget.id);
-        for (const s of classSeatings) {
+      if (deleteTarget.isChartGroup) {
+        // Ett kort = ett helt klassekart. Slett alle periode-radene som deler
+        // gruppenøkkel (chart_group), samme mønster som enkeltsletting under.
+        const groupSeatings = seatings.filter(s => groupKey(s) === deleteTarget.groupKey);
+        for (const s of groupSeatings) {
           await window.api.deleteSeating(s.id);
         }
       } else {
@@ -552,7 +617,11 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
     modalStudentCount = Array.isArray(parsed) ? parsed.length : (parsed.students || []).length;
   } catch(e){}
 
-  const renderSeatingCard = (seating) => {
+  // Ett kort per klassekart (chart_group), ikke ett per periode-rad.
+  const charts = buildCharts(seatings);
+
+  const renderChartCard = (chart) => {
+    const seating = chart.newest;
     const cls = classes.find(c => c.id === seating.class_id);
 
     const handlePrint = (e) => {
@@ -569,25 +638,27 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
     } catch (e) {}
     const hasValidRoom = !!(seating.room_id && rooms.some(r => r.id === seating.room_id));
     const roomName = seating.room_name || rooms.find(r => r.id === seating.room_id)?.name || (hasValidRoom ? '—' : 'Mangler rom');
+    const periodWord = chart.periodCount === 1 ? 'periode' : 'perioder';
+    const periodLabel = `${chart.periodCount} ${periodWord} · ${seating.comment || 'ingen periode angitt'}`;
 
     return (
       <Card
-        key={seating.id}
+        key={chart.groupKey}
         title={seating.name}
         badgeText={cls?.name || seating.class_name || '—'}
-        badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
+        accent="sky"
         infoList={[
-          { icon: 'fa-solid fa-calendar-week', text: seating.comment || 'Ingen periode angitt' },
+          { icon: 'fa-solid fa-calendar-week', text: periodLabel },
           { icon: hasValidRoom ? 'fa-solid fa-school' : 'fa-solid fa-triangle-exclamation text-amber-400', text: roomName },
-          { icon: 'fa-solid fa-users', text: `${studentCount} elever` }
+          { icon: 'fa-solid fa-users', text: `${studentCount} ${studentCount === 1 ? 'elev' : 'elever'}` }
         ]}
         icon="fa-solid fa-users-rectangle"
         onClick={() => onEdit(seating.id)}
-        onDelete={() => setDeleteTarget(seating)}
+        onDelete={() => setDeleteTarget({ isChartGroup: true, groupKey: chart.groupKey, name: seating.name, periodCount: chart.periodCount })}
         actions={
           <>
-             <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handlePrint} title="Skriv ut / PDF"><i className="fa-solid fa-print text-xs"></i></button>
-             <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-blue-950/60 hover:text-blue-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); openExport(seating); }} title="Eksporter kart"><i className="fa-solid fa-file-export text-xs"></i></button>
+             <button className={cardActionBtnClass} onClick={handlePrint} title="Skriv ut / PDF"><i className="fa-solid fa-print text-[11px]"></i></button>
+             <button className={cardActionBtnClass} onClick={(e) => { e.stopPropagation(); openExport(seating); }} title="Eksporter kart"><i className="fa-solid fa-file-export text-[11px]"></i></button>
           </>
         }
       />
@@ -597,13 +668,14 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   return (
     <PageLayout
       title="Mine klassekart"
-      icon="fa-solid fa-map-location-dot"
+      icon="fa-solid fa-users-rectangle"
+      accent="sky"
       onAdd={handleOpenCreate}
       onImport={() => document.getElementById('modal_import_seating')?.showModal()}
     >
-      {seatings.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klassekart opprettet enda.</p> : null}
+      {charts.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klassekart opprettet enda.</p> : null}
 
-      {seatings.length > 0 && (
+      {charts.length > 0 && (
         <div className="col-span-full flex justify-end -mb-1">
           <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-400 select-none">
             <span>Grupper per klasse</span>
@@ -619,12 +691,12 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
 
       {groupedByClass ? (
         classes
-          .filter(cls => seatings.some(s => s.class_id === cls.id))
+          .filter(cls => charts.some(ch => ch.newest.class_id === cls.id))
           .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
           .map(cls => {
-            const classSeatings = seatings
-              .filter(s => s.class_id === cls.id)
-              .sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+            const classCharts = charts
+              .filter(ch => ch.newest.class_id === cls.id)
+              .sort((a, b) => (a.newest.name || '').localeCompare(b.newest.name || '', 'nb'));
 
             return (
               <div key={cls.id} className="col-span-full collapse collapse-arrow bg-base-100/40 border border-white/10 rounded-2xl">
@@ -632,27 +704,29 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                 <div className="collapse-title font-bold text-white flex items-center gap-2">
                   <i className="fa-solid fa-users text-emerald-400"></i>
                   {cls.name}
-                  <span className="text-xs font-normal text-slate-400">({classSeatings.length} klassekart)</span>
+                  <span className="text-xs font-normal text-slate-400">({classCharts.length} klassekart)</span>
                 </div>
                 <div className="collapse-content">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
-                    {classSeatings.map(seating => renderSeatingCard(seating))}
+                    {classCharts.map(ch => renderChartCard(ch))}
                   </div>
                 </div>
               </div>
             );
           })
       ) : (
-        seatings
+        charts
           .slice()
-          .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-          .map(seating => renderSeatingCard(seating))
+          .sort((a, b) => new Date(b.newest.created_at || 0) - new Date(a.newest.created_at || 0))
+          .map(ch => renderChartCard(ch))
       )}
 
       <ConfirmDeleteModal 
         isOpen={!!deleteTarget}
-        title={deleteTarget?.isClassGroup ? "klassehistorikk" : "klassekart"}
-        itemName={deleteTarget?.name}
+        title="klassekart"
+        itemName={deleteTarget?.isChartGroup && deleteTarget.periodCount > 1
+          ? `${deleteTarget.name} (${deleteTarget.periodCount} perioder)`
+          : deleteTarget?.name}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
@@ -810,7 +884,7 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
   };
 
   return (
-    <PageLayout title="Gruppearbeid" icon="fa-solid fa-people-group" onAdd={() => document.getElementById('modal_create_group')?.showModal()}>
+    <PageLayout title="Gruppearbeid" icon="fa-solid fa-people-group" accent="indigo" onAdd={() => document.getElementById('modal_create_group')?.showModal()}>
       {assignments.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen gruppeinndelinger opprettet enda.</p> : null}
 
       {classes.map(cls => {
@@ -830,7 +904,7 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
             key={cls.id}
             title={latest.name}
             badgeText={cls.name}
-            badgeColor="bg-blue-950/60 text-blue-400 border-blue-500/30"
+            accent="indigo"
             infoList={[
               { icon: 'fa-solid fa-object-group', text: `${latest.group_count} grupper` },
               { icon: 'fa-solid fa-layer-group', text: `Historikk: ${classAssignments.length} inndelinger` }
@@ -839,8 +913,8 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
             onClick={() => onEdit(latest.id)}
             onDelete={() => setDeleteTarget({ ...cls, isClassGroup: true, name: `Klasse ${cls.name}` })}
             actions={
-              <button className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-emerald-950/60 hover:text-emerald-400 text-slate-400 border border-slate-700/60 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100" onClick={handlePrint} title="Skriv ut / PDF">
-                <i className="fa-solid fa-print text-xs"></i>
+              <button className={cardActionBtnClass} onClick={handlePrint} title="Skriv ut / PDF">
+                <i className="fa-solid fa-print text-[11px]"></i>
               </button>
             }
           />

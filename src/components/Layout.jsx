@@ -31,7 +31,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
   const mainTabs = [
     { id: 'classes-overview', label: 'Klasser', icon: 'fa-solid fa-users', activeIds: ['classes-overview', 'classes'] },
     { id: 'rooms-overview', label: 'Rom', icon: 'fa-solid fa-school', activeIds: ['rooms-overview', 'rooms'] },
-    { id: 'seating-overview', label: 'Klassekart', icon: 'fa-solid fa-map-location-dot', activeIds: ['seating-overview', 'seating'] },
+    { id: 'seating-overview', label: 'Klassekart', icon: 'fa-solid fa-users-rectangle', activeIds: ['seating-overview', 'seating'] },
     { id: 'group-overview', label: 'Gruppearbeid', icon: 'fa-solid fa-people-group', activeIds: ['group-overview', 'group-editor'] },
     { id: 'station-overview', label: 'Stasjoner', icon: 'fa-solid fa-arrows-rotate', activeIds: ['station-overview', 'station-setup', 'station-presenter'] }
   ];
@@ -82,7 +82,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
                 className={`overblikk-nav-btn ${isActive ? 'active' : ''}`}
                 onClick={() => setCurrentView(tab.id)}
               >
-                <i className={`${tab.icon} fa-fw text-sm flex-shrink-0 ${isActive ? 'text-[#34d399]' : 'text-slate-400'}`}></i>
+                <i className={`${tab.icon} fa-fw text-sm flex-shrink-0 ${isActive ? 'text-[oklch(var(--p))]' : 'text-slate-400'}`}></i>
                 <span className="leading-none flex-1 text-left">{tab.label}</span>
               </button>
             );
@@ -127,7 +127,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             className={`overblikk-nav-btn overblikk-nav-btn-sub ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
           >
-            <i className="fa-solid fa-gear fa-fw flex-shrink-0 text-slate-400"></i>
+            <i className={`fa-solid fa-gear fa-fw flex-shrink-0 ${currentView === 'settings' ? 'text-[oklch(var(--p))]' : 'text-slate-400'}`}></i>
             <span className="leading-none flex-1 text-left">Innstillinger</span>
           </button>
         </div>

@@ -5,9 +5,30 @@
 
 export const CHANGELOG = [
   {
+    version: '2.9.5',
+    date: '9. september 2026',
+    isLatest: true,
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Ett kort per klassekart – periodene samles under',
+        desc: 'I «Mine klassekart» får hvert klassekart nå ett kort, ikke ett kort per periode. Kortet viser antall perioder og den nyeste perioden, og et klikk åpner den siste perioden – periodene byttes videre fra nedtrekket inne i visningen. Sletteknappen på kortet fjerner hele klassekartet (alle periodene); enkeltperioder slettes fortsatt inne i editoren.'
+      },
+      {
+        type: 'ui',
+        title: 'Nytt, ryddigere kortdesign i alle oversikter',
+        desc: 'Kortene i Klasser, Rom, Klassekart, Gruppearbeid og Stasjoner har fått felles, strammere design med egen fargeidentitet per modul. Info-linjene har fått full bredde, så ukenummer og annen tekst ikke lenger brekker over flere linjer. Handlingsknappene ligger samlet på én rad, og hele kortet kan nå fokuseres og åpnes med tastatur.'
+      },
+      {
+        type: 'ui',
+        title: 'Tydeligere ikoner i meny og sidetitler',
+        desc: 'Klassekart har fått nytt ikon i sidemenyen, og det aktive menyikonet følger nå temafargen i stedet for å være fast grønt. Ikonet i hver sidetittel bruker modulens egen farge.'
+      }
+    ]
+  },
+  {
     version: '2.9.1',
     date: '1. september 2026',
-    isLatest: true,
     highlights: [
       {
         type: 'feature',
