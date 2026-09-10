@@ -27,9 +27,11 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Stian Taknes",
     "createUpdaterArtifacts": true,
     "targets": ["nsis"],
     "windows": {
+      "webviewInstallMode": { "type": "skip" },
       "nsis": {
         "installMode": "currentUser"
       }
