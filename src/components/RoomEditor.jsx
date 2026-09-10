@@ -233,7 +233,7 @@ export default function RoomEditor({ onBack, initialId }) {
             <h2 className="text-lg font-bold text-base-content">Ingen rom funnet</h2>
             <p className="text-sm mb-4">Opprett ditt første klasserom for å komme i gang.</p>
             <button
-              className="btn btn-sm bg-[#34d399] hover:bg-[#10b981] text-slate-950 border-none font-bold gap-2"
+              className="btn btn-sm bg-primary hover:bg-primary/90 text-slate-950 border-none font-bold gap-2"
               onClick={handleOpenNewModal}
             >
               <i className="fa-solid fa-plus"></i> Nytt rom

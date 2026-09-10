@@ -43,7 +43,7 @@ export default function DeskContextMenu({
       <div className="divider my-0 h-1"></div>
       <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-base-content/60">Plasser per bord</li>
       <div className="flex gap-1 px-2 py-1">
-        <button className="btn btn-xs btn-outline flex-1 border-base-300 text-[#34d399]" onClick={() => { setDeskCapacity(1); setContextMenu(null); }}>1</button>
+        <button className="btn btn-xs btn-outline flex-1 border-base-300 text-primary" onClick={() => { setDeskCapacity(1); setContextMenu(null); }}>1</button>
         <button className="btn btn-xs btn-outline flex-1 border-base-300 text-cyan-300" onClick={() => { setDeskCapacity(2); setContextMenu(null); }}>2</button>
         <button className="btn btn-xs btn-outline flex-1 border-base-300 text-indigo-300" onClick={() => { setDeskCapacity(3); setContextMenu(null); }}>3</button>
         <button className="btn btn-xs btn-outline flex-1 border-base-300 text-purple-300" onClick={() => { setDeskCapacity(4); setContextMenu(null); }}>4</button>

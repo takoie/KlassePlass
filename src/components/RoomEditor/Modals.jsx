@@ -46,7 +46,7 @@ export default function Modals({
       <dialog id="modal_create_new_room" className="modal modal-bottom sm:modal-middle" onClose={() => setIsCreatingRoom(false)}>
         <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl max-w-lg">
           <h3 className="font-bold text-lg flex items-center gap-2 text-base-content">
-            <i className="fa-solid fa-wand-magic-sparkles text-[#f59e0b]"></i> Opprett nytt klasserom
+            <i className="fa-solid fa-wand-magic-sparkles text-accent"></i> Opprett nytt klasserom
           </h3>
           <p className="py-2 text-xs text-base-content/60">Gi rommet et navn og velg et ferdig oppsett:</p>
 
@@ -66,7 +66,7 @@ export default function Modals({
             {presetsList.map(p => (
               <div
                 key={p.id}
-                className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col gap-1 ${selectedPreset === p.id ? 'border-[#34d399] bg-[#34d399]/10 shadow' : 'border-base-300 bg-surface-field hover:bg-base-200'}`}
+                className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col gap-1 ${selectedPreset === p.id ? 'border-primary bg-primary/10 shadow' : 'border-base-300 bg-surface-field hover:bg-base-200'}`}
                 onClick={(e) => {
                   e.preventDefault();
                   setSelectedPreset(p.id);

@@ -100,7 +100,7 @@ export default function UpdateModal({ isOpen, onClose }) {
             </div>
           </div>
           <button
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-base-content/60 hover:text-base-content flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-base-content/5 hover:bg-base-content/5 text-base-content/60 hover:text-base-content flex items-center justify-center transition-colors"
             onClick={onClose}
             title="Lukk"
           >

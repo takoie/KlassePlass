@@ -43,7 +43,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
         <div className="titlebar flex items-center justify-end pr-3 pt-3 flex-shrink-0 bg-transparent absolute top-0 right-0 w-full z-[100] pointer-events-auto" data-tauri-drag-region style={{ WebkitAppRegion: 'drag', height: '40px' }}>
           {(currentView === 'seating' || currentView === 'rooms') && (
             <div className="absolute left-1/2 top-5 h-7 flex items-center -translate-x-1/2 select-none" data-tauri-drag-region style={{ WebkitAppRegion: 'drag' }}>
-              <span className="font-extrabold text-base-content text-lg tracking-wider">KLASSE<span className="text-[#f59e0b] tracking-wider drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]">PLASS</span></span>
+              <span className="font-extrabold text-base-content text-lg tracking-wider">KLASSE<span className="text-accent tracking-wider drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]">PLASS</span></span>
             </div>
           )}
           <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag', pointerEvents: 'auto' }}>
@@ -53,7 +53,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             <button className="w-8 h-7 flex items-center justify-center rounded text-base-content/60 hover:bg-base-300/60 hover:text-base-content transition-colors" onClick={() => window.api?.maximizeWindow()} title={isMaximized ? 'Gjenopprett' : 'Maksimer'}>
               <i className={isMaximized ? 'fa-solid fa-window-restore text-xs' : 'fa-regular fa-square text-xs'}></i>
             </button>
-            <button className="w-9 h-7 flex items-center justify-center rounded bg-[#ef4444] text-base-content hover:bg-red-600 transition-colors shadow" onClick={() => window.api?.closeWindow()} title="Lukk">
+            <button className="w-9 h-7 flex items-center justify-center rounded bg-error text-base-content hover:bg-red-600 transition-colors shadow" onClick={() => window.api?.closeWindow()} title="Lukk">
               <i className="fa-solid fa-xmark text-sm font-bold"></i>
             </button>
           </div>
@@ -68,7 +68,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
         <div className="h-16 flex items-center justify-center mb-3" style={{ WebkitAppRegion: 'drag' }}>
           <div className="select-none flex items-center justify-center tracking-tight text-center">
             <span className="font-extrabold text-base-content text-2xl tracking-wider">KLASSE</span>
-            <span className="font-extrabold text-[#f59e0b] text-2xl tracking-wider drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]">PLASS</span>
+            <span className="font-extrabold text-accent text-2xl tracking-wider drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]">PLASS</span>
           </div>
         </div>
         

@@ -29,7 +29,7 @@ export default function BoardContextMenu({ contextMenu, setContextMenu, centerBo
       style={style}
       onClick={(e) => e.stopPropagation()}
     >
-      <li><a onClick={() => { centerBoardX(); setContextMenu(null); }}><i className="fa-solid fa-align-center text-[#f59e0b]"></i> Sentrer på x-akse</a></li>
+      <li><a onClick={() => { centerBoardX(); setContextMenu(null); }}><i className="fa-solid fa-align-center text-accent"></i> Sentrer på x-akse</a></li>
     </ul>
   );
 }

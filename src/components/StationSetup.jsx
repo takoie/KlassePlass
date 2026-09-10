@@ -384,7 +384,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
               <i className="fa-solid fa-play"></i> Start økt
             </button>
           )}
-          <button className="btn btn-sm bg-[#34d399]/20 text-[#34d399] border-none hover:bg-[#34d399]/30 gap-2" onClick={handleSave} disabled={!canSave || saveState === 'saving'}>
+          <button className="btn btn-sm bg-primary/20 text-primary border-none hover:bg-primary/30 gap-2" onClick={handleSave} disabled={!canSave || saveState === 'saving'}>
             {saveState === 'saving' ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-floppy-disk"></i>}
             Lagre
           </button>

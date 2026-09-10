@@ -314,7 +314,7 @@ export default function ClassManager({ onBack, initialId }) {
                 type="text" 
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
-                className="input input-ghost text-3xl font-extrabold w-full bg-transparent border-b-2 border-transparent hover:border-base-300 focus:bg-base-200 focus:border-[#34d399] px-2 transition-all rounded-none h-14 text-center text-base-content"
+                className="input input-ghost text-3xl font-extrabold w-full bg-transparent border-b-2 border-transparent hover:border-base-300 focus:bg-base-200 focus:border-primary px-2 transition-all rounded-none h-14 text-center text-base-content"
                 placeholder="Klassenavn..."
               />
               <div className="mt-1 flex items-center justify-center gap-1.5 text-xs font-semibold">
@@ -327,7 +327,7 @@ export default function ClassManager({ onBack, initialId }) {
                     <i className="fa-solid fa-triangle-exclamation"></i> Kunne ikke lagre
                   </span>
                 ) : (
-                  <span className="text-[#34d399] flex items-center gap-1 shadow-sm">
+                  <span className="text-primary flex items-center gap-1 shadow-sm">
                     <i className="fa-solid fa-circle-check"></i> Lagret
                   </span>
                 )}
@@ -338,13 +338,13 @@ export default function ClassManager({ onBack, initialId }) {
             <div className="w-full mb-4 flex justify-center">
               <div className="bg-base-200 border border-base-300 p-1 rounded-xl flex gap-1">
                 <button 
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'students' ? 'bg-[#34d399] text-slate-950 shadow' : 'text-base-content/60 hover:text-base-content'}`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'students' ? 'bg-primary text-slate-950 shadow' : 'text-base-content/60 hover:text-base-content'}`}
                   onClick={() => setActiveTab('students')}
                 >
                   <i className="fa-solid fa-users"></i> Elever ({students.length})
                 </button>
                 <button 
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'rules' ? 'bg-[#34d399] text-slate-950 shadow' : 'text-base-content/60 hover:text-base-content'}`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'rules' ? 'bg-primary text-slate-950 shadow' : 'text-base-content/60 hover:text-base-content'}`}
                   onClick={() => setActiveTab('rules')}
                 >
                   <i className="fa-solid fa-shield-halved"></i> Elev-regler og tilrettelegging ({rules.length})

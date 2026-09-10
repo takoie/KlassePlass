@@ -37,7 +37,7 @@ export default function DeskItem({
   const groupColor = desk.groupId ? GROUP_COLORS[(desk.groupId - 1) % GROUP_COLORS.length] : null;
 
   let borderStyle = groupColor ? { borderWidth: '3px', borderColor: groupColor } : {};
-  let borderClass = 'border-2 border-slate-500 bg-base-200 hover:border-[#34d399]';
+  let borderClass = 'border-2 border-slate-500 bg-base-200 hover:border-primary';
   
   if (isSelected) {
     borderClass = 'border-2 border-indigo-500 bg-indigo-950/50 shadow-[0_0_16px_rgba(99,102,241,0.6)] z-20 scale-105';

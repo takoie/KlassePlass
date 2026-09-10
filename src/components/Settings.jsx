@@ -111,7 +111,7 @@ export default function Settings() {
   return (
     <div className="flex flex-col h-full module-content-bg text-base-content">
       {/* Toppmeny for innstillings-faner */}
-      <div className="flex items-center gap-4 px-6 pt-6 pb-4 border-b border-white/10 flex-shrink-0 bg-white/[0.03] backdrop-blur-md overflow-x-auto">
+      <div className="flex items-center gap-4 px-6 pt-6 pb-4 border-b border-base-content/10 flex-shrink-0 bg-base-content/5 backdrop-blur-md overflow-x-auto">
         <h2 className="text-lg font-bold flex items-center gap-2 text-base-content flex-shrink-0">
           <i className="fa-solid fa-gear text-emerald-400"></i> Innstillinger
         </h2>
@@ -123,7 +123,7 @@ export default function Settings() {
               className={`btn btn-sm rounded-full border-none gap-2 font-semibold ${
                 activeTab === tab.id
                   ? 'bg-emerald-500/15 text-emerald-400 font-bold hover:bg-emerald-500/20'
-                  : 'bg-transparent text-base-content/60 hover:bg-white/5 hover:text-base-content'
+                  : 'bg-transparent text-base-content/60 hover:bg-base-content/5 hover:text-base-content'
               }`}
               onClick={() => setActiveTab(tab.id)}
             >
@@ -140,7 +140,7 @@ export default function Settings() {
           <div className="max-w-2xl mx-auto">
             <h3 className="text-xl font-bold mb-6 text-base-content">Visning & generelt</h3>
             
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Standard tavleplassering</h4>
               <p className="text-xs text-base-content/60 mb-4">Velg om tavlen skal ligge øverst eller nederst i klasserommet som standard.</p>
               
@@ -159,7 +159,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Lys / mørk modus</h4>
               <p className="text-xs text-base-content/60 mb-4">Gjelder hele appen. «Følg systemet» bruker Windows-innstillingen din.</p>
 
@@ -184,7 +184,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Canvas-bakgrunn</h4>
               <p className="text-xs text-base-content/60 mb-4">Velg mørk eller lys bakgrunn for tegneflaten i rombygger og klassekart.</p>
 
@@ -204,7 +204,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Fargetema</h4>
               <p className="text-xs text-base-content/60 mb-4">Velg fargeprofilen som passer deg best. Gjelder for hele appen.</p>
 
@@ -215,18 +215,18 @@ export default function Settings() {
                     onClick={() => handleSetTheme(t.id)}
                     className={`relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
                       (settings.theme || 'klasseplass') === t.id
-                        ? 'border-white/30 bg-white/5'
-                        : 'border-white/10 hover:border-white/20 hover:bg-white/[0.03]'
+                        ? 'border-base-content/10 bg-base-content/5'
+                        : 'border-base-content/10 hover:border-base-content/10 hover:bg-base-content/5'
                     }`}
                   >
                     {(settings.theme || 'klasseplass') === t.id && (
-                      <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white/10 flex items-center justify-center">
+                      <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-base-content/5 flex items-center justify-center">
                         <i className="fa-solid fa-check text-[9px] text-base-content"></i>
                       </span>
                     )}
                     <div className="flex gap-1">
                       {t.colors.map((c, i) => (
-                        <span key={i} className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: c }}></span>
+                        <span key={i} className="w-4 h-4 rounded-full border border-base-content/10" style={{ backgroundColor: c }}></span>
                       ))}
                     </div>
                     <span className="text-xs font-semibold text-base-content">{t.label}</span>
@@ -251,7 +251,7 @@ export default function Settings() {
               </div>
             )}
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Ta sikkerhetskopi</h4>
               <p className="text-xs text-base-content/60 mb-4">Lagre en kopi av hele databasen (alle klasser, rom og klassekart) som en fil du selv velger.</p>
               <button className="btn btn-sm bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30 gap-2" onClick={handleBackup}>
@@ -259,7 +259,7 @@ export default function Settings() {
               </button>
             </div>
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Gjenopprett fra sikkerhetskopi</h4>
               <p className="text-xs text-base-content/60 mb-4">Erstatter hele den nåværende databasen med innholdet i en valgt sikkerhetskopi-fil. Den nåværende databasen tas automatisk vare på som <code>.bak</code> først.</p>
               <button className="btn btn-sm btn-outline border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-2" onClick={() => document.getElementById('modal_restore_db')?.showModal()}>
@@ -267,7 +267,7 @@ export default function Settings() {
               </button>
             </div>
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Flytt database</h4>
               <p className="text-xs text-base-content/60 mb-4">Flytt databasefilen til en annen mappe (f.eks. en delt nettverksstasjon eller skylagringsmappe). Appen må startes på nytt etterpå.</p>
               <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 gap-2" onClick={() => document.getElementById('modal_move_db')?.showModal()}>
@@ -279,9 +279,9 @@ export default function Settings() {
 
         {activeTab === 'om' && (
           <div className="max-w-2xl mx-auto">
-            <div className="text-center py-10 bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6 shadow-xl">
+            <div className="text-center py-10 bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6 shadow-xl">
               <h1 className="text-4xl font-extrabold mb-2 text-base-content tracking-wider">
-                KLASSE<span className="text-[#f59e0b]">PLASS</span>
+                KLASSE<span className="text-accent">PLASS</span>
               </h1>
               {appVersion && (
                 <p className="text-xs text-base-content/50 font-mono mb-2">v{appVersion}</p>
@@ -296,7 +296,7 @@ export default function Settings() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               {features.map((f) => (
-                <div key={f.title} className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-5 flex gap-3">
+                <div key={f.title} className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-5 flex gap-3">
                   <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
                     <i className={`${f.icon} text-sm`}></i>
                   </div>
@@ -308,7 +308,7 @@ export default function Settings() {
               ))}
             </div>
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-base-content mb-2">Utvikler & informasjon</h4>
               <p className="text-xs text-base-content/60">
                 Utviklet av Stian Taknæs - <a href="mailto:stian@taknes.no" className="text-emerald-400 hover:underline font-bold">stian@taknes.no</a>
@@ -329,14 +329,14 @@ export default function Settings() {
               </p>
             </div>
             
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-base-content mb-3">Retningslinjer for skolen</h4>
               <p className="text-xs text-base-content/60 leading-relaxed">
                 Behandling av personopplysninger skjer i henhold til skolens interne personvernrutiner og UDIRs retningslinjer for digitale verktøy i skolen.
               </p>
             </div>
 
-            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
+            <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-base-content mb-3">Regelverk og lenker</h4>
               <ul className="flex flex-col gap-3">
                 <li>
@@ -382,7 +382,7 @@ export default function Settings() {
             <h3 className="text-xl font-bold mb-6 text-base-content">Tredjepartsbiblioteker & Lisenser</h3>
 
             <h4 className="font-bold text-sm text-base-content mb-2">Frontend-biblioteker (kode som følger med i appen)</h4>
-            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6">
+            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6">
               <table className="table w-full text-xs text-base-content/80">
                 <thead>
                   <tr className="border-b border-base-300/80 text-base-content/60">
@@ -404,7 +404,7 @@ export default function Settings() {
             </div>
 
             <h4 className="font-bold text-sm text-base-content mb-2">Native runtime (Rust/Tauri-bakenden kompilert inn i appen)</h4>
-            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6">
+            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl mb-6">
               <table className="table w-full text-xs text-base-content/80">
                 <thead>
                   <tr className="border-b border-base-300/80 text-base-content/60">
@@ -423,7 +423,7 @@ export default function Settings() {
             </div>
 
             <h4 className="font-bold text-sm text-base-content mb-2">Byggeverktøy (brukt til å utvikle, style og pakke appen)</h4>
-            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl">
+            <div className="overflow-x-auto bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl">
               <table className="table w-full text-xs text-base-content/80">
                 <thead>
                   <tr className="border-b border-base-300/80 text-base-content/60">

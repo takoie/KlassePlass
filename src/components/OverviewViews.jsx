@@ -40,10 +40,10 @@ export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, on
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       style={{ '--ca': accentColor, '--ca-rgb': hexToRgbTriplet(accentColor) }}
-      className="group relative flex flex-col rounded-xl border border-white/[0.06] bg-[#232838] p-4
+      className="group relative flex flex-col rounded-xl border border-base-content/10 bg-base-200 p-4
                  shadow-[0_1px_2px_rgba(0,0,0,0.28),0_12px_32px_-18px_rgba(0,0,0,0.6)]
                  cursor-pointer transition-[transform,border-color,box-shadow,background-color] duration-200 ease-out
-                 hover:-translate-y-0.5 hover:border-[rgb(var(--ca-rgb)/0.45)] hover:bg-[#262c3d]
+                 hover:-translate-y-0.5 hover:border-[rgb(var(--ca-rgb)/0.45)] hover:bg-base-300
                  hover:shadow-[0_2px_4px_rgba(0,0,0,0.34),0_22px_48px_-20px_rgba(0,0,0,0.72)]
                  focus-visible:outline-none focus-visible:border-[rgb(var(--ca-rgb)/0.55)]
                  focus-visible:ring-2 focus-visible:ring-[rgb(var(--ca-rgb)/0.4)]"
@@ -76,7 +76,7 @@ export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, on
 
       <div className="flex-1 min-h-[0.875rem]"></div>
 
-      <div className="flex items-center justify-end gap-1.5 border-t border-white/[0.06] pt-3">
+      <div className="flex items-center justify-end gap-1.5 border-t border-base-content/10 pt-3">
         {actions}
         {onDelete && (
           <button
@@ -87,7 +87,7 @@ export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, on
             <i className="fa-solid fa-trash-can text-[11px]"></i>
           </button>
         )}
-        <span className="grid place-items-center w-7 h-7 rounded-md ml-0.5 bg-white/[0.04] text-base-content/60 transition-colors group-hover:bg-[rgb(var(--ca-rgb))] group-hover:text-[#0b0d14]">
+        <span className="grid place-items-center w-7 h-7 rounded-md ml-0.5 bg-base-content/5 text-base-content/60 transition-colors group-hover:bg-[rgb(var(--ca-rgb))] group-hover:text-primary-content">
           <i className="fa-solid fa-arrow-right text-[11px]"></i>
         </span>
       </div>
@@ -129,7 +129,7 @@ export const PageLayout = ({ title, icon, accent = 'emerald', onAdd, onImport, c
             <i className="fa-solid fa-file-import"></i> Importer
           </button>
         )}
-        <button className="btn btn-sm bg-[#34d399] hover:bg-[#10b981] text-slate-950 border-none font-bold gap-2 shadow-lg shadow-emerald-950/40" onClick={onAdd}>
+        <button className="btn btn-sm bg-primary hover:bg-primary/90 text-slate-950 border-none font-bold gap-2 shadow-lg shadow-emerald-950/40" onClick={onAdd}>
           <i className="fa-solid fa-plus"></i> Opprett ny
         </button>
       </div>
@@ -699,7 +699,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
               .sort((a, b) => (a.newest.name || '').localeCompare(b.newest.name || '', 'nb'));
 
             return (
-              <div key={cls.id} className="col-span-full collapse collapse-arrow bg-base-100/40 border border-white/10 rounded-2xl">
+              <div key={cls.id} className="col-span-full collapse collapse-arrow bg-base-100/40 border border-base-content/10 rounded-2xl">
                 <input type="checkbox" defaultChecked />
                 <div className="collapse-title font-bold text-base-content flex items-center gap-2">
                   <i className="fa-solid fa-users text-emerald-400"></i>
