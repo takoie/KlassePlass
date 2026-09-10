@@ -18,6 +18,7 @@ export default function HeaderBar({
   rooms, selectedRoom,
   seatings, selectedSeatingId, handleSelectSeating, chartGroup, setEditingPeriod,
   saveState, handlePrint, isOnlyPeriod,
+  onUndo, onRedo, onRestoreToOpen, canUndo, canRedo, canRestoreToOpen, undoDepth,
 }) {
   const roomName = rooms.find(r => r.id === Number(selectedRoom))?.name || '—';
   // Periode-nedtrekket viser BARE periodene som hører til det aktive
@@ -103,6 +104,34 @@ export default function HeaderBar({
         >
           Ny periode
         </HeaderButton>
+      </div>
+
+      {/* Angre / gjør om / tilbakestill */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <HeaderDivider />
+        <HeaderButton
+          tone="neutral"
+          icon="fa-solid fa-rotate-left"
+          title={canUndo ? `Angre siste endring (Ctrl+Z)${undoDepth ? ` · ${undoDepth} steg` : ''}` : 'Ingenting å angre'}
+          onClick={onUndo}
+          disabled={!canUndo}
+        />
+        <HeaderButton
+          tone="neutral"
+          icon="fa-solid fa-rotate-right"
+          title={canRedo ? 'Gjør om (Ctrl+Shift+Z)' : 'Ingenting å gjøre om'}
+          onClick={onRedo}
+          disabled={!canRedo}
+        />
+        <HeaderButton
+          tone="neutral"
+          icon="fa-solid fa-clock-rotate-left"
+          title={canRestoreToOpen
+            ? 'Tilbakestill alle plasseringer til slik de var da du åpnet perioden'
+            : 'Plasseringene er som da du åpnet perioden'}
+          onClick={onRestoreToOpen}
+          disabled={!canRestoreToOpen}
+        />
       </div>
 
       {/* Høyre: status + handlinger */}

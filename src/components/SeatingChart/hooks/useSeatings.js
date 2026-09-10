@@ -5,6 +5,12 @@ import { useState, useRef, useEffect } from 'react';
 // backfyllingen har kjørt, og importerte rader uten verdi.
 const groupOf = (s) => s?.chart_group || (s?.class_id != null ? `c${s.class_id}` : null);
 
+// Kronologisk rekkefølge for to periode-rader: eldst først, med rad-id som
+// tie-break når created_at er lik (id-en er monotont økende). Brukes både til
+// sortering og til «er denne perioden eldre enn den åpne?».
+const periodOrder = (a, b) =>
+  (new Date(a?.created_at || 0) - new Date(b?.created_at || 0)) || (Number(a?.id) - Number(b?.id));
+
 const normalizeStudent = (s) => {
   if (typeof s === 'string') {
     return { id: `stu-${Math.random().toString(36).substr(2, 9)}`, name: s, note: '' };
@@ -66,7 +72,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
 
   useEffect(() => {
     latestSeatingDataRef.current = {
-      selectedSeatingId, selectedClass, selectedRoom, chartName, chartComment,
+      selectedSeatingId, selectedClass, selectedRoom, chartGroup, chartName, chartComment,
       placements, lockedSeats, unusedSeats, studentRoles, studentNotes, groupOverrides, desks, boardObj
     };
   });
@@ -92,7 +98,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
             deskLayout: { desks: ds, boardObj: bo }
           });
           window.api.saveSeating({
-            id: sid || null,
+            // sid kan være en streng når perioden ble valgt via nedtrekket
+            // (Select gir tilbake String(value)) - backend krever i64, så
+            // en streng-id gjør at lagringen stille feiler.
+            id: sid ? Number(sid) : null,
             name: cn.trim(),
             classId: Number(sc),
             roomId: Number(sr),
@@ -323,9 +332,13 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   // getNeighbors), på tvers av så mange tidligere kart som nødvendig for å fylle opp.
   const getRecentPartners = (studentId, maxCount = 2) => {
     if (!studentId) return [];
+    // KUN perioder som ligger FØR den åpne perioden kronologisk. Uten dette ville
+    // en eldre periode man går tilbake til fått «historikk» fra perioder som ble
+    // laget etterpå - de fremstår da som om den gamle perioden var den nyeste.
+    const current = seatings.find(s => Number(s.id) === Number(selectedSeatingId));
     const pastCharts = seatings
-      .filter(s => groupOf(s) === chartGroup && s.id !== Number(selectedSeatingId))
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      .filter(s => groupOf(s) === chartGroup && Number(s.id) !== Number(selectedSeatingId) && (!current || periodOrder(s, current) < 0))
+      .sort((a, b) => periodOrder(b, a));
 
     const foundIds = [];
     for (const c of pastCharts) {
@@ -361,9 +374,13 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       return;
     }
 
+    // Se getRecentPartners: kun perioder FØR den åpne perioden teller som
+    // «tidligere» - ellers viser en gammel periode konflikter mot perioder som
+    // ble opprettet senere.
+    const current = seatings.find(s => Number(s.id) === Number(selectedSeatingId));
     const pastCharts = seatings
-       .filter(s => groupOf(s) === chartGroup && s.id !== Number(selectedSeatingId))
-       .sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+       .filter(s => groupOf(s) === chartGroup && Number(s.id) !== Number(selectedSeatingId) && (!current || periodOrder(s, current) < 0))
+       .sort((a,b) => periodOrder(b, a))
        .slice(0, 5);
 
     const pastNeighborsPerChart = pastCharts.map(c => {
@@ -400,6 +417,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       pendingSaveRef.current = false;
     }
     isInitialLoadRef.current = true;
+    // Select gir id-en tilbake som streng. Lagres den rått blir selectedSeatingId
+    // en streng, og hver påfølgende autolagring sender { id: "3" } til backend
+    // som krever i64 - kallet feiler stille og lagre-statusen henger på "Lagrer…".
+    const normId = (id === '' || id == null) ? '' : Number(id);
     const seating = seatingsList.find(s => s.id === Number(id));
     if (!seating) {
       setSelectedSeatingId('');
@@ -413,7 +434,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       setStudentNotes({});
       if (selectedClass && selectedRoom) setupNewChart(selectedClass, selectedRoom, {});
     } else {
-      setSelectedSeatingId(id);
+      setSelectedSeatingId(normId);
       setSelectedClass(seating.class_id);
       setSelectedRoom(seating.room_id);
       setChartGroup(groupOf(seating));
@@ -536,7 +557,8 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       });
 
       const result = await window.api.saveSeating({
-        id: selectedSeatingId || null,
+        // Alltid tall (eller null) - backend krever i64. Se handleSelectSeating.
+        id: selectedSeatingId ? Number(selectedSeatingId) : null,
         name: chartName.trim(),
         classId: Number(selectedClass),
         roomId: Number(selectedRoom),

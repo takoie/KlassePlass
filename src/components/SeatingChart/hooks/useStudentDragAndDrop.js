@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { getDeskLayout, slotIndexAtPointerX } from '../deskLayout';
 
 // Hvor langt (i skjerm-piksler) pekeren må ha flyttet seg fra der draget startet
 // før et slipp «på gulvet» tolkes som "fjern eleven" – hindrer at et rent klikk
@@ -68,10 +69,12 @@ export function useStudentDragAndDrop({
 
     if (!onDrawer) {
       for (let d of desks) {
-        const cap = d.capacity || 1;
-        const deskW = cap * 100;
-        if (cx >= d.x && cx <= (d.x + deskW) && cy >= d.y && cy <= (d.y + 60)) {
-          const slotIdx = Math.min(cap - 1, Math.max(0, Math.floor((cx - d.x) / 100)));
+        // Bruk KOLLAPSET bord-geometri (samme som render), ellers peker
+        // treff-boksen på de gamle koordinatene der setene lå før kollapsen.
+        const layout = getDeskLayout(d, placements, unusedSeats);
+        if (cx >= d.x && cx <= (d.x + layout.width) && cy >= d.y && cy <= (d.y + 60)) {
+          const slotIdx = slotIndexAtPointerX(layout, d.x, cx);
+          if (slotIdx == null) break; // helt kollapset bord – ingen sete å treffe
           const key = `${d.id}_seat_${slotIdx}`;
           // Håndskjulte (tomme "ubrukt"-merkede) plasser er ikke gyldige mål – de
           // vises ikke under draget, så de skal heller ikke få "Slipp her"-highlight.
@@ -100,12 +103,11 @@ export function useStudentDragAndDrop({
     let targetSlotKey = null;
     if (!droppedOnDrawer && canvasRef.current) {
       for (let d of desks) {
-        const cap = d.capacity || 1;
-        const deskW = cap * 100;
-        if (cx >= d.x && cx <= (d.x + deskW) && cy >= d.y && cy <= (d.y + 60)) {
-          const slotW = 100;
-          const relativeX = cx - d.x;
-          const slotIdx = Math.min(cap - 1, Math.max(0, Math.floor(relativeX / slotW)));
+        // Samme kollapset geometri som render + handleMouseMove.
+        const layout = getDeskLayout(d, placements, unusedSeats);
+        if (cx >= d.x && cx <= (d.x + layout.width) && cy >= d.y && cy <= (d.y + 60)) {
+          const slotIdx = slotIndexAtPointerX(layout, d.x, cx);
+          if (slotIdx == null) break;
           const key = `${d.id}_seat_${slotIdx}`;
           // Håndskjulte (tomme "ubrukt"-merkede) plasser er ikke gyldige slippmål.
           targetSlotKey = (unusedSeats?.[key] && !placements[key]) ? null : key;

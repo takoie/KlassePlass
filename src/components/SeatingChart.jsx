@@ -13,6 +13,8 @@ import { useFunModes } from './SeatingChart/hooks/useFunModes';
 import { useGroupLasso } from './SeatingChart/hooks/useGroupLasso';
 import { useStudentDragAndDrop } from './SeatingChart/hooks/useStudentDragAndDrop';
 import { useSeatings } from './SeatingChart/hooks/useSeatings';
+import { useSeatingUndo } from './SeatingChart/hooks/useSeatingUndo';
+import { getDeskLayout } from './SeatingChart/deskLayout';
 
 // Makkergruppe-fargene 1-12 (se [1..12]-gridet i DeskContextMenu.jsx/
 // Toolbar.jsx). Brukerspesifisert palett (kategorisk, D3/Tableau-aktig) valgt
@@ -130,6 +132,41 @@ export default function SeatingChart({ onBack, initialId }) {
   // "Slett periode" ville da vært misvisende (antyder at kartet lever videre med
   // andre perioder), så knappen/dialogen kaller det "Slett kart" i stedet.
   const isOnlyPeriod = chartPeriodCount <= 1;
+
+  // Angre/gjør-om for elevplasseringer m.m. mens editoren er åpen på denne
+  // perioden. Bytte periode nullstiller loggen (se hooken).
+  const {
+    undo, redo, restoreToOpen, canUndo, canRedo, canRestoreToOpen, undoDepth,
+  } = useSeatingUndo({
+    selectedSeatingId,
+    placements, setPlacements,
+    lockedSeats, setLockedSeats,
+    unusedSeats, setUnusedSeats,
+    groupOverrides, setGroupOverrides,
+    allStudents, setUnplacedStudents,
+  });
+
+  const openRestoreToOpenModal = () => {
+    if (canRestoreToOpen) document.getElementById('modal_restore_open')?.showModal();
+  };
+
+  // Ctrl/Cmd+Z = angre, Ctrl+Shift+Z / Ctrl+Y = gjør om. Ignoreres når
+  // markøren står i et skrivefelt (navn/notat-modaler o.l.).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'z' && key !== 'y') return;
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const wantRedo = key === 'y' || (key === 'z' && e.shiftKey);
+      e.preventDefault();
+      if (wantRedo) redo();
+      else undo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo]);
 
   // Speiler isProjectorMode mot native OS-fullskjerm. Kjøres KUN på faktisk
   // endring (ikke som cleanup+body-par), for å unngå to overlappende
@@ -463,6 +500,9 @@ export default function SeatingChart({ onBack, initialId }) {
           setEditingPeriod={setEditingPeriod}
           saveState={saveState} handlePrint={handlePrint}
           isOnlyPeriod={isOnlyPeriod}
+          onUndo={undo} onRedo={redo} onRestoreToOpen={openRestoreToOpenModal}
+          canUndo={canUndo} canRedo={canRedo} canRestoreToOpen={canRestoreToOpen}
+          undoDepth={undoDepth}
         />
       )}
 
@@ -595,21 +635,16 @@ export default function SeatingChart({ onBack, initialId }) {
                       // Kollaps kun når minst én plass blir igjen (ellers er det et
                       // vanlig tomt bord) og ikke midt i en dra-handling (da trengs
                       // alle plassene som gyldige slippmål).
-                      const allSlots = Array.from({ length: cap }, (_, i) => i);
-                      const hasStudents = allSlots.some((i) => placements[`${d.id}_seat_${i}`]);
-                      const visibleSlots = allSlots.filter(
-                        (i) => !(unusedSeats[`${d.id}_seat_${i}`] && !placements[`${d.id}_seat_${i}`])
-                      );
-                      const hiddenSlotCount = cap - visibleSlots.length;
-                      // Alle ledige plasser skjult + ingen elever = hele bordet trekkes
-                      // sammen til en liten "skjult"-brikke med et øye for å hente det fram.
+                      // Kollaps-geometri (hvilke seter vises, i hvilken rekkefølge, hvor
+                      // bredt bordet blir) ligger i deskLayout.mjs – DELT med treff-testen
+                      // i useStudentDragAndDrop, ellers driver slippmålene fra setene.
                       // Håndskjulte plasser forblir skjult også under en dra-handling
                       // (i motsetning til bord skjult av "Skjul tomme bord"-toggelen) –
                       // brukeren gjemte dem bevisst, så de skal ikke dukke opp som "Ubrukt".
-                      const deskCollapsedWhole = hiddenSlotCount > 0 && visibleSlots.length === 0 && !hasStudents;
-                      const collapseUnused = visibleSlots.length > 0 && hiddenSlotCount > 0;
-                      const renderSlots = collapseUnused ? visibleSlots : allSlots;
-                      const deskW = renderSlots.length * 100;
+                      const {
+                        hasStudents, hiddenSlotCount,
+                        collapsedWhole: deskCollapsedWhole, collapseUnused, renderSlots, width: deskW,
+                      } = getDeskLayout(d, placements, unusedSeats);
                       const visualWidth = deskW;
 
                       // "Skjul tomme bord": bord uten en eneste elev forsvinner helt fra
@@ -872,6 +907,7 @@ export default function SeatingChart({ onBack, initialId }) {
         newPeriodWeeks={newPeriodWeeks} setNewPeriodWeeks={setNewPeriodWeeks} handleStartNewPeriod={handleStartNewPeriod}
         canSplitChart={chartPeriodCount > 1} splitToNewChart={splitToNewChart}
         syncFromRoom={syncFromRoom}
+        restoreToOpen={restoreToOpen}
       />
 
       <DeskContextMenu

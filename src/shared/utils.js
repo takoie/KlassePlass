@@ -147,55 +147,6 @@ export function getPortal() {
 }
 
 /**
- * Bekreftelsesdialog som matcher KlassePlass-designet.
- * Returnerer en Promise<boolean> — true hvis brukeren bekrefter.
- * @param {Object} opts
- * @param {string} opts.title       — tittel (f.eks. "Slett klassen?")
- * @param {string} opts.message     — forklarende tekst
- * @param {string} [opts.confirmLabel]  — tekst på bekreft-knapp (standard: "Ja, slett")
- * @param {string} [opts.cancelLabel]   — tekst på avbryt-knapp (standard: "Avbryt")
- * @param {boolean} [opts.danger]       — rød bekreft-knapp (standard: true)
- */
-export function showConfirm({ title, message, confirmLabel = 'Ja, slett', cancelLabel = 'Avbryt', danger = true } = {}) {
-  return new Promise(resolve => {
-    const portal = getPortal();
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'kp-backdrop';
-    backdrop.style.zIndex = '10000';
-
-    const titleId = 'kp-confirm-title';
-    backdrop.setAttribute('role', 'dialog');
-    backdrop.setAttribute('aria-modal', 'true');
-    backdrop.setAttribute('aria-labelledby', titleId);
-
-    backdrop.innerHTML = `
-      <div class="kp-modal" style="max-width:400px">
-        <div class="modal-header">
-          <span class="modal-title" id="${titleId}">${title ?? ''}</span>
-        </div>
-        ${message ? `<p style="font-size:13px;color:oklch(var(--bc)/0.7);margin-bottom:4px;line-height:1.5">${message}</p>` : ''}
-        <div class="modal-footer">
-          <button class="btn btn-ghost btn-sm" id="kp-confirm-cancel">${cancelLabel}</button>
-          <button class="btn btn-sm ${danger ? 'btn-error' : 'btn-primary'}" id="kp-confirm-ok">${confirmLabel}</button>
-        </div>
-      </div>`;
-
-    const close = (result) => {
-      backdrop.remove();
-      resolve(result);
-    };
-
-    backdrop.querySelector('#kp-confirm-cancel').addEventListener('click', () => close(false));
-    backdrop.querySelector('#kp-confirm-ok').addEventListener('click', () => close(true));
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) close(false); });
-
-    portal.appendChild(backdrop);
-    focusAfterRender(backdrop.querySelector('#kp-confirm-cancel'));
-  });
-}
-
-/**
  * Fokuserer et element etter neste render-syklus.
  * Bruk i stedet for ad-hoc setTimeout(() => el?.focus(), 50).
  * @param {HTMLElement|null|undefined} el

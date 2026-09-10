@@ -8,6 +8,7 @@ export default function Modals({
   newPeriodWeeks, setNewPeriodWeeks, handleStartNewPeriod,
   canSplitChart, splitToNewChart,
   syncFromRoom,
+  restoreToOpen,
 }) {
   return (
     <>
@@ -149,6 +150,25 @@ export default function Modals({
               <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
             </form>
             <button className="btn btn-warning" onClick={syncFromRoom}>Ja, oppdater</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="modal_restore_open" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-orange-400 text-lg flex items-center gap-2">
+            <i className="fa-solid fa-clock-rotate-left"></i> Tilbakestill plasseringene?
+          </h3>
+          <p className="py-4 text-sm text-slate-300">
+            Setter alle plasseringer, låste seter, skjulte plasser og makkergruppe-farger
+            tilbake til slik de var da du åpnet perioden. De siste endringene forsvinner –
+            men kan hentes tilbake med <strong>Gjør om</strong>.
+          </p>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+              <button className="btn btn-warning" onClick={restoreToOpen}>Ja, tilbakestill</button>
+            </form>
           </div>
         </div>
       </dialog>
