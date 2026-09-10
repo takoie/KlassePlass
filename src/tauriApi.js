@@ -130,28 +130,18 @@ const tauriApi = {
   },
   openPath: async (path) => {
     try {
-      await invoke('open_file_native', { path });
+      await pluginOpenPath(path);
       return { success: true, error: null };
-    } catch (e) {
-      try {
-        await pluginOpenPath(path);
-        return { success: true, error: null };
-      } catch (err) {
-        return { success: false, error: err?.message ?? String(err) };
-      }
+    } catch (err) {
+      return { success: false, error: err?.message ?? String(err) };
     }
   },
   showInFolder: async (path) => {
     try {
-      await invoke('show_in_folder_native', { path });
+      await revealItemInDir(path);
       return { success: true, error: null };
-    } catch (e) {
-      try {
-        await revealItemInDir(path);
-        return { success: true, error: null };
-      } catch (err) {
-        return { success: false, error: err?.message ?? String(err) };
-      }
+    } catch (err) {
+      return { success: false, error: err?.message ?? String(err) };
     }
   },
 

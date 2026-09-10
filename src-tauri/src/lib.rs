@@ -15,7 +15,7 @@ use commands::groups::{
   delete_group_assignment, get_group_assignment, get_group_assignment_groups,
   get_group_assignments, get_group_history, save_group_assignment, save_group_history,
 };
-use commands::print_export::{export_seating_chart_pdf, open_file_native, show_in_folder_native};
+use commands::print_export::export_seating_chart_pdf;
 use commands::rooms::{delete_room, get_room, get_rooms, save_room};
 use commands::seatings::{
   delete_seating, get_seating, get_seatings, save_seating, set_seating_chart_group,
@@ -63,8 +63,6 @@ pub fn run() {
       restore_db,
       move_db,
       export_seating_chart_pdf,
-      open_file_native,
-      show_in_folder_native,
       export_bundle,
       import_bundle_pick_file
     ])
