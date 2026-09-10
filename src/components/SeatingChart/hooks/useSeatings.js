@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { showToast } from '../../../shared/utils';
 
 // Gruppenøkkelen for en seating-rad. Etter v12-backfyllingen har hver rad en
 // ikke-tom chart_group; fallbacken ("c{class_id}") dekker bare kort tid før
@@ -174,7 +175,9 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
           setupNewChartLocal(clsObj, rmObj, parsedPlacements, deskSnapshot);
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('lasting av klassekart feilet', e);
+    }
   };
 
   // deskSnapshot (om satt): bordoppsettet slik det var da klassekartet sist ble lagret.
@@ -578,7 +581,11 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         if (saved) setChartGroup(groupOf(saved));
       }
       setSaveState('saved');
-    } catch (e) {}
+    } catch (e) {
+      console.error('saveCurrentSeating feilet', e);
+      setSaveState('error');
+      showToast('Klassekartet kunne ikke lagres. Sjekk at det er nok diskplass, og prøv igjen.', 'error');
+    }
   };
 
   const handleStartNewPeriod = async (jumpWeeks) => {
@@ -626,7 +633,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       setSeatings(newSeatings);
       if (result?.lastID) handleSelectSeating(result.lastID, newSeatings);
       document.getElementById('modal_new_period')?.close();
-    } catch (e) {}
+    } catch (e) {
+      console.error('handleStartNewPeriod feilet', e);
+      showToast('Kunne ikke opprette ny periode. Prøv igjen.', 'error');
+    }
   };
 
   const handleSaveEditedPeriod = async () => {
@@ -677,7 +687,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       } else {
         handleSelectSeating('', newSeatings);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('handleSaveEditedPeriod feilet', e);
+      showToast('Kunne ikke lagre endringene i perioden. Prøv igjen.', 'error');
+    }
   };
 
   const flipRoom = () => {
@@ -813,7 +826,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         }
         return next;
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error('syncFromRoom feilet', e);
+      showToast('Kunne ikke oppdatere romplanen for dette kartet.', 'error');
+    }
     document.getElementById('modal_sync_room')?.close();
   };
 
@@ -831,7 +847,10 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
       setChartGroup(newGroup);
       setSaveState('saved');
       document.getElementById('modal_edit_period')?.close();
-    } catch (e) {}
+    } catch (e) {
+      console.error('splitToNewChart feilet', e);
+      showToast('Kunne ikke løsrive perioden til eget kart. Prøv igjen.', 'error');
+    }
   };
 
   // Antall perioder som deler kart med den aktive — > 1 betyr at "skill ut"
