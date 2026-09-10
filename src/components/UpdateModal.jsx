@@ -87,7 +87,7 @@ export default function UpdateModal({ isOpen, onClose }) {
         {/* Header */}
         <div className="px-6 py-4 bg-surface-raised border-b border-base-300 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-success">
               <i className="fa-solid fa-cloud-arrow-down text-lg"></i>
             </div>
             <div>
@@ -115,15 +115,15 @@ export default function UpdateModal({ isOpen, onClose }) {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
                 {checking ? (
-                  <i className="fa-solid fa-spinner fa-spin text-emerald-400 text-base"></i>
+                  <i className="fa-solid fa-spinner fa-spin text-success text-base"></i>
                 ) : updateReady ? (
-                  <i className="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+                  <i className="fa-solid fa-circle-check text-success text-base"></i>
                 ) : updateAvailable ? (
-                  <i className="fa-solid fa-circle-arrow-down text-emerald-400 text-base"></i>
+                  <i className="fa-solid fa-circle-arrow-down text-success text-base"></i>
                 ) : checkError ? (
                   <i className="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i>
                 ) : (
-                  <i className="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+                  <i className="fa-solid fa-circle-check text-success text-base"></i>
                 )}
 
                 <div>
@@ -159,7 +159,7 @@ export default function UpdateModal({ isOpen, onClose }) {
                   onClick={() => handleCheck(true)}
                   disabled={checking || downloading}
                 >
-                  <i className={`fa-solid fa-arrows-rotate ${checking ? 'fa-spin text-emerald-400' : ''}`}></i>
+                  <i className={`fa-solid fa-arrows-rotate ${checking ? 'fa-spin text-success' : ''}`}></i>
                   Søk på nytt
                 </button>
 
@@ -192,7 +192,7 @@ export default function UpdateModal({ isOpen, onClose }) {
               <div className="mt-2 space-y-1">
                 <div className="flex justify-between text-xs text-base-content/60">
                   <span>Laster ned installasjonsfiler...</span>
-                  <span className="font-bold text-emerald-400">{downloadProgress?.percent ?? 50}%</span>
+                  <span className="font-bold text-success">{downloadProgress?.percent ?? 50}%</span>
                 </div>
                 <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300">
                   <div
@@ -208,7 +208,7 @@ export default function UpdateModal({ isOpen, onClose }) {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-extrabold uppercase tracking-widest text-base-content/60 flex items-center gap-2">
-                <i className="fa-solid fa-list-check text-emerald-400"></i> Hva er nytt i KlassePlass
+                <i className="fa-solid fa-list-check text-success"></i> Hva er nytt i KlassePlass
               </h3>
             </div>
 
@@ -224,7 +224,7 @@ export default function UpdateModal({ isOpen, onClose }) {
                         Versjon {rel.version}
                       </span>
                       {rel.isLatest && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-success border border-emerald-500/30">
                           Nyeste
                         </span>
                       )}
@@ -239,7 +239,7 @@ export default function UpdateModal({ isOpen, onClose }) {
                       <div key={idx} className="flex items-start gap-2.5 text-xs">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold mt-0.5 flex-shrink-0 border ${
                           item.type === 'feature'
-                            ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30'
+                            ? 'bg-emerald-950/60 text-success border-emerald-500/30'
                             : item.type === 'fix'
                             ? 'bg-amber-950/60 text-amber-300 border-amber-500/30'
                             : item.type === 'stability'

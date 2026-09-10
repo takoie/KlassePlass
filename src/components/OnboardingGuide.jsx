@@ -78,7 +78,7 @@ export default function OnboardingGuide({ onClose }) {
     <dialog ref={dialogRef} className="modal modal-bottom sm:modal-middle">
       <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl max-w-lg">
         <div className="flex items-start gap-4 mb-2">
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center text-success flex-shrink-0">
             <i className={`${current.icon} text-lg`}></i>
           </div>
           <div className="pt-1">
@@ -109,7 +109,7 @@ export default function OnboardingGuide({ onClose }) {
                 <i className="fa-solid fa-arrow-left"></i> Forrige
               </button>
             )}
-            <button className="btn btn-sm bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30 gap-2" onClick={handleNext}>
+            <button className="btn btn-sm bg-emerald-500/20 text-success border-none hover:bg-emerald-500/30 gap-2" onClick={handleNext}>
               {isLast ? 'Kom i gang' : 'Neste'} {!isLast && <i className="fa-solid fa-arrow-right"></i>}
             </button>
           </div>

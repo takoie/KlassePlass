@@ -12,7 +12,7 @@ const GROUP_COLORS = [
 const zoneMeta = {
   window: { label: 'Vindurekke', badgeClass: 'border-yellow-500/40 text-yellow-300 bg-yellow-950/80' },
   door: { label: 'Dørsone', badgeClass: 'border-amber-500/40 text-amber-300 bg-amber-950/80' },
-  front: { label: 'Fremste rad', badgeClass: 'border-emerald-500/40 text-emerald-300 bg-emerald-950/80' },
+  front: { label: 'Fremste rad', badgeClass: 'border-emerald-500/40 text-success bg-emerald-950/80' },
   back: { label: 'Bakerste rad', badgeClass: 'border-purple-500/40 text-purple-300 bg-purple-950/80' },
   center: { label: 'Midtsone', badgeClass: 'border-cyan-500/40 text-cyan-300 bg-cyan-950/80' }
 };

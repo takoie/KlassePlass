@@ -14,10 +14,10 @@ export const HeaderField = ({ label, title, children }) => (
 );
 
 const TONES = {
-  ghost: 'border-transparent text-base-content/60 hover:text-base-content hover:bg-base-200',
-  neutral: 'border-base-300 text-base-content hover:text-base-content hover:bg-base-200',
-  primary: 'border-emerald-500/40 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/10',
-  danger: 'border-rose-500/30 text-rose-300 hover:text-rose-200 hover:bg-rose-950/40',
+  ghost: 'border-transparent text-base-content/60 hover:text-base-content hover:bg-base-300',
+  neutral: 'border-base-300 text-base-content hover:text-base-content hover:bg-base-300',
+  primary: 'border-primary/40 text-primary hover:bg-primary/10',
+  danger: 'border-error/40 text-error hover:bg-error/10',
 };
 
 /** Ensartet header-knapp: samme boks-høyde som nedtrekksmenyene, litt mindre tekst. */
@@ -40,15 +40,15 @@ export const HeaderButton = ({ onClick, title, tone = 'neutral', icon, iconClass
 export const SaveStatus = ({ saveState }) => (
   <div className="w-[92px] flex-shrink-0 flex items-center justify-end">
     {saveState === 'saving' ? (
-      <span className="text-amber-400 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-warning text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
         <i className="fa-solid fa-spinner fa-spin"></i> Lagrer…
       </span>
     ) : saveState === 'error' ? (
-      <span className="text-rose-400 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-error text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
         <i className="fa-solid fa-triangle-exclamation"></i> Ikke lagret
       </span>
     ) : (
-      <span className="text-emerald-400 text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-success text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
         <i className="fa-solid fa-circle-check"></i> Lagret
       </span>
     )}

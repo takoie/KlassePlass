@@ -37,7 +37,7 @@ export default function Toolbar({
     <div className="w-64 bg-base-200 flex flex-col z-10 flex-shrink-0 border-r border-base-300 shadow-xl relative overflow-hidden">
       {/* Header */}
       <div className="px-4 py-3 border-b border-base-300 flex justify-between items-center bg-base-200">
-        <h3 className="font-extrabold text-xs text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
+        <h3 className="font-extrabold text-xs text-success flex items-center gap-2 uppercase tracking-widest">
           <i className="fa-solid fa-toolbox"></i> Verktøy
         </h3>
       </div>
@@ -49,7 +49,7 @@ export default function Toolbar({
 
           <ActionRow
             icon="fa-solid fa-users"
-            iconColor="text-emerald-400"
+            iconColor="text-success"
             label="Elever"
             active={showStudentDrawer}
             badge={unplacedStudents.length > 0 ? unplacedStudents.length : null}
@@ -58,7 +58,7 @@ export default function Toolbar({
 
           <ActionRow
             icon="fa-solid fa-people-arrows"
-            iconColor="text-emerald-400"
+            iconColor="text-success"
             label="Plasser alle"
             disabled={unplacedStudents.length === 0}
             title="Fyll alle ledige plasser med uplasserte elever"

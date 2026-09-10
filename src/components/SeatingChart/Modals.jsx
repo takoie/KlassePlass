@@ -109,7 +109,7 @@ export default function Modals({
       <dialog id="modal_new_period" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-base-content text-lg flex items-center gap-2">
-            <i className="fa-solid fa-plus text-emerald-400"></i> Ny periode
+            <i className="fa-solid fa-plus text-success"></i> Ny periode
           </h3>
           <p className="py-2 text-sm text-base-content/80">
             Lagrer det nåværende oppsettet som historikk og starter en ny periode. Hvor mange uker skal den nye perioden vare?

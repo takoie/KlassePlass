@@ -65,7 +65,7 @@ export default function RoomToolsDrawer({
     <>
       {/* Header */}
       <div className="flex-shrink-0 min-w-[16rem] px-4 py-3 border-b border-base-300 flex justify-between items-center">
-        <h3 className="font-extrabold text-xs text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
+        <h3 className="font-extrabold text-xs text-success flex items-center gap-2 uppercase tracking-widest">
           <i className="fa-solid fa-toolbox"></i> Verktøy
         </h3>
         <button
@@ -77,7 +77,7 @@ export default function RoomToolsDrawer({
       </div>
 
       <div className="flex-1 min-h-0 min-w-[16rem] overflow-y-auto flex flex-col gap-3 p-3 custom-scrollbar">
-        <Panel icon="fa-solid fa-eye" iconColor="text-emerald-400" title="Visning & kontroll" open>
+        <Panel icon="fa-solid fa-eye" iconColor="text-success" title="Visning & kontroll" open>
           <ToggleRow
             icon="fa-solid fa-map"
             iconColor="text-amber-400"
@@ -169,7 +169,7 @@ export default function RoomToolsDrawer({
           <span className={`${subLabelCls} pt-2`}>Sone-tildeling</span>
           <ActionRow icon="fa-solid fa-sun" iconColor="text-yellow-300" label="Vindurekke" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('window')} />
           <ActionRow icon="fa-solid fa-door-open" iconColor="text-amber-300" label="Dørsone" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('door')} />
-          <ActionRow icon="fa-solid fa-location-dot" iconColor="text-emerald-300" label="Fremste rad" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('front')} />
+          <ActionRow icon="fa-solid fa-location-dot" iconColor="text-success" label="Fremste rad" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('front')} />
           <ActionRow icon="fa-solid fa-arrow-down" iconColor="text-purple-300" label="Bakerste rad" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('back')} />
           <ActionRow icon="fa-solid fa-align-center" iconColor="text-cyan-300" label="Midtsone" disabled={selectedDesksCount === 0} onClick={() => toggleZoneOnSelected('center')} />
           <ActionRow icon="fa-solid fa-eraser" iconColor="text-rose-300" label="Fjern alle soner" onClick={clearAllZones} />

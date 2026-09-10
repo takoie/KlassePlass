@@ -19,7 +19,7 @@ export default function UpdateBanner() {
     <div className="fixed bottom-4 right-4 z-[200] w-80 bg-surface-field border border-emerald-500/40 rounded-2xl shadow-2xl p-4 animate-[fadeIn_0.2s_ease-out]">
       <div className="flex items-start gap-3">
         <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-          <i className="fa-solid fa-arrow-up text-emerald-400 text-sm"></i>
+          <i className="fa-solid fa-arrow-up text-success text-sm"></i>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-base-content">Ny versjon er klar</p>
@@ -28,7 +28,7 @@ export default function UpdateBanner() {
           </p>
           <div className="flex gap-2 mt-3">
             <button
-              className="btn btn-xs bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30 gap-1.5"
+              className="btn btn-xs bg-emerald-500/20 text-success border-none hover:bg-emerald-500/30 gap-1.5"
               onClick={handleRestart}
               disabled={restarting}
             >

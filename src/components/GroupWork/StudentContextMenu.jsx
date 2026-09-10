@@ -45,7 +45,7 @@ export default function StudentContextMenu({
             setContextMenu(null);
           }}
         >
-          <i className={`fa-solid ${isLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4`}></i>
+          <i className={`fa-solid ${isLocked ? 'fa-unlock text-success' : 'fa-lock text-red-400'} w-4`}></i>
           {isLocked ? 'Lås opp elev' : 'Lås elev'}
         </button>
 
@@ -57,7 +57,7 @@ export default function StudentContextMenu({
               setContextMenu(null);
             }}
           >
-            <i className={`fa-solid ${isExcluded ? 'fa-user-check text-emerald-400' : 'fa-user-clock text-amber-400'} w-4`}></i>
+            <i className={`fa-solid ${isExcluded ? 'fa-user-check text-success' : 'fa-user-clock text-amber-400'} w-4`}></i>
             {isExcluded ? 'Ta med i fordelingen' : 'Sett som fraværende'}
           </button>
         )}

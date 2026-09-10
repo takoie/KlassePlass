@@ -14,7 +14,7 @@ export default function StudentDrawer({ showStudentDrawer, setShowStudentDrawer,
     >
       <div className="px-4 py-3 border-b border-base-300 flex justify-between items-center bg-base-200 whitespace-nowrap min-w-[16rem]">
         <h3 className="text-sm font-bold text-base-content flex items-center gap-2">
-          <i className="fa-solid fa-users text-emerald-400"></i> Elever ({unplacedStudents.length})
+          <i className="fa-solid fa-users text-success"></i> Elever ({unplacedStudents.length})
         </h3>
         <button className="btn btn-ghost btn-xs btn-square hover:bg-base-200 text-base-content/60" onClick={() => setShowStudentDrawer(false)}>
           <i className="fa-solid fa-xmark"></i>

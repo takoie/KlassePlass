@@ -67,7 +67,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
               setContextMenu(null);
             }}
           >
-            <i className={`fa-solid ${isStudentLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4 text-center`}></i>
+            <i className={`fa-solid ${isStudentLocked ? 'fa-unlock text-success' : 'fa-lock text-red-400'} w-4 text-center`}></i>
             {isStudentLocked ? 'Lås opp elev' : 'Lås elev'}
           </button>
         )}
@@ -79,7 +79,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
             setContextMenu(null);
           }}
         >
-          <i className={`fa-solid ${isDeskLocked ? 'fa-unlock text-emerald-400' : 'fa-lock text-red-400'} w-4 text-center`}></i>
+          <i className={`fa-solid ${isDeskLocked ? 'fa-unlock text-success' : 'fa-lock text-red-400'} w-4 text-center`}></i>
           {isDeskLocked ? 'Lås opp bord' : 'Lås bord'}
         </button>
 
@@ -91,7 +91,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
               setContextMenu(null);
             }}
           >
-            <i className={`fa-solid ${isSeatUnused ? 'fa-rotate-left text-emerald-400' : 'fa-eye-slash text-amber-400'} w-4 text-center`}></i>
+            <i className={`fa-solid ${isSeatUnused ? 'fa-rotate-left text-success' : 'fa-eye-slash text-amber-400'} w-4 text-center`}></i>
             {isSeatUnused ? 'Vis denne plassen' : 'Skjul denne plassen'}
           </button>
         )}
@@ -104,7 +104,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
               setContextMenu(null);
             }}
           >
-            <i className="fa-solid fa-eye text-emerald-400 w-4 text-center"></i>
+            <i className="fa-solid fa-eye text-success w-4 text-center"></i>
             Vis skjulte plasser ({hiddenSeatCount})
           </button>
         )}

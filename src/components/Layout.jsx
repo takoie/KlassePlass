@@ -101,13 +101,13 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
           <button
             className={`overblikk-nav-btn overblikk-nav-btn-sub relative transition-all duration-300 ${
               hasUpdateReady
-                ? 'border-emerald-500/60 bg-emerald-950/40 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                ? 'border-emerald-500/60 bg-emerald-950/40 text-success shadow-[0_0_15px_rgba(16,185,129,0.35)]'
                 : ''
             }`}
             onClick={onOpenUpdateModal}
           >
             <i className={`fa-solid fa-cloud-arrow-down fa-fw flex-shrink-0 ${
-              hasUpdateReady ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-base-content/60'
+              hasUpdateReady ? 'text-success drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-base-content/60'
             }`}></i>
             <span className="leading-none flex-1 text-left">Oppdatering</span>
             {hasUpdateReady && (

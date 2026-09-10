@@ -241,7 +241,7 @@ export const ClassesOverview = ({ onEdit }) => {
 
       <dialog id="modal_create_class" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
         <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
-          <h3 className="font-bold text-lg text-emerald-400 mb-6 flex items-center gap-2">
+          <h3 className="font-bold text-lg text-success mb-6 flex items-center gap-2">
             <i className="fa-solid fa-users"></i> Opprett ny klasse
           </h3>
 
@@ -702,7 +702,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
               <div key={cls.id} className="col-span-full collapse collapse-arrow bg-base-100/40 border border-base-content/10 rounded-2xl">
                 <input type="checkbox" defaultChecked />
                 <div className="collapse-title font-bold text-base-content flex items-center gap-2">
-                  <i className="fa-solid fa-users text-emerald-400"></i>
+                  <i className="fa-solid fa-users text-success"></i>
                   {cls.name}
                   <span className="text-xs font-normal text-base-content/60">({classCharts.length} klassekart)</span>
                 </div>
@@ -733,7 +733,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
 
       <dialog id="modal_create_seating" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
         <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
-          <h3 className="font-bold text-lg text-emerald-400 mb-6 flex items-center gap-2">
+          <h3 className="font-bold text-lg text-success mb-6 flex items-center gap-2">
             <i className="fa-solid fa-map-location-dot"></i> Opprett nytt klassekart
           </h3>
           
@@ -766,7 +766,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                 />
                 {selectedClass && (
                   <p className="text-[11px] text-base-content/60 mt-1 flex items-center gap-1.5">
-                    <i className="fa-solid fa-users w-3 text-emerald-400"></i> {modalStudentCount} elever
+                    <i className="fa-solid fa-users w-3 text-success"></i> {modalStudentCount} elever
                   </p>
                 )}
               </div>

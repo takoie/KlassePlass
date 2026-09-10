@@ -218,14 +218,14 @@ export default function Select({
                   opt.disabled
                     ? 'text-base-content/40 cursor-not-allowed'
                     : isActive
-                    ? 'bg-base-200 text-base-content'
+                    ? 'bg-primary/15 text-base-content'
                     : isSelected
-                    ? 'text-emerald-300'
+                    ? 'text-primary font-semibold'
                     : 'text-base-content'
                 }`}
               >
                 <span className="truncate">{opt.label}</span>
-                {isSelected && <i className="fa-solid fa-check text-[11px] text-emerald-400 flex-shrink-0"></i>}
+                {isSelected && <i className="fa-solid fa-check text-[11px] text-primary flex-shrink-0"></i>}
               </li>
             );
           })}

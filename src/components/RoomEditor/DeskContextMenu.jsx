@@ -52,7 +52,7 @@ export default function DeskContextMenu({
       <li className="menu-title py-1 px-2 text-[10px] uppercase opacity-50 text-base-content/60">Toggle soner ({selectedDesks.length})</li>
       <li><a onClick={() => { toggleZoneOnSelected('window'); setContextMenu(null); }}><i className="fa-solid fa-sun text-yellow-400"></i> Vindurekke</a></li>
       <li><a onClick={() => { toggleZoneOnSelected('door'); setContextMenu(null); }}><i className="fa-solid fa-door-open text-amber-400"></i> Dørsone</a></li>
-      <li><a onClick={() => { toggleZoneOnSelected('front'); setContextMenu(null); }}><i className="fa-solid fa-location-dot text-emerald-400"></i> Fremste rad</a></li>
+      <li><a onClick={() => { toggleZoneOnSelected('front'); setContextMenu(null); }}><i className="fa-solid fa-location-dot text-success"></i> Fremste rad</a></li>
       <li><a onClick={() => { toggleZoneOnSelected('back'); setContextMenu(null); }}><i className="fa-solid fa-arrow-down text-purple-400"></i> Bakerste rad</a></li>
       <li><a onClick={() => { toggleZoneOnSelected('center'); setContextMenu(null); }}><i className="fa-solid fa-align-center text-cyan-400"></i> Midtsone</a></li>
       <div className="divider my-0 h-1"></div>

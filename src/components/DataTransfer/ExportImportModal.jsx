@@ -68,7 +68,7 @@ export function ExportModal({ modalId, source, suggestedName }) {
     <dialog id={modalId} className="modal modal-bottom sm:modal-middle">
       <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
         <h3 className="font-bold text-lg flex items-center gap-2 text-base-content">
-          <i className="fa-solid fa-file-export text-emerald-400"></i> Eksporter
+          <i className="fa-solid fa-file-export text-success"></i> Eksporter
         </h3>
         <div className="flex flex-col gap-2 py-4">
           {source.class && (

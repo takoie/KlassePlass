@@ -337,7 +337,7 @@ export default function PrintPreviewModal({
           {exportState.status === 'done' && (
             <div className="mt-4 flex items-center justify-between bg-base-200/80 border border-base-300/80 rounded-xl px-4 py-3 text-sm text-base-content">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-success">
                   <i className="fa-solid fa-circle-check text-sm"></i>
                 </div>
                 <div>
@@ -350,7 +350,7 @@ export default function PrintPreviewModal({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="btn btn-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 gap-1.5 font-medium transition-all"
+                  className="btn btn-xs bg-emerald-500/20 hover:bg-emerald-500/30 text-success border border-emerald-500/40 gap-1.5 font-medium transition-all"
                   onClick={() => window.api.openPath(exportState.filePath)}
                 >
                   <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Åpne fil

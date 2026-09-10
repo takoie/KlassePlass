@@ -43,7 +43,7 @@ export default function WhatsNewModal({ isOpen, onClose }) {
             <div key={idx} className={`flex flex-col items-center gap-1.5 text-xs ${idx > 0 ? 'pt-4' : ''} ${idx < sortedHighlights.length - 1 ? 'pb-4' : ''}`}>
               <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
                 item.type === 'feature'
-                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30'
+                  ? 'bg-emerald-950/60 text-success border-emerald-500/30'
                   : item.type === 'fix'
                   ? 'bg-amber-950/60 text-amber-300 border-amber-500/30'
                   : item.type === 'stability'

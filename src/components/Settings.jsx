@@ -113,7 +113,7 @@ export default function Settings() {
       {/* Toppmeny for innstillings-faner */}
       <div className="flex items-center gap-4 px-6 pt-6 pb-4 border-b border-base-content/10 flex-shrink-0 bg-base-content/5 backdrop-blur-md overflow-x-auto">
         <h2 className="text-lg font-bold flex items-center gap-2 text-base-content flex-shrink-0">
-          <i className="fa-solid fa-gear text-emerald-400"></i> Innstillinger
+          <i className="fa-solid fa-gear text-success"></i> Innstillinger
         </h2>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -122,7 +122,7 @@ export default function Settings() {
               key={tab.id}
               className={`btn btn-sm rounded-full border-none gap-2 font-semibold ${
                 activeTab === tab.id
-                  ? 'bg-emerald-500/15 text-emerald-400 font-bold hover:bg-emerald-500/20'
+                  ? 'bg-emerald-500/15 text-success font-bold hover:bg-emerald-500/20'
                   : 'bg-transparent text-base-content/60 hover:bg-base-content/5 hover:text-base-content'
               }`}
               onClick={() => setActiveTab(tab.id)}
@@ -190,7 +190,7 @@ export default function Settings() {
 
               <div className="flex items-center gap-2">
                 <button
-                  className={`btn btn-sm gap-2 ${!settings.canvasLightMode ? 'btn-neutral bg-base-300 text-emerald-300' : 'btn-outline border-base-300 text-base-content/60'}`}
+                  className={`btn btn-sm gap-2 ${!settings.canvasLightMode ? 'btn-neutral bg-base-300 text-success' : 'btn-outline border-base-300 text-base-content/60'}`}
                   onClick={() => handleSaveSetting('canvasLightMode', false)}
                 >
                   <i className="fa-solid fa-moon"></i> Mørk
@@ -244,7 +244,7 @@ export default function Settings() {
             {dbMessage && (
               <div className={`rounded-2xl p-4 mb-6 text-xs font-semibold border ${
                 dbMessage.type === 'success'
-                  ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                  ? 'bg-emerald-950/40 border-emerald-500/40 text-success'
                   : 'bg-red-950/40 border-red-500/40 text-red-300'
               }`}>
                 {dbMessage.text}
@@ -254,7 +254,7 @@ export default function Settings() {
             <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
               <h4 className="font-bold text-sm text-base-content mb-1">Ta sikkerhetskopi</h4>
               <p className="text-xs text-base-content/60 mb-4">Lagre en kopi av hele databasen (alle klasser, rom og klassekart) som en fil du selv velger.</p>
-              <button className="btn btn-sm bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30 gap-2" onClick={handleBackup}>
+              <button className="btn btn-sm bg-emerald-500/20 text-success border-none hover:bg-emerald-500/30 gap-2" onClick={handleBackup}>
                 <i className="fa-solid fa-download"></i> Lagre sikkerhetskopi
               </button>
             </div>
@@ -297,7 +297,7 @@ export default function Settings() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               {features.map((f) => (
                 <div key={f.title} className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-5 flex gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center text-success flex-shrink-0">
                     <i className={`${f.icon} text-sm`}></i>
                   </div>
                   <div>
@@ -311,7 +311,7 @@ export default function Settings() {
             <div className="bg-base-100/50 backdrop-blur-md border border-base-content/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6">
               <h4 className="font-bold text-sm text-base-content mb-2">Utvikler & informasjon</h4>
               <p className="text-xs text-base-content/60">
-                Utviklet av Stian Taknæs - <a href="mailto:stian@taknes.no" className="text-emerald-400 hover:underline font-bold">stian@taknes.no</a>
+                Utviklet av Stian Taknæs - <a href="mailto:stian@taknes.no" className="text-success hover:underline font-bold">stian@taknes.no</a>
               </p>
             </div>
           </div>
@@ -343,7 +343,7 @@ export default function Settings() {
                   <a
                     href="https://www.udir.no/regelverk-og-tilsyn/personvern-for-barnehage-og-skole/"
                     target="_blank" rel="noopener noreferrer"
-                    className="text-emerald-400 hover:underline font-bold text-xs flex items-center gap-2"
+                    className="text-success hover:underline font-bold text-xs flex items-center gap-2"
                   >
                     <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                     UDIR: Personvern (GDPR) i barnehage og skole
@@ -354,7 +354,7 @@ export default function Settings() {
                   <a
                     href="https://www.udir.no/regelverk-og-tilsyn/personvern-for-barnehage-og-skole/veiledere/personvern-i-skytjenester/"
                     target="_blank" rel="noopener noreferrer"
-                    className="text-emerald-400 hover:underline font-bold text-xs flex items-center gap-2"
+                    className="text-success hover:underline font-bold text-xs flex items-center gap-2"
                   >
                     <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                     UDIR: Veileder om personvern i skytjenester
@@ -365,7 +365,7 @@ export default function Settings() {
                   <a
                     href="https://www.datatilsynet.no/regelverk-og-verktoy/lover-og-regler/om-personopplysningsloven-og-nar-den-gjelder/"
                     target="_blank" rel="noopener noreferrer"
-                    className="text-emerald-400 hover:underline font-bold text-xs flex items-center gap-2"
+                    className="text-success hover:underline font-bold text-xs flex items-center gap-2"
                   >
                     <i className="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
                     Datatilsynet: Personopplysningsloven og GDPR i Norge
@@ -391,14 +391,14 @@ export default function Settings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
-                  <tr><td className="py-2.5 px-4 font-semibold">React & React DOM</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/api</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-dialog</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-opener</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-process</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-updater</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">dnd kit (core, sortable, utilities)</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">Font Awesome Free</td><td className="py-2.5 px-4 text-emerald-400">CC BY 4.0 / SIL OFL 1.1 / MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">React & React DOM</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/api</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-dialog</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-opener</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-process</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-updater</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">dnd kit (core, sortable, utilities)</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Font Awesome Free</td><td className="py-2.5 px-4 text-success">CC BY 4.0 / SIL OFL 1.1 / MIT</td></tr>
                 </tbody>
               </table>
             </div>
@@ -413,11 +413,11 @@ export default function Settings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
-                  <tr><td className="py-2.5 px-4 font-semibold">Tauri (core) & tauri-plugin-log</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">rusqlite (+ bundlet SQLite)</td><td className="py-2.5 px-4 text-emerald-400">MIT (SQLite: Public Domain)</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">printpdf</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">serde & serde_json</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">log</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Tauri (core) & tauri-plugin-log</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">rusqlite (+ bundlet SQLite)</td><td className="py-2.5 px-4 text-success">MIT (SQLite: Public Domain)</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">printpdf</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">serde & serde_json</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">log</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
                 </tbody>
               </table>
             </div>
@@ -432,10 +432,10 @@ export default function Settings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
-                  <tr><td className="py-2.5 px-4 font-semibold">Vite & @vitejs/plugin-react</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">Tailwind CSS & daisyUI</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">PostCSS & Autoprefixer</td><td className="py-2.5 px-4 text-emerald-400">MIT</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/cli & tauri-build</td><td className="py-2.5 px-4 text-emerald-400">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Vite & @vitejs/plugin-react</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">Tailwind CSS & daisyUI</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">PostCSS & Autoprefixer</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/cli & tauri-build</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
                 </tbody>
               </table>
             </div>

@@ -62,7 +62,7 @@ export function ToggleRow({ icon, iconColor, label, checked, onChange, disabled,
     >
       <span className="flex items-center gap-2.5 min-w-0 flex-1">
         {icon && (
-          <i className={`${icon} fa-fw text-xs flex-shrink-0 ${checked ? (iconColor || 'text-emerald-400') : 'text-base-content/50'}`}></i>
+          <i className={`${icon} fa-fw text-xs flex-shrink-0 ${checked ? (iconColor || 'text-success') : 'text-base-content/50'}`}></i>
         )}
         <span className="truncate text-left">{label}</span>
       </span>

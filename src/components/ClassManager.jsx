@@ -255,7 +255,7 @@ export default function ClassManager({ onBack, initialId }) {
 
   const ruleOptions = [
     { type: 'avoid', label: '⛔ Skal IKKE sitte sammen (2 til 5 elever)', icon: 'fa-solid fa-shield-halved text-red-400' },
-    { type: 'pair', label: '💚 God makkermatch (2 elever)', icon: 'fa-solid fa-heart text-emerald-400' },
+    { type: 'pair', label: '💚 God makkermatch (2 elever)', icon: 'fa-solid fa-heart text-success' },
     { type: 'nearBoard', label: '📍 Må sitte nær tavlen (fremste rad)', icon: 'fa-solid fa-location-dot text-amber-400' },
     { type: 'sitBack', label: '🔙 Må sitte bakerst (bakre rad)', icon: 'fa-solid fa-arrow-down text-purple-400' },
     { type: 'sitMiddle', label: '↔️ Må sitte i midten (midterste rad)', icon: 'fa-solid fa-align-center text-cyan-400' },

@@ -168,7 +168,7 @@ export default function StationPresenter({ onBack, initialId }) {
               {mins}:{secs}
             </div>
 
-            <button className="btn btn-circle bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30" onClick={() => setIsRunning(r => !r)}>
+            <button className="btn btn-circle bg-emerald-500/20 text-success border-none hover:bg-emerald-500/30" onClick={() => setIsRunning(r => !r)}>
               <i className={`fa-solid ${isRunning ? 'fa-pause' : 'fa-play'}`}></i>
             </button>
             <button className="btn btn-ghost text-base-content/60 hover:text-base-content" onClick={resetTimer} title="Start tiden på nytt">
