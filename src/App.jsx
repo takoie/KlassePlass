@@ -15,6 +15,31 @@ import OnboardingGuide from './components/OnboardingGuide';
 import GlobalTooltip from './components/GlobalTooltip';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
 import { showToast } from './shared/utils';
+import { foldLegacyConstraints } from './shared/ruleConstraints.mjs';
+
+// Engangs-migrering: eldre versjoner kunne få rader i student_constraints-
+// tabellen via bundle-import. Regler bor nå kun i klassens `rules`-blob, så vi
+// folder eventuelle slike rader inn i blobben én gang og setter et flagg.
+// Feiler trygt: flagget blir stående usatt, så den prøver igjen neste oppstart.
+async function foldLegacyConstraintsOnce() {
+  const classes = await window.api.getClasses();
+  for (const c of classes || []) {
+    try {
+      const rows = await window.api.getConstraints(c.id);
+      if (!rows || rows.length === 0) continue;
+      const full = await window.api.getClass(c.id);
+      const parsed = full?.students ? JSON.parse(full.students) : { students: [], rules: [] };
+      const blob = Array.isArray(parsed) ? { students: parsed, rules: [] } : parsed;
+      const folded = foldLegacyConstraints(blob, rows);
+      if (folded !== blob) {
+        await window.api.saveClass({ id: c.id, name: c.name, students: JSON.stringify(folded) });
+      }
+    } catch (e) {
+      console.error('constraint-fold feilet for klasse', c?.id, e);
+    }
+  }
+  await window.api.saveSettings({ constraintsFoldComplete: true });
+}
 
 function App() {
   const [currentView, setCurrentView] = useState('classes-overview');
@@ -29,6 +54,10 @@ function App() {
     window.api?.getSettings?.().then((s) => {
       if (s?.theme) document.documentElement.setAttribute('data-theme', s.theme);
       if (!s?.onboardingCompleted) setShowOnboarding(true);
+
+      if (s?.constraintsFoldComplete !== true) {
+        foldLegacyConstraintsOnce().catch((e) => console.error('constraint-fold (oppstart) feilet, prøver igjen neste gang', e));
+      }
 
       // "Hva er nytt"-popup: vises KUN når appen nettopp ble oppdatert (lagret
       // `lastSeenVersion` fra forrige oppstart avviker fra kjørende versjon) -
