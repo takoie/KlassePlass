@@ -15,6 +15,7 @@ import OnboardingGuide from './components/OnboardingGuide';
 import GlobalTooltip from './components/GlobalTooltip';
 import { ClassesOverview, RoomsOverview, SeatingOverview, GroupOverview } from './components/OverviewViews';
 import { showToast } from './shared/utils';
+import { applyResolvedTheme } from './shared/theme';
 import { foldLegacyConstraints } from './shared/ruleConstraints.mjs';
 
 // Engangs-migrering: eldre versjoner kunne få rader i student_constraints-
@@ -52,7 +53,7 @@ function App() {
   // statisk fallback for aller første maling, før innstillingene er hentet.
   useEffect(() => {
     window.api?.getSettings?.().then((s) => {
-      if (s?.theme) document.documentElement.setAttribute('data-theme', s.theme);
+      applyResolvedTheme(s?.theme, s?.colorMode ?? 'system');
       if (!s?.onboardingCompleted) setShowOnboarding(true);
 
       if (s?.constraintsFoldComplete !== true) {
@@ -81,6 +82,19 @@ function App() {
         showToast(`Databasen ble oppdatert (v${info.fromVersion} → v${info.toVersion}). Sikkerhetskopi lagret ved siden av databasefilen.`, 'info');
       }
     }).catch(() => {});
+
+    // Følg OS-ens lys/mørk-innstilling live når colorMode === 'system'.
+    let mq;
+    const onSchemeChange = () => {
+      window.api?.getSettings?.().then((s2) => {
+        if ((s2?.colorMode ?? 'system') === 'system') applyResolvedTheme(s2?.theme, 'system');
+      }).catch(() => {});
+    };
+    try {
+      mq = window.matchMedia('(prefers-color-scheme: light)');
+      mq.addEventListener('change', onSchemeChange);
+    } catch (e) { /* matchMedia utilgjengelig */ }
+    return () => { try { mq?.removeEventListener('change', onSchemeChange); } catch (e) {} };
   }, []);
 
   const handleEdit = (view, id) => {

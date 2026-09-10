@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { showToast } from '../shared/utils';
+import { applyResolvedTheme } from '../shared/theme';
 import Select from './Select';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('visning');
-  const [settings, setSettings] = useState({ boardPosition: 'top', theme: 'klasseplass' });
+  const [settings, setSettings] = useState({ boardPosition: 'top', theme: 'klasseplass', colorMode: 'system' });
   const [dbMessage, setDbMessage] = useState(null);
   const [appVersion, setAppVersion] = useState(null);
 
@@ -33,8 +34,13 @@ export default function Settings() {
   };
 
   const handleSetTheme = (themeId) => {
-    document.documentElement.setAttribute('data-theme', themeId);
+    applyResolvedTheme(themeId, settings.colorMode ?? 'system');
     handleSaveSetting('theme', themeId);
+  };
+
+  const handleSetColorMode = (mode) => {
+    applyResolvedTheme(settings.theme, mode);
+    handleSaveSetting('colorMode', mode);
   };
 
   const handleBackup = async () => {
@@ -150,6 +156,31 @@ export default function Settings() {
                     { value: 'bottom', label: 'Tavle nederst' },
                   ]}
                 />
+              </div>
+            </div>
+
+            <div className="bg-base-100/50 backdrop-blur-md border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] rounded-2xl p-6 mb-6">
+              <h4 className="font-bold text-sm text-slate-200 mb-1">Lys / mørk modus</h4>
+              <p className="text-xs text-slate-400 mb-4">Gjelder hele appen. «Følg systemet» bruker Windows-innstillingen din.</p>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { id: 'light', label: 'Lys', icon: 'fa-sun' },
+                  { id: 'dark', label: 'Mørk', icon: 'fa-moon' },
+                  { id: 'system', label: 'Følg systemet', icon: 'fa-desktop' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    className={`btn btn-sm gap-2 ${
+                      (settings.colorMode ?? 'system') === m.id
+                        ? 'btn-primary'
+                        : 'btn-outline border-slate-700 text-slate-400'
+                    }`}
+                    onClick={() => handleSetColorMode(m.id)}
+                  >
+                    <i className={`fa-solid ${m.icon}`}></i> {m.label}
+                  </button>
+                ))}
               </div>
             </div>
 
