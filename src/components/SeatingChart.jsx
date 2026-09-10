@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { lightenHex } from '../shared/utils';
 import PrintPreviewModal from './Print/PrintPreviewModal';
@@ -10,6 +10,7 @@ import StudentDrawer from './SeatingChart/StudentDrawer';
 import { HoverTip } from './HoverTip';
 import { useCanvasFit } from './SeatingChart/hooks/useCanvasFit';
 import { useFunModes } from './SeatingChart/hooks/useFunModes';
+import { evaluateRules } from '../lib/seatingSolver.mjs';
 import { useGroupLasso } from './SeatingChart/hooks/useGroupLasso';
 import { useStudentDragAndDrop } from './SeatingChart/hooks/useStudentDragAndDrop';
 import { useSeatings } from './SeatingChart/hooks/useSeatings';
@@ -39,7 +40,7 @@ const getFontSizeClass = (name) => {
 export default function SeatingChart({ onBack, initialId }) {
   const [desks, setDesks] = useState([]);
   const [boardObj, setBoardObj] = useState({ x: 422, y: 15 });
-  const [ruleReport, setRuleReport] = useState(null);
+  const [ruleBannerHidden, setRuleBannerHidden] = useState(false);
 
   // UI State
   const [isProjectorMode, setIsProjectorMode] = useState(false);
@@ -127,6 +128,16 @@ export default function SeatingChart({ onBack, initialId }) {
     canvasLight, toggleCanvasLight,
     chartGroup, splitToNewChart, chartPeriodCount
   } = useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides, onBack });
+
+  // Regel-tilbakemelding: hvor mange av klassens regler den gjeldende
+  // plasseringen oppfyller. Beregnes reaktivt, så den dekker alle kilder
+  // (Plasser alle, Randomiser, fun modes, manuell dra, angre/gjør-om).
+  const ruleReport = useMemo(
+    () => evaluateRules(placements, classRules, desks, allStudents),
+    [placements, classRules, desks, allStudents]
+  );
+  // Enhver endring i plasseringene viser stripa igjen selv om den ble lukket.
+  useEffect(() => { setRuleBannerHidden(false); }, [placements]);
 
   // Når klassekartet kun har én periode er den perioden reelt sett HELE kartet -
   // "Slett periode" ville da vært misvisende (antyder at kartet lever videre med
@@ -563,6 +574,31 @@ export default function SeatingChart({ onBack, initialId }) {
               <div className={`text-[10rem] font-black drop-shadow-[0_0_30px_rgba(244,63,94,0.8)] transition-transform ${bombBoom ? 'text-emerald-400 scale-125' : 'text-rose-500 animate-bounce'}`}>
                 {bombBoom ? '💥' : bombCountdown}
               </div>
+            </div>
+          )}
+
+          {!isProjectorMode && ruleReport.total > 0 && !ruleBannerHidden && (
+            <div className={`absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs shadow-lg border ${
+              ruleReport.violations.length === 0
+                ? 'bg-emerald-950/90 border-emerald-500/40 text-emerald-200'
+                : 'bg-amber-950/90 border-amber-500/40 text-amber-100'
+            }`}>
+              <i className={`fa-solid ${ruleReport.violations.length === 0 ? 'fa-circle-check' : 'fa-triangle-exclamation'}`}></i>
+              <span>{ruleReport.satisfied} av {ruleReport.total} regler oppfylt</span>
+              {ruleReport.violations.length > 0 && (
+                <span className="opacity-90">
+                  · brutt: {ruleReport.violations
+                    .map(v => v.studentNames.join(v.rule.type === 'avoid' ? ' ✕ ' : ' + '))
+                    .join(', ')}
+                </span>
+              )}
+              <button
+                className="ml-1 opacity-70 hover:opacity-100"
+                aria-label="Lukk"
+                onClick={() => setRuleBannerHidden(true)}
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
             </div>
           )}
 
