@@ -43,6 +43,51 @@ export function sortSlotsByDeskOrder(slots, desks, boardObj) {
   });
 }
 
+// Bygger oppslags-hjelperne som regel-sjekkene trenger, mot én kandidat-plassering.
+function buildRuleCtx(candidatePlacements, desks) {
+  const deskIdForSlot = (slotKey) => slotKey.split('_seat_')[0];
+  const deskForStudent = (studentId) => {
+    const slotKey = Object.keys(candidatePlacements).find(k => candidatePlacements[k] === studentId);
+    if (!slotKey) return null;
+    return (desks || []).find(d => d.id === deskIdForSlot(slotKey)) || null;
+  };
+  const hasZone = (desk, zone) => !!desk && Array.isArray(desk.zones) && desk.zones.includes(zone);
+  return { deskForStudent, hasZone };
+}
+
+/**
+ * Antall regelbrudd for én regel mot en plassering (0 = oppfylt). For sone-
+ * regler telles ett brudd per elev som er feil plassert (samme vekting som før);
+ * for avoid/pair er det 0 eller 1. Delt mellom scoreClassPlacement (ganges med
+ * prioritets-straff) og evaluateRules (> 0 => regelen er brutt).
+ */
+export function ruleViolationCount(rule, ctx) {
+  const ids = rule.studentIds || [];
+  const { deskForStudent, hasZone } = ctx;
+  const zoneMiss = (zone, want) =>
+    ids.reduce((n, id) => n + (hasZone(deskForStudent(id), zone) === want ? 0 : 1), 0);
+
+  switch (rule.type) {
+    case 'avoid': {
+      const deskIds = ids.map(deskForStudent).filter(Boolean).map(d => d.id);
+      return (deskIds.length > 1 && new Set(deskIds).size < deskIds.length) ? 1 : 0;
+    }
+    case 'pair':
+    case 'supportPair': {
+      if (ids.length < 2) return 0;
+      const a = deskForStudent(ids[0]);
+      const b = deskForStudent(ids[1]);
+      return (a && b && a.id !== b.id) ? 1 : 0;
+    }
+    case 'nearBoard':  return zoneMiss('front', true);
+    case 'sitBack':    return zoneMiss('back', true);
+    case 'sitMiddle':  return zoneMiss('center', true);
+    case 'awayDoor':   return zoneMiss('door', false);
+    case 'awayWindow': return zoneMiss('window', false);
+    default:           return 0;
+  }
+}
+
 /**
  * Scorer en kandidat-plassering mot klassens regler. Start 100, trekk fra per brudd,
  * skalert etter regelens prioritet.
@@ -52,55 +97,37 @@ export function sortSlotsByDeskOrder(slots, desks, boardObj) {
  */
 export function scoreClassPlacement(candidatePlacements, classRules, desks) {
   let score = 100;
-
-  const deskIdForSlot = (slotKey) => slotKey.split('_seat_')[0];
-  const deskForStudent = (studentId) => {
-    const slotKey = Object.keys(candidatePlacements).find(k => candidatePlacements[k] === studentId);
-    if (!slotKey) return null;
-    return desks.find(d => d.id === deskIdForSlot(slotKey)) || null;
-  };
-  const hasZone = (desk, zone) => !!desk && Array.isArray(desk.zones) && desk.zones.includes(zone);
+  const ctx = buildRuleCtx(candidatePlacements, desks);
 
   (classRules || []).forEach(rule => {
     if (!rule || !rule.type) return;
     const penalty = PRIORITY_PENALTY[rule.priority] ?? PRIORITY_PENALTY.important;
-    const ids = rule.studentIds || [];
-
-    switch (rule.type) {
-      case 'avoid': {
-        const deskIds = ids.map(deskForStudent).filter(Boolean).map(d => d.id);
-        if (deskIds.length > 1 && new Set(deskIds).size < deskIds.length) score -= penalty;
-        break;
-      }
-      case 'pair':
-      case 'supportPair': {
-        if (ids.length < 2) break;
-        const deskA = deskForStudent(ids[0]);
-        const deskB = deskForStudent(ids[1]);
-        if (deskA && deskB && deskA.id !== deskB.id) score -= penalty;
-        break;
-      }
-      case 'nearBoard':
-        ids.forEach(id => { if (!hasZone(deskForStudent(id), 'front')) score -= penalty; });
-        break;
-      case 'sitBack':
-        ids.forEach(id => { if (!hasZone(deskForStudent(id), 'back')) score -= penalty; });
-        break;
-      case 'sitMiddle':
-        ids.forEach(id => { if (!hasZone(deskForStudent(id), 'center')) score -= penalty; });
-        break;
-      case 'awayDoor':
-        ids.forEach(id => { if (hasZone(deskForStudent(id), 'door')) score -= penalty; });
-        break;
-      case 'awayWindow':
-        ids.forEach(id => { if (hasZone(deskForStudent(id), 'window')) score -= penalty; });
-        break;
-      default:
-        break;
-    }
+    score -= penalty * ruleViolationCount(rule, ctx);
   });
 
   return score;
+}
+
+/**
+ * Rapport om hvilke regler en plassering oppfyller/bryter. Samme sjekk som
+ * scoreClassPlacement, men boolsk per regel og med elevnavn til visning.
+ * @returns {{ total: number, satisfied: number, violations: Array<{rule: object, studentNames: string[]}> }}
+ */
+export function evaluateRules(candidatePlacements, classRules, desks, students = []) {
+  const nameById = new Map((students || []).map(s => [s.id, s.name]));
+  const ctx = buildRuleCtx(candidatePlacements, desks);
+  const rules = (classRules || []).filter(r => r && r.type);
+
+  const violations = [];
+  for (const rule of rules) {
+    if (ruleViolationCount(rule, ctx) > 0) {
+      violations.push({
+        rule,
+        studentNames: (rule.studentIds || []).map(id => nameById.get(id) || id),
+      });
+    }
+  }
+  return { total: rules.length, satisfied: rules.length - violations.length, violations };
 }
 
 /**

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sortSlotsByDeskOrder, scoreClassPlacement, findBestPlacement } from '../src/lib/seatingSolver.mjs';
+import { sortSlotsByDeskOrder, scoreClassPlacement, findBestPlacement, evaluateRules } from '../src/lib/seatingSolver.mjs';
 
 const boardObj = { x: 422, y: 15 }; // tavle øverst
 
@@ -113,3 +113,47 @@ test('findBestPlacement: dupliserer aldri elever som allerede er låst i basePla
   assert.equal(placedValues.length, 3);
 });
 
+
+// ---- evaluateRules --------------------------------------------------------
+
+test('evaluateRules: kritisk avoid oppfylt når elevene sitter ved hvert sitt bord', () => {
+  const desks = makeDesks();
+  const placements = { d1_seat_0: 'a', d2_seat_0: 'b' };
+  const rules = [{ id: 'r', type: 'avoid', priority: 'critical', studentIds: ['a', 'b'] }];
+  const rep = evaluateRules(placements, rules, desks, [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]);
+  assert.equal(rep.total, 1);
+  assert.equal(rep.satisfied, 1);
+  assert.equal(rep.violations.length, 0);
+});
+
+test('evaluateRules: avoid brutt når elevene deler bord, med navn', () => {
+  const desks = makeDesks();
+  const placements = { d1_seat_0: 'a', d1_seat_1: 'b' };
+  const rules = [{ id: 'r', type: 'avoid', priority: 'critical', studentIds: ['a', 'b'] }];
+  const rep = evaluateRules(placements, rules, desks, [{ id: 'a', name: 'Kari' }, { id: 'b', name: 'Ola' }]);
+  assert.equal(rep.violations.length, 1);
+  assert.deepEqual([...rep.violations[0].studentNames].sort(), ['Kari', 'Ola']);
+});
+
+test('evaluateRules er enig med scoreClassPlacement (100 <=> null brudd)', () => {
+  const desks = makeDesks();
+  const rules = [{ id: 'r', type: 'avoid', priority: 'critical', studentIds: ['a', 'b'] }];
+  const apart = { d1_seat_0: 'a', d2_seat_0: 'b' };
+  const together = { d1_seat_0: 'a', d1_seat_1: 'b' };
+  assert.equal(scoreClassPlacement(apart, rules, desks) === 100, evaluateRules(apart, rules, desks).violations.length === 0);
+  assert.equal(scoreClassPlacement(together, rules, desks) === 100, evaluateRules(together, rules, desks).violations.length === 0);
+});
+
+test('evaluateRules: nearBoard oppfylt i front-sone, brutt utenfor', () => {
+  const desks = makeDesks(); // d1 har zones ['front'], d2 har []
+  const rules = [{ id: 'r', type: 'nearBoard', priority: 'important', studentIds: ['a'] }];
+  assert.equal(evaluateRules({ d1_seat_0: 'a' }, rules, desks, [{ id: 'a', name: 'A' }]).violations.length, 0);
+  assert.equal(evaluateRules({ d2_seat_0: 'a' }, rules, desks, [{ id: 'a', name: 'A' }]).violations.length, 1);
+});
+
+test('evaluateRules: uplassert elev i navnelista faller tilbake på id', () => {
+  const desks = makeDesks();
+  const rules = [{ id: 'r', type: 'avoid', priority: 'critical', studentIds: ['a', 'b'] }];
+  const rep = evaluateRules({ d1_seat_0: 'a', d1_seat_1: 'b' }, rules, desks, []);
+  assert.deepEqual([...rep.violations[0].studentNames].sort(), ['a', 'b']);
+});
