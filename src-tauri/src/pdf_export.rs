@@ -24,10 +24,6 @@
 //! resolves all business logic (student names, group colors, zone labels)
 //! into these structs, so Rust only needs geometry/drawing logic against
 //! fixed layout constants, never domain lookups.
-//!
-//! The spike command from Task 0.2 (`spike_generate_test_pdf`) is left in
-//! place below — it's superseded by the real payload/rendering path but kept
-//! as a minimal smoke test that the `printpdf` crate still works end to end.
 
 use printpdf::path::{PaintMode, WindingOrder};
 use printpdf::*;
@@ -646,21 +642,6 @@ fn draw_desk(layer: &PdfLayerReference, fonts: &Fonts, desk: &PrintDesk, scale: 
       cursor_x_mm += chip_w_mm + chip_gap_mm;
     }
   }
-}
-
-pub fn spike_generate_test_pdf(path: &str) -> Result<(), String> {
-    let (doc, page1, layer1) = PdfDocument::new("Klassekart", Mm(297.0), Mm(210.0), "Layer 1");
-    let layer = doc.get_page(page1).get_layer(layer1);
-    let font = doc
-        .add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| e.to_string())?;
-    layer.use_text("Testbord 1", 14.0, Mm(20.0), Mm(190.0), &font);
-
-    doc.save(&mut BufWriter::new(
-        File::create(path).map_err(|e| e.to_string())?,
-    ))
-    .map_err(|e| e.to_string())?;
-    Ok(())
 }
 
 #[cfg(test)]
