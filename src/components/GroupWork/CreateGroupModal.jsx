@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { normalizeStudents, showToast } from '../../shared/utils';
 import { generateGroups } from '../../shared/groupRandomizer';
+import { rulesToGroupConstraints } from '../../shared/ruleConstraints.mjs';
 import Select from '../Select';
 
 /**
@@ -19,17 +20,18 @@ export default function CreateGroupModal({ classes, onCreated }) {
   const [leaderIds, setLeaderIds] = useState([]);
   const [busy, setBusy] = useState(false);
 
-  const classStudents = (() => {
+  const classBlob = (() => {
     const cls = classes.find(c => c.id === Number(selectedClass));
-    if (!cls) return [];
+    if (!cls) return { students: [], rules: [] };
     try {
       const parsed = cls.students ? JSON.parse(cls.students) : [];
-      const list = Array.isArray(parsed) ? parsed : (parsed.students || []);
-      return normalizeStudents(list);
+      if (Array.isArray(parsed)) return { students: normalizeStudents(parsed), rules: [] };
+      return { students: normalizeStudents(parsed.students || []), rules: parsed.rules || [] };
     } catch (e) {
-      return [];
+      return { students: [], rules: [] };
     }
   })();
+  const classStudents = classBlob.students;
 
   useEffect(() => {
     // Fjern ledere som ikke lenger finnes i klassen når klassen byttes
@@ -64,10 +66,9 @@ export default function CreateGroupModal({ classes, onCreated }) {
       const classIdNum = Number(selectedClass);
       const studentsById = Object.fromEntries(classStudents.map(s => [s.id, s]));
 
-      const rawConstraints = await window.api.getConstraints(classIdNum);
-      const constraints = (rawConstraints || []).map(c => ({
-        studentA: c.student_a, studentB: c.student_b, type: c.type,
-      }));
+      // Elevregler fra klassens blob (samme kilde som klassekart-løseren).
+      // Kun kritiske avoid/pair-regler blir harde constraints for gruppene.
+      const constraints = rulesToGroupConstraints(classBlob.rules, classStudents);
 
       let recentPairs = [];
       if (avoidHistory && avoidLastN > 0) {
