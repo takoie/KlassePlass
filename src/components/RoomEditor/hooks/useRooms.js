@@ -245,47 +245,6 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     }
   };
 
-  // "Rom A" -> "Rom A (kopi)", deretter "(kopi 2)", "(kopi 3)" ... En allerede
-  // eksisterende "(kopi)"-hale strippes først, så duplisering av en kopi ikke
-  // gir "Rom A (kopi) (kopi)".
-  const makeCopyName = (base, existing) => {
-    const taken = new Set((existing || []).map(r => r.name));
-    const root = base.replace(/\s*\(kopi(?:\s+\d+)?\)\s*$/i, '').trim() || base;
-    let candidate = `${root} (kopi)`;
-    let n = 2;
-    while (taken.has(candidate)) {
-      candidate = `${root} (kopi ${n})`;
-      n += 1;
-    }
-    return candidate;
-  };
-
-  // Lager et nytt rom med en kopi av det gjeldende oppsettet (bord + tavle,
-  // slik det ser ut på skjermen nå, inkl. eventuelle ulagrede endringer) og
-  // bytter til det. Klassekart som bruker originalrommet påvirkes ikke.
-  const handleDuplicateRoom = async () => {
-    if (!selectedRoom) return;
-    isInitialLoadRef.current = true;
-    const newName = makeCopyName(roomName.trim() || selectedRoom.name || 'Rom', rooms);
-    try {
-      const layoutData = { desks, boardObj };
-      const result = await window.api.saveRoom({ id: null, name: newName, layoutData });
-      const createdId = result?.lastID;
-      const data = await window.api.getRooms();
-      setRooms(data);
-      const createdRoom = data.find(r => r.id === Number(createdId)) || {
-        id: createdId || Date.now(),
-        name: newName,
-        layout_data: JSON.stringify(layoutData)
-      };
-      handleSelectRoom(createdRoom);
-      showToast(`Rommet ble duplisert som «${newName}».`, 'success');
-    } catch (e) {
-      showToast('Kunne ikke duplisere rommet.', 'error');
-    }
-    setTimeout(() => isInitialLoadRef.current = false, 100);
-  };
-
   // Endrer navnet på det gjeldende rommet. `roomName`-state mates inn i den
   // debouncede autolagringen (samme vei som før), og `selectedRoom` oppdateres
   // med en gang så header-tittel/slette-dialog viser det nye navnet umiddelbart.
@@ -406,7 +365,7 @@ export function useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, se
     genStructure, setGenStructure,
     genRows, setGenRows,
     inputModalRef,
-    handleSelectRoom, handleOpenNewModal, handleConfirmCreateNew, handleDuplicateRoom, handleRenameRoom, handleDelete,
+    handleSelectRoom, handleOpenNewModal, handleConfirmCreateNew, handleRenameRoom, handleDelete,
     generateStructure, centerDesks, flipRoom, addDesk, clearDesks,
     canvasLight, toggleCanvasLight
   };

@@ -2,27 +2,11 @@
  * Generelle hjelpefunksjoner.
  */
 
-import { DESK_TYPES } from './constants.js';
-
 /** Generer en enkel UUID (ikke kryptografisk sikker, men god nok for desk IDs) */
 export function uid() {
   return crypto.randomUUID
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-/** Lager et nytt tomt desk-objekt av gitt type */
-export function createDesk(type, x, y) {
-  const info = DESK_TYPES[type] ?? DESK_TYPES.single;
-  return {
-    id: uid(),
-    type,
-    x, y,
-    rotation: 0,
-    color: 'default',
-    groupId: null,
-    slots: Array(info.capacity).fill(null),
-  };
 }
 
 /**
@@ -43,16 +27,6 @@ export function lightenHex(hex, amount = 0.65) {
   return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
 }
 
-/** Snapper x/y til nærmeste grid-punkt */
-export function snapToGrid(value, snap = 15) {
-  return Math.round(value / snap) * snap;
-}
-
-/** Bygger en studentsById Map fra en array av { id, name, note } */
-export function buildStudentsById(students) {
-  return Object.fromEntries(students.map(s => [s.id, s]));
-}
-
 /**
  * Konverterer student-array fra legacy-format (bare strings) til objekt-format.
  * Eksisterende objekt-format returneres uendret.
@@ -63,78 +37,6 @@ export function normalizeStudents(arr) {
     if (typeof s === 'string') return { id: `s-${i}-${s.replace(/\s/g, '')}`, name: s, note: '', placement: null };
     return { placement: null, note: '', ...s, id: s.id ?? `s-${i}`, name: s.name ?? String(s) };
   });
-}
-
-/** ISO 8601 ukenummer for en dato */
-export function getWeekNumber(date = new Date()) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-/**
- * Ekstraher alle par fra en desk-layout (for historikk-lagring).
- * Returnerer: [["Ola", "Kari"], ["Per", "Lise"], ...]
- * "Par" = to elever som sitter på samme pult.
- */
-export function extractPairsFromLayout(desks, studentsById) {
-  const pairs = [];
-  for (const desk of desks) {
-    const names = (desk.slots ?? [])
-      .filter(s => s && studentsById[s.studentId])
-      .map(s => studentsById[s.studentId].name);
-    for (let i = 0; i < names.length; i++) {
-      for (let j = i + 1; j < names.length; j++) {
-        pairs.push([names[i], names[j]].sort());
-      }
-    }
-  }
-  return pairs;
-}
-
-/**
- * Ekstraher nabopar fra en desk-layout basert på koordinat-nærhet.
- * To pulter regnes som naboer hvis |dx| ≤ dxThreshold OG |dy| ≤ dyThreshold.
- * Returnerer: [["Ola", "Kari"], ...] — alle unike par mellom elever på naboborger.
- * Inkluderer også elever som deler samme pult (multi-slot desks).
- */
-export function extractNeighborsFromLayout(desks, studentsById, dxThreshold = 110, dyThreshold = 75) {
-  const placed = desks.filter(d =>
-    (d.slots ?? []).some(s => s?.studentId && studentsById[s.studentId])
-  );
-  const neighbors = [];
-  const seen = new Set();
-
-  for (let i = 0; i < placed.length; i++) {
-    for (let j = i + 1; j < placed.length; j++) {
-      const a = placed[i], b = placed[j];
-      if (Math.abs(a.x - b.x) > dxThreshold || Math.abs(a.y - b.y) > dyThreshold) continue;
-      const namesA = (a.slots ?? [])
-        .filter(s => s?.studentId && studentsById[s.studentId])
-        .map(s => studentsById[s.studentId].name);
-      const namesB = (b.slots ?? [])
-        .filter(s => s?.studentId && studentsById[s.studentId])
-        .map(s => studentsById[s.studentId].name);
-      for (const na of namesA) {
-        for (const nb of namesB) {
-          const key = [na, nb].sort().join('|');
-          if (!seen.has(key)) { seen.add(key); neighbors.push([na, nb].sort()); }
-        }
-      }
-    }
-    // Also record pairs within the same multi-slot desk as neighbors
-    const slotNames = (placed[i].slots ?? [])
-      .filter(s => s?.studentId && studentsById[s.studentId])
-      .map(s => studentsById[s.studentId].name);
-    for (let x = 0; x < slotNames.length; x++) {
-      for (let y = x + 1; y < slotNames.length; y++) {
-        const key = [slotNames[x], slotNames[y]].sort().join('|');
-        if (!seen.has(key)) { seen.add(key); neighbors.push([slotNames[x], slotNames[y]].sort()); }
-      }
-    }
-  }
-  return neighbors;
 }
 
 /**
