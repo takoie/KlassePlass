@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { lightenHex } from '../shared/utils';
+import { useIsLightTheme } from '../shared/theme';
 import PrintPreviewModal from './Print/PrintPreviewModal';
 import Modals from './SeatingChart/Modals';
 import DeskContextMenu from './SeatingChart/DeskContextMenu';
@@ -40,6 +41,7 @@ export default function SeatingChart({ onBack, initialId }) {
   const [desks, setDesks] = useState([]);
   const [boardObj, setBoardObj] = useState({ x: 422, y: 15 });
   const [ruleReport, setRuleReport] = useState(null);
+  const isLightTheme = useIsLightTheme();
 
   // UI State
   const [isProjectorMode, setIsProjectorMode] = useState(false);
@@ -127,6 +129,10 @@ export default function SeatingChart({ onBack, initialId }) {
     canvasLight, toggleCanvasLight,
     chartGroup, splitToNewChart, chartPeriodCount
   } = useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj, groupOverrides, setGroupOverrides, onBack });
+
+  // Lyst tema => lys tegneflate som standard (så hvite pulter skiller seg ut).
+  // canvasLight-bryteren kan fortsatt tvinge lys flate i mørkt tema.
+  const canvasIsLight = canvasLight || isLightTheme;
 
   // Når klassekartet kun har én periode er den perioden reelt sett HELE kartet -
   // "Slett periode" ville da vært misvisende (antyder at kartet lever videre med
@@ -562,12 +568,12 @@ export default function SeatingChart({ onBack, initialId }) {
           <div ref={containerRef} className="w-full h-full relative">
             <div
               ref={canvasRef}
-              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400/70' : 'bg-base-100 border-base-300/50'}`}
+              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasIsLight ? 'bg-slate-200 border-slate-400/70' : 'bg-base-100 border-base-300/50'}`}
               style={{
                 width: '1100px',
                 height: '700px',
                 transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                backgroundImage: canvasLight
+                backgroundImage: canvasIsLight
                   ? 'radial-gradient(rgba(0,0,0,0.14) 1px, transparent 0)'
                   : 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 0)',
                 backgroundSize: '20px 20px'
@@ -700,8 +706,8 @@ export default function SeatingChart({ onBack, initialId }) {
                               let bgClass = conflictColor
                                 ? `${conflictColor} text-base-content shadow-md border-2`
                                 : isUnused
-                                ? 'bg-slate-950/60 text-base-content/40 border border-dashed border-base-300/60'
-                                : (studentObj ? 'bg-emerald-500/10 text-base-content shadow-md border border-emerald-500/20' : 'bg-surface-raised text-base-content/50 border border-base-300/30');
+                                ? 'bg-base-content/5 text-base-content/50 border border-dashed border-base-content/25'
+                                : (studentObj ? 'bg-emerald-500/10 text-base-content shadow-md border border-emerald-500/20' : 'bg-surface-raised text-base-content/60 border border-base-content/15');
 
                               // Makkergruppe-farge på selve setet: lysere fyll-tone (via lightenHex)
                               // + full-metning kant, slik at borderen fortsatt er tydelig synlig mot
@@ -781,7 +787,7 @@ export default function SeatingChart({ onBack, initialId }) {
                                       <span className={`truncate ${fontSizeClass} tracking-wide`}>{studentObj.name}</span>
                                     </div>
                                   ) : !isHoverTarget ? (
-                                    <span className={`text-[10px] uppercase tracking-widest font-bold ${isUnused ? 'opacity-50' : 'opacity-30'}`}>
+                                    <span className={`text-[10px] uppercase tracking-widest font-bold ${isUnused ? 'opacity-80' : 'opacity-70'}`}>
                                       {isUnused ? 'Ubrukt' : 'Ledig'}
                                     </span>
                                   ) : null}

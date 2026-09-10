@@ -1,9 +1,11 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+// Invertert boble (bakgrunn = tekstfargen, tekst = bakgrunnsfargen) - alltid
+// høy kontrast mot siden, i både lyst og mørkt tema.
 const TIP_CLASS =
-  'pointer-events-none rounded-xl bg-slate-950/95 border border-base-300 shadow-2xl ' +
-  'px-2.5 py-2 text-[11px] leading-relaxed text-base-content text-left normal-case font-normal ' +
+  'pointer-events-none rounded-xl bg-base-content/95 border border-base-content shadow-2xl ' +
+  'px-2.5 py-2 text-[11px] leading-relaxed text-base-100 text-left normal-case font-normal ' +
   'tracking-normal whitespace-pre-line';
 
 /**

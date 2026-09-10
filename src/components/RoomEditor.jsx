@@ -13,6 +13,7 @@ import { useDeskSelection } from './RoomEditor/hooks/useDeskSelection';
 import { useRooms } from './RoomEditor/hooks/useRooms';
 import { centerBoardX as computeCenterBoardX } from './RoomEditor/geometry';
 import { computeDeskNumbering } from './SeatingChart/deskLayout';
+import { useIsLightTheme } from '../shared/theme';
 
 export default function RoomEditor({ onBack, initialId }) {
   const [desks, setDesks] = useState([]); // [{ id, x, y, capacity: 1|2|3|4, zones: [], groupId: null }]
@@ -103,6 +104,10 @@ export default function RoomEditor({ onBack, initialId }) {
     canvasLight, toggleCanvasLight
   } = useRooms({ initialId, desks, setDesks, boardObj, setBoardObj, setSelectedDesks });
 
+  // Lyst tema => lys tegneflate som standard.
+  const isLightTheme = useIsLightTheme();
+  const canvasIsLight = canvasLight || isLightTheme;
+
   const openRenameModal = () => {
     setRenameValue(roomName || '');
     document.getElementById('modal_rename_room')?.showModal();
@@ -169,12 +174,12 @@ export default function RoomEditor({ onBack, initialId }) {
               >
                 <div
                   ref={canvasRef}
-                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400' : 'bg-base-100 border-base-300'}`}
+                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasIsLight ? 'bg-slate-200 border-slate-400' : 'bg-base-100 border-base-300'}`}
                   style={{
                     width: '1100px',
                     height: '700px',
                     transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                    backgroundImage: canvasLight
+                    backgroundImage: canvasIsLight
                       ? 'radial-gradient(rgba(0,0,0,0.14) 1px, transparent 0)'
                       : 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 0)',
                     backgroundSize: '20px 20px'
