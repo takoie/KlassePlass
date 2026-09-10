@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, useDraggable, useDroppable, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { normalizeStudents, showToast, focusAfterRender } from '../shared/utils';
 import { generateGroups, buildGroupPairs } from '../shared/groupRandomizer';
+import { rulesToGroupConstraints } from '../shared/ruleConstraints.mjs';
 import StudentContextMenu from './GroupWork/StudentContextMenu';
 import PrintPreviewModal from './Print/PrintPreviewModal';
 
@@ -65,10 +66,10 @@ export default function GroupEditor({ onBack, initialId }) {
       const students = normalizeStudents(list);
       const byId = Object.fromEntries(students.map(s => [s.id, s]));
 
-      const rawConstraints = await window.api.getConstraints(assignment.class_id);
-      const mappedConstraints = (rawConstraints || []).map(c => ({
-        studentA: c.student_a, studentB: c.student_b, type: c.type,
-      }));
+      // Elevregler leses fra klassens blob (samme kilde som klassekart-løseren).
+      // Kun kritiske avoid/pair-regler blir harde constraints for gruppene.
+      const blobRules = Array.isArray(parsed) ? [] : (parsed.rules || []);
+      const mappedConstraints = rulesToGroupConstraints(blobRules, students);
 
       setAssignmentId(assignment.id);
       setName(assignment.name);
