@@ -155,6 +155,7 @@ export default function RoomEditor({ onBack, initialId }) {
                 generateStructure={generateStructure}
                 addDesk={addDesk}
                 clearDesks={clearDesks}
+                deskCount={desks.length}
                 canvasLight={canvasLight}
                 toggleCanvasLight={toggleCanvasLight}
               />

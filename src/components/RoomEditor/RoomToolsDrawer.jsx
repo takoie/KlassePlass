@@ -51,6 +51,7 @@ export default function RoomToolsDrawer({
   generateStructure,
   addDesk,
   clearDesks,
+  deskCount = 0,
   showNumbers,
   setShowNumbers,
   showZones,
@@ -128,7 +129,9 @@ export default function RoomToolsDrawer({
           </div>
           <button
             className="mt-2 h-8 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors"
-            onClick={generateStructure}
+            onClick={() => (deskCount > 0
+              ? document.getElementById('modal_confirm_generate')?.showModal()
+              : generateStructure())}
           >
             Generer bord-struktur
           </button>
@@ -177,11 +180,37 @@ export default function RoomToolsDrawer({
       <div className="flex-shrink-0 min-w-[16rem] border-t border-slate-800 p-3">
         <button
           className="w-full h-8 rounded-md border border-rose-500/30 text-rose-300 hover:bg-rose-950/40 hover:text-rose-200 text-xs font-semibold transition-colors"
-          onClick={clearDesks}
+          onClick={() => document.getElementById('modal_confirm_clear_room')?.showModal()}
         >
           <i className="fa-solid fa-trash mr-1.5"></i> Tøm hele rommet
         </button>
       </div>
+
+      <dialog id="modal_confirm_clear_room" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-lg text-rose-400">Tøm hele rommet?</h3>
+          <p className="py-4 text-sm text-slate-300">Alle bord fjernes fra rommet. Dette kan ikke angres.</p>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
+              <button className="btn btn-error" onClick={clearDesks}>Ja, tøm rommet</button>
+            </form>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="modal_confirm_generate" className="modal modal-bottom sm:modal-middle">
+        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+          <h3 className="font-bold text-lg text-amber-400">Generer ny bord-struktur?</h3>
+          <p className="py-4 text-sm text-slate-300">Dette erstatter alle bordene i rommet, inkludert soner og grupper du har satt. Kan ikke angres.</p>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
+              <button className="btn btn-warning" onClick={generateStructure}>Ja, generer</button>
+            </form>
+          </div>
+        </div>
+      </dialog>
     </>
   );
 }
