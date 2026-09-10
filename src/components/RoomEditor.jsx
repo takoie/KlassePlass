@@ -12,6 +12,7 @@ import { useDeskDragAndDrop } from './RoomEditor/hooks/useDeskDragAndDrop';
 import { useDeskSelection } from './RoomEditor/hooks/useDeskSelection';
 import { useRooms } from './RoomEditor/hooks/useRooms';
 import { centerBoardX as computeCenterBoardX } from './RoomEditor/geometry';
+import { computeDeskNumbering } from './SeatingChart/deskLayout';
 
 export default function RoomEditor({ onBack, initialId }) {
   const [desks, setDesks] = useState([]); // [{ id, x, y, capacity: 1|2|3|4, zones: [], groupId: null }]
@@ -107,38 +108,10 @@ export default function RoomEditor({ onBack, initialId }) {
     document.getElementById('modal_rename_room')?.showModal();
   };
 
-  const isBoardAtTop = (boardObj?.y || 25) < 350;
-
-  const sortedDesks = [...desks].sort((a, b) => {
-    const yDiff = a.y - b.y;
-    
-    if (isBoardAtTop) {
-      if (Math.abs(yDiff) > 35) return yDiff;
-      return a.x - b.x;
-    } else {
-      if (Math.abs(yDiff) > 35) return -yDiff;
-      return b.x - a.x;
-    }
-  });
-
-  // Numrene følger seteplasser, ikke bord — et 2-seters bord opptar to numre,
-  // ett per sete, slik at neste bord fortsetter fra riktig sete-nummer, ikke bord-nummer.
-  const deskNumberMap = {};
-  let seatCounter = 0;
-  sortedDesks.forEach((d) => {
-    const cap = d.capacity || 1;
-    const nums = new Array(cap);
-    // Når tavla er i bunnen telles bordene fra høyre mot venstre (se sorteringen
-    // over), så setene INNI hvert bord må også telles fra høyre mot venstre —
-    // ellers får det synlig venstre setet lavest nummer uansett, og nummerering
-    // stemmer ikke med hvilken side som faktisk er nærmest tavla.
-    for (let i = 0; i < cap; i++) {
-      seatCounter += 1;
-      const slotIdx = isBoardAtTop ? i : (cap - 1 - i);
-      nums[slotIdx] = seatCounter;
-    }
-    deskNumberMap[d.id] = nums;
-  });
+  // Sete-nummerering - delt logikk med klassekartet (computeDeskNumbering i
+  // deskLayout.mjs). Romeditoren har ingen ubrukte/skjulte seter, så alle
+  // seter telles fortløpende.
+  const { deskNumberMap } = computeDeskNumbering(desks, boardObj);
 
   const presetsList = [
     { id: '2-2-2', title: 'Par-rekker', subtitle: '2-2-2 oppsett', icon: '║ ║ ║' },

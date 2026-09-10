@@ -50,3 +50,54 @@ export function slotIndexAtPointerX(layout, deskX, cx) {
   );
   return layout.renderSlots[visualIdx];
 }
+
+/**
+ * Sete-nummerering sett fra lærerens side (teller fra tavla og utover). Numrene
+ * følger seteplasser, ikke bord: et 2-seters bord bruker to numre, så neste bord
+ * fortsetter fra riktig setenummer. Delt mellom klassekart-renderingen og
+ * romeditoren.
+ *
+ * @param {Array<{id: string, x: number, y: number, capacity?: number}>} desks
+ * @param {{y?: number}} boardObj
+ * @param {{ placements?: object|null, unusedSeats?: object|null, hideEmptyDesks?: boolean }} [opts]
+ *   Kun klassekartet sender disse: ubrukte seter, og helt tomme bord når "Skjul
+ *   tomme bord" er på, hopper HELT over tellingen så resten forblir 1,2,3...
+ *   Romeditoren kaller uten opts og teller da alle seter fortløpende.
+ * @returns {{ sortedDesks: Array, deskNumberMap: Object<string, Array<number|undefined>> }}
+ */
+export function computeDeskNumbering(desks, boardObj, opts = {}) {
+  const { placements = null, unusedSeats = null, hideEmptyDesks = false } = opts;
+  const isBoardAtTop = (boardObj?.y || 25) < 350;
+
+  const sortedDesks = [...desks].sort((a, b) => {
+    const yDiff = a.y - b.y;
+    if (isBoardAtTop) {
+      if (Math.abs(yDiff) > 35) return yDiff;
+      return a.x - b.x;
+    }
+    // Tavla i bunnen: rad 1 er nederst, og bordene telles fra høyre mot venstre.
+    if (Math.abs(yDiff) > 35) return -yDiff;
+    return b.x - a.x;
+  });
+
+  const deskNumberMap = {};
+  let seatCounter = 0;
+  sortedDesks.forEach((d) => {
+    const cap = d.capacity || 1;
+    const nums = new Array(cap);
+    const isFullyEmptyDesk = hideEmptyDesks && !!placements &&
+      Array.from({ length: cap }, (_, s) => placements[`${d.id}_seat_${s}`]).every((v) => !v);
+    // Tavla i bunnen => setene inni bordet telles også fra høyre mot venstre,
+    // ellers får synlig venstre sete lavest nummer uansett hvilken side som er
+    // nærmest tavla.
+    for (let i = 0; i < cap; i++) {
+      const slotIdx = isBoardAtTop ? i : (cap - 1 - i);
+      if (isFullyEmptyDesk || (unusedSeats && unusedSeats[`${d.id}_seat_${slotIdx}`])) continue;
+      seatCounter += 1;
+      nums[slotIdx] = seatCounter;
+    }
+    deskNumberMap[d.id] = nums;
+  });
+
+  return { sortedDesks, deskNumberMap };
+}

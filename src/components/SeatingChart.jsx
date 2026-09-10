@@ -14,7 +14,7 @@ import { useGroupLasso } from './SeatingChart/hooks/useGroupLasso';
 import { useStudentDragAndDrop } from './SeatingChart/hooks/useStudentDragAndDrop';
 import { useSeatings } from './SeatingChart/hooks/useSeatings';
 import { useSeatingUndo } from './SeatingChart/hooks/useSeatingUndo';
-import { getDeskLayout } from './SeatingChart/deskLayout';
+import { getDeskLayout, computeDeskNumbering } from './SeatingChart/deskLayout';
 
 // Makkergruppe-fargene 1-12 (se [1..12]-gridet i DeskContextMenu.jsx/
 // Toolbar.jsx). Brukerspesifisert palett (kategorisk, D3/Tableau-aktig) valgt
@@ -437,46 +437,10 @@ export default function SeatingChart({ onBack, initialId }) {
     }
   };
 
-  // Autonummerering: Teller konsekvent basert på tavlas plassering (lærerperspektiv)
-  const isBoardAtTop = (boardObj?.y || 25) < 350;
-
-  const sortedDesks = [...desks].sort((a, b) => {
-    const yDiff = a.y - b.y;
-    
-    if (isBoardAtTop) {
-      if (Math.abs(yDiff) > 35) return yDiff;
-      return a.x - b.x;
-    } else {
-      // Tavla er i bunnen, rad 1 er nederst. Teller fra høyre mot venstre (lærerens venstre)
-      if (Math.abs(yDiff) > 35) return -yDiff;
-      return b.x - a.x;
-    }
-  });
-
-  // Numrene følger seteplasser, ikke bord — et 2-seters bord opptar to numre,
-  // ett per sete, slik at neste bord fortsetter fra riktig sete-nummer, ikke bord-nummer.
-  const deskNumberMap = {};
-  let seatCounter = 0;
-  sortedDesks.forEach((d) => {
-    const cap = d.capacity || 1;
-    const nums = new Array(cap);
-    // Bord som er helt skjult (tomme + "Skjul tomme bord" på) skal heller ikke
-    // "bruke opp" plassnumre de aldri viser - samme resonnement som ubrukte seter.
-    const isFullyEmptyDesk = hideEmptyDesks &&
-      Array.from({ length: cap }, (_, s) => placements[`${d.id}_seat_${s}`]).every(val => !val);
-    // Når tavla er i bunnen telles bordene fra høyre mot venstre (se sorteringen
-    // over), så setene INNI hvert bord må også telles fra høyre mot venstre —
-    // ellers får det synlig venstre setet lavest nummer uansett, og nummerering
-    // stemmer ikke med hvilken side som faktisk er nærmest tavla.
-    for (let i = 0; i < cap; i++) {
-      const slotIdx = isBoardAtTop ? i : (cap - 1 - i);
-      // Ubrukte seter og skjulte tomme bord hopper HELT over tellingen (ikke bare
-      // "vises ikke") slik at resten av plassene forblir sammenhengende (1,2,3...).
-      if (isFullyEmptyDesk || unusedSeats[`${d.id}_seat_${slotIdx}`]) continue;
-      seatCounter += 1;
-      nums[slotIdx] = seatCounter;
-    }
-    deskNumberMap[d.id] = nums;
+  // Autonummerering (lærerperspektiv, teller fra tavla og utover). Delt logikk
+  // med romeditoren - se computeDeskNumbering i deskLayout.mjs.
+  const { deskNumberMap } = computeDeskNumbering(desks, boardObj, {
+    placements, unusedSeats, hideEmptyDesks,
   });
 
   const zoneMeta = {

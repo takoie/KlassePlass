@@ -51,3 +51,58 @@ test('skjult plass som likevel har en elev teller ikke som skjult', () => {
   assert.equal(layout.collapseUnused, false);
   assert.deepEqual(layout.renderSlots, [0, 1, 2, 3]);
 });
+
+// ---- computeDeskNumbering -----------------------------------------------
+
+import { computeDeskNumbering } from '../src/components/SeatingChart/deskLayout.mjs';
+
+const numDesks = [
+  { id: 'a', x: 0,   y: 100, capacity: 2 },
+  { id: 'b', x: 200, y: 100, capacity: 1 },
+  { id: 'c', x: 0,   y: 300, capacity: 2 },
+];
+const dense = (arr) => Array.from(arr ?? []);
+
+test('computeDeskNumbering: tavla øverst - fortløpende venstre->høyre, rad for rad', () => {
+  const { deskNumberMap } = computeDeskNumbering(numDesks, { y: 25 });
+  assert.deepEqual(dense(deskNumberMap.a), [1, 2]);
+  assert.deepEqual(dense(deskNumberMap.b), [3]);
+  assert.deepEqual(dense(deskNumberMap.c), [4, 5]);
+});
+
+test('computeDeskNumbering: tavla nederst - nederste rad først, høyre->venstre inni bordet', () => {
+  const { sortedDesks, deskNumberMap } = computeDeskNumbering(numDesks, { y: 700 });
+  // Nederste rad (y=300) kommer først: bare bord c der. Setene telles fra høyre:
+  // slotIdx 1 får 1, slotIdx 0 får 2.
+  assert.equal(sortedDesks[0].id, 'c');
+  assert.deepEqual(dense(deskNumberMap.c), [2, 1]);
+  // Deretter øverste rad, høyre->venstre: b (x=200) før a (x=0).
+  assert.deepEqual(dense(deskNumberMap.b), [3]);
+  assert.deepEqual(dense(deskNumberMap.a), [5, 4]);
+});
+
+test('computeDeskNumbering: ubrukte seter hopper over tellingen (klassekart)', () => {
+  const { deskNumberMap } = computeDeskNumbering(numDesks, { y: 25 }, {
+    unusedSeats: { 'a_seat_1': true },
+  });
+  assert.equal(deskNumberMap.a[0], 1);
+  assert.equal(deskNumberMap.a[1], undefined);
+  assert.deepEqual(dense(deskNumberMap.b), [2]);
+  assert.deepEqual(dense(deskNumberMap.c), [3, 4]);
+});
+
+test('computeDeskNumbering: helt tomt bord hoppes over når hideEmptyDesks', () => {
+  const { deskNumberMap } = computeDeskNumbering(numDesks, { y: 25 }, {
+    placements: { 'a_seat_0': 's1', 'c_seat_0': 's2' },
+    hideEmptyDesks: true,
+  });
+  assert.deepEqual(dense(deskNumberMap.a), [1, 2]);
+  assert.equal(deskNumberMap.b[0], undefined);
+  assert.deepEqual(dense(deskNumberMap.c), [3, 4]);
+});
+
+test('computeDeskNumbering: uten opts (romeditor) telles alle seter fortløpende', () => {
+  const { deskNumberMap } = computeDeskNumbering(numDesks, { y: 25 });
+  const total = Object.values(deskNumberMap).flat().filter(Boolean).length;
+  assert.equal(total, 5);
+});
