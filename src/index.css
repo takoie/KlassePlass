@@ -147,3 +147,40 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.45);
 }
+
+/* ============================================================
+   Animasjoner + toast. Bodde tidligere i src/styles/components.css
+   (fjernet i React-migrasjonen). `animate-[fadeIn_...]` brukes ~6
+   steder (Toolbar, Select, UpdateBanner/Modal, WhatsNewModal) og
+   showToast() i src/shared/utils.js bygger .toast-elementer.
+   ============================================================ */
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+#toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10000;
+}
+
+.toast {
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  background: oklch(var(--b2));
+  border: 1px solid oklch(var(--b3));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  max-width: 320px;
+}
+
+.toast.toast-show    { opacity: 1; transform: translateX(0); }
+.toast.toast-success { border-color: oklch(var(--su)); }
+.toast.toast-error   { border-color: oklch(var(--er)); }
+.toast.toast-warning { border-color: oklch(var(--wa)); }
