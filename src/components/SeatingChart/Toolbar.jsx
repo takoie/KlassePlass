@@ -34,9 +34,9 @@ export default function Toolbar({
   canvasLight, toggleCanvasLight,
 }) {
   return (
-    <div className="w-64 bg-base-200 flex flex-col z-10 flex-shrink-0 border-r border-slate-800 shadow-xl relative overflow-hidden">
+    <div className="w-64 bg-base-200 flex flex-col z-10 flex-shrink-0 border-r border-base-300 shadow-xl relative overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-800 flex justify-between items-center bg-base-200">
+      <div className="px-4 py-3 border-b border-base-300 flex justify-between items-center bg-base-200">
         <h3 className="font-extrabold text-xs text-emerald-400 flex items-center gap-2 uppercase tracking-widest">
           <i className="fa-solid fa-toolbox"></i> Verktøy
         </h3>
@@ -98,8 +98,8 @@ export default function Toolbar({
 
           {/* Makkergrupper ekspanderbar boks */}
           {showGroupDrawer && (
-            <div className="flex flex-col gap-2 p-2.5 rounded-xl bg-slate-900/80 border border-fuchsia-500/30 animate-[fadeIn_0.15s_ease-out]">
-              <p className="text-[10px] text-slate-400 leading-tight">Velg farge og klikk på bordene for å koble dem sammen.</p>
+            <div className="flex flex-col gap-2 p-2.5 rounded-xl bg-base-300/80 border border-fuchsia-500/30 animate-[fadeIn_0.15s_ease-out]">
+              <p className="text-[10px] text-base-content/60 leading-tight">Velg farge og klikk på bordene for å koble dem sammen.</p>
               <div className="grid grid-cols-4 gap-1.5">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(g => (
                   <button
@@ -113,7 +113,7 @@ export default function Toolbar({
                 ))}
               </div>
               <button
-                className={`h-7 rounded-lg flex items-center justify-center text-[11px] font-bold border transition-all ${activeGroupId === 0 ? 'bg-red-500/20 border-red-500 text-red-400' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}
+                className={`h-7 rounded-lg flex items-center justify-center text-[11px] font-bold border transition-all ${activeGroupId === 0 ? 'bg-red-500/20 border-red-500 text-red-400' : 'border-base-300 text-base-content/60 hover:bg-base-200'}`}
                 onClick={() => setActiveGroupId(0)}
               >
                 <i className="fa-solid fa-eraser mr-1.5 text-[10px]"></i> Fjern gruppe
@@ -126,7 +126,7 @@ export default function Toolbar({
                   <i className="fa-solid fa-xmark text-[10px]"></i> Avslutt modus
                 </button>
               )}
-              <div className="h-px bg-slate-800 my-0.5"></div>
+              <div className="h-px bg-base-200 my-0.5"></div>
               <ToggleRow
                 icon="fa-solid fa-hashtag"
                 label="Vis gruppenummer"
@@ -235,90 +235,90 @@ export default function Toolbar({
           />
 
           {showFunDrawer && (
-            <div className="flex flex-col gap-2.5 p-2.5 rounded-xl bg-slate-900/80 border border-pink-500/30 animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex flex-col gap-2.5 p-2.5 rounded-xl bg-base-300/80 border border-pink-500/30 animate-[fadeIn_0.15s_ease-out]">
               {/* Gradvis avdekking */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-[10px] text-base-content/60 font-bold uppercase tracking-wider flex items-center gap-1.5">
                   <i className="fa-solid fa-masks-theater text-cyan-400"></i> Gradvis avdekking
                 </span>
                 {!revealMode ? (
-                  <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5 font-bold" onClick={startReveal} disabled={!!activeFunMode}>
+                  <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-base-content gap-1.5 font-bold" onClick={startReveal} disabled={!!activeFunMode}>
                     <i className="fa-solid fa-eye-slash"></i> Start avdekking
                   </button>
                 ) : (
                   <>
                     <p className="text-[10px] text-center text-cyan-300 font-semibold">{revealedCount} av {revealTotal} avslørt</p>
-                    <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-white gap-1.5 font-bold" onClick={revealNext} disabled={revealedCount >= revealTotal}>
+                    <button className="btn btn-xs bg-cyan-600 hover:bg-cyan-500 text-base-content gap-1.5 font-bold" onClick={revealNext} disabled={revealedCount >= revealTotal}>
                       <i className="fa-solid fa-eye"></i> Avslør neste
                     </button>
-                    <button className="btn btn-xs btn-ghost border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white" onClick={revealAll} disabled={revealedCount >= revealTotal}>
+                    <button className="btn btn-xs btn-ghost border border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content" onClick={revealAll} disabled={revealedCount >= revealTotal}>
                       Avslør alle
                     </button>
-                    <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={endReveal}>
+                    <button className="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content" onClick={endReveal}>
                       <i className="fa-solid fa-xmark"></i> Avslutt
                     </button>
                   </>
                 )}
               </div>
 
-              <div className="h-px bg-slate-800"></div>
+              <div className="h-px bg-base-200"></div>
 
               {/* Roulette */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-[10px] text-base-content/60 font-bold uppercase tracking-wider flex items-center gap-1.5">
                   <i className="fa-solid fa-dice text-amber-400"></i> Roulette
                 </span>
                 {activeFunMode === 'roulette' ? (
-                  <button className="btn btn-xs bg-amber-600 hover:bg-amber-500 text-white gap-1.5 font-bold" onClick={stopRoulette}>
+                  <button className="btn btn-xs bg-amber-600 hover:bg-amber-500 text-base-content gap-1.5 font-bold" onClick={stopRoulette}>
                     <i className="fa-solid fa-stop"></i> Stopp
                   </button>
                 ) : (
-                  <button className="btn btn-xs bg-amber-600 hover:bg-amber-500 text-white gap-1.5 font-bold" onClick={startRoulette} disabled={!!activeFunMode || revealMode}>
+                  <button className="btn btn-xs bg-amber-600 hover:bg-amber-500 text-base-content gap-1.5 font-bold" onClick={startRoulette} disabled={!!activeFunMode || revealMode}>
                     <i className="fa-solid fa-play"></i> Start roulette
                   </button>
                 )}
               </div>
 
-              <div className="h-px bg-slate-800"></div>
+              <div className="h-px bg-base-200"></div>
 
               {/* Randombomb */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-[10px] text-base-content/60 font-bold uppercase tracking-wider flex items-center gap-1.5">
                   <i className="fa-solid fa-bomb text-rose-400"></i> Randombomb
                 </span>
                 {activeFunMode === 'randombomb' ? (
                   <>
                     <p className="text-[10px] text-center text-rose-300 font-semibold">{bombBoom ? 'BOOM!' : `Nedtelling: ${bombCountdown}`}</p>
-                    <button className="btn btn-xs btn-ghost border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white" onClick={cancelRandombomb} disabled={bombBoom}>
+                    <button className="btn btn-xs btn-ghost border border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content" onClick={cancelRandombomb} disabled={bombBoom}>
                       <i className="fa-solid fa-xmark"></i> Avbryt
                     </button>
                   </>
                 ) : (
-                  <button className="btn btn-xs bg-rose-600 hover:bg-rose-500 text-white gap-1.5 font-bold" onClick={startRandombomb} disabled={!!activeFunMode || revealMode}>
+                  <button className="btn btn-xs bg-rose-600 hover:bg-rose-500 text-base-content gap-1.5 font-bold" onClick={startRandombomb} disabled={!!activeFunMode || revealMode}>
                     <i className="fa-solid fa-play"></i> Start randombomb
                   </button>
                 )}
               </div>
 
-              <div className="h-px bg-slate-800"></div>
+              <div className="h-px bg-base-200"></div>
 
               {/* Musikkstoler & Makkerbytte */}
               <div className="grid grid-cols-2 gap-1.5">
-                <button className="btn btn-xs bg-lime-600 hover:bg-lime-500 text-white gap-1 font-bold truncate" onClick={startMusikkstoler} disabled={!!activeFunMode || revealMode} title="Musikkstoler (stokk raskt)">
+                <button className="btn btn-xs bg-lime-600 hover:bg-lime-500 text-base-content gap-1 font-bold truncate" onClick={startMusikkstoler} disabled={!!activeFunMode || revealMode} title="Musikkstoler (stokk raskt)">
                   <i className="fa-solid fa-music text-[10px]"></i> Musikkstoler
                 </button>
-                <button className="btn btn-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-white gap-1 font-bold truncate" onClick={startMakkerbytte} disabled={!!activeFunMode || revealMode} title="Bytt om grupper">
+                <button className="btn btn-xs bg-fuchsia-600 hover:bg-fuchsia-500 text-base-content gap-1 font-bold truncate" onClick={startMakkerbytte} disabled={!!activeFunMode || revealMode} title="Bytt om grupper">
                   <i className="fa-solid fa-shuffle text-[10px]"></i> Makkerbytte
                 </button>
               </div>
 
               {/* Trekk en elev */}
               <div className="flex flex-col gap-1.5 pt-1">
-                <button className="btn btn-xs bg-yellow-600 hover:bg-yellow-500 text-white gap-1.5 font-bold" onClick={startSpotlight} disabled={!!activeFunMode || revealMode}>
+                <button className="btn btn-xs bg-yellow-600 hover:bg-yellow-500 text-base-content gap-1.5 font-bold" onClick={startSpotlight} disabled={!!activeFunMode || revealMode}>
                   <i className="fa-solid fa-star text-[10px]"></i> Trekk en elev
                 </button>
                 {spotlightSlotKey && (
-                  <button className="btn btn-xs btn-ghost text-slate-400 hover:text-white" onClick={dismissSpotlight}>
+                  <button className="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content" onClick={dismissSpotlight}>
                     <i className="fa-solid fa-xmark"></i> Fjern uthevning
                   </button>
                 )}

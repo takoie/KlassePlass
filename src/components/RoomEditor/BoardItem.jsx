@@ -23,7 +23,7 @@ export default function BoardItem({ boardObj, onContextMenu }) {
       {...listeners}
       onContextMenu={onContextMenu}
     >
-      <div className="w-64 h-9 bg-slate-900/90 border border-[#f59e0b]/50 rounded-full shadow-xl flex items-center justify-center text-[#f59e0b] font-bold tracking-[0.5em] text-sm hover:border-[#f59e0b]">
+      <div className="w-64 h-9 bg-base-300/90 border border-[#f59e0b]/50 rounded-full shadow-xl flex items-center justify-center text-[#f59e0b] font-bold tracking-[0.5em] text-sm hover:border-[#f59e0b]">
         T A V L E
       </div>
     </div>

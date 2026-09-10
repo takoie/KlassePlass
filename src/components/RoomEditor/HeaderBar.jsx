@@ -29,8 +29,8 @@ export default function HeaderBar({ onBack, selectedRoom, roomName, onEditName, 
           <>
             <HeaderDivider />
             <div className="flex items-center gap-2 min-w-0">
-              <i className="fa-solid fa-school text-slate-500 text-xs flex-shrink-0"></i>
-              <span className="text-sm font-bold text-white truncate max-w-[16rem]" title={roomName}>
+              <i className="fa-solid fa-school text-base-content/50 text-xs flex-shrink-0"></i>
+              <span className="text-sm font-bold text-base-content truncate max-w-[16rem]" title={roomName}>
                 {roomName || 'Uten navn'}
               </span>
               <HeaderButton

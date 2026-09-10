@@ -65,7 +65,7 @@ export default function HeaderBar({
           />
         </HeaderField>
         <HeaderField label="Rom" title="Rommet er knyttet til klassekartet og settes ved opprettelse">
-          <span className="h-9 flex items-center px-3 rounded-md bg-surface-field border border-slate-700 text-xs font-semibold text-slate-300 max-w-28 truncate">
+          <span className="h-9 flex items-center px-3 rounded-md bg-surface-field border border-base-300 text-xs font-semibold text-base-content/80 max-w-28 truncate">
             {roomName}
           </span>
         </HeaderField>

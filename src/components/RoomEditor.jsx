@@ -133,7 +133,7 @@ export default function RoomEditor({ onBack, initialId }) {
       <div className="flex flex-1 overflow-hidden relative">
         {selectedRoom ? (
           <>
-            <div className={`bg-base-200 border-slate-800 flex flex-col min-h-0 z-10 flex-shrink-0 shadow-xl transition-all duration-300 ease-in-out overflow-hidden ${showToolsDrawer ? 'w-64 border-r' : 'w-0 border-r-0'}`}>
+            <div className={`bg-base-200 border-base-300 flex flex-col min-h-0 z-10 flex-shrink-0 shadow-xl transition-all duration-300 ease-in-out overflow-hidden ${showToolsDrawer ? 'w-64 border-r' : 'w-0 border-r-0'}`}>
               <RoomToolsDrawer
                 setShowToolsDrawer={setShowToolsDrawer}
                 showNumbers={showNumbers}
@@ -169,7 +169,7 @@ export default function RoomEditor({ onBack, initialId }) {
               >
                 <div
                   ref={canvasRef}
-                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400' : 'bg-base-100 border-slate-700'}`}
+                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400' : 'bg-base-100 border-base-300'}`}
                   style={{
                     width: '1100px',
                     height: '700px',
@@ -228,9 +228,9 @@ export default function RoomEditor({ onBack, initialId }) {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
+          <div className="flex-1 flex flex-col items-center justify-center text-base-content/50">
             <i className="fa-solid fa-school text-5xl mb-3 opacity-20"></i>
-            <h2 className="text-lg font-bold text-white">Ingen rom funnet</h2>
+            <h2 className="text-lg font-bold text-base-content">Ingen rom funnet</h2>
             <p className="text-sm mb-4">Opprett ditt første klasserom for å komme i gang.</p>
             <button
               className="btn btn-sm bg-[#34d399] hover:bg-[#10b981] text-slate-950 border-none font-bold gap-2"

@@ -13,14 +13,14 @@ export default function Modals({
   return (
     <>
       <dialog id="modal_student_note" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-lg text-amber-300 flex items-center gap-2">
             <i className="fa-solid fa-note-sticky"></i> Notat for {editingNoteStudent?.name}
           </h3>
-          <p className="py-2 text-xs text-slate-400">Skriv inn notat eller spesiell tilrettelegging for denne eleven:</p>
+          <p className="py-2 text-xs text-base-content/60">Skriv inn notat eller spesiell tilrettelegging for denne eleven:</p>
 
           <textarea
-            className="textarea textarea-bordered w-full h-24 bg-surface-field border-slate-700 text-white mt-2 font-medium focus:border-amber-400"
+            className="textarea textarea-bordered w-full h-24 bg-surface-field border-base-300 text-base-content mt-2 font-medium focus:border-amber-400"
             placeholder="Skriv notat her..."
             value={noteInputValue}
             onChange={(e) => setNoteInputValue(e.target.value)}
@@ -28,7 +28,7 @@ export default function Modals({
 
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2">Avbryt</button>
               <button className="btn btn-primary" onClick={saveStudentNote}>Lagre notat</button>
             </form>
           </div>
@@ -36,18 +36,18 @@ export default function Modals({
       </dialog>
 
       <dialog id="modal_delete_seating" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-red-400 text-lg flex items-center gap-2">
             <i className="fa-solid fa-triangle-exclamation"></i> {isOnlyPeriod ? 'Slett kart?' : 'Slett periode?'}
           </h3>
-          <p className="py-4 text-sm text-slate-300">
+          <p className="py-4 text-sm text-base-content/80">
             {isOnlyPeriod
               ? <>Er du helt sikker på at du vil slette klassekartet <strong>{chartName}</strong>? Klassen har ingen andre perioder.</>
               : <>Er du helt sikker på at du vil slette perioden <strong>{chartName}</strong>? Andre perioder for denne klassen beholdes.</>}
           </p>
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200">Avbryt</button>
               <button className="btn btn-error" onClick={handleDelete}>{isOnlyPeriod ? 'Ja, slett kart' : 'Ja, slett periode'}</button>
             </form>
           </div>
@@ -55,26 +55,26 @@ export default function Modals({
       </dialog>
 
       <dialog id="modal_edit_period" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
-          <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
-            <i className="fa-solid fa-pen text-slate-400"></i> Rediger klassekart
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
+          <h3 className="font-bold text-base-content text-lg flex items-center gap-2">
+            <i className="fa-solid fa-pen text-base-content/60"></i> Rediger klassekart
           </h3>
           <div className="py-4 flex flex-col gap-4">
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn</label>
+              <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Navn</label>
               <input
                 type="text"
-                className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
+                className="input input-bordered w-full bg-surface-field border-base-300 text-base-content"
                 value={editingPeriod?.name ?? ''}
                 onChange={(e) => setEditingPeriod(p => ({ ...p, name: e.target.value }))}
                 autoFocus
               />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Periode (f.eks uke 1-4)</label>
+              <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Periode (f.eks uke 1-4)</label>
               <input
                 type="text"
-                className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
+                className="input input-bordered w-full bg-surface-field border-base-300 text-base-content"
                 value={editingPeriod?.comment ?? ''}
                 onChange={(e) => setEditingPeriod(p => ({ ...p, comment: e.target.value }))}
               />
@@ -82,15 +82,15 @@ export default function Modals({
           </div>
 
           {canSplitChart && (
-            <div className="border-t border-slate-800 pt-3 mt-1">
+            <div className="border-t border-base-300 pt-3 mt-1">
               <button
                 type="button"
-                className="btn btn-sm btn-ghost border border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white gap-2"
+                className="btn btn-sm btn-ghost border border-base-300 text-base-content hover:bg-base-200 hover:text-base-content gap-2"
                 onClick={splitToNewChart}
               >
                 <i className="fa-solid fa-code-branch"></i> Skill ut som eget klassekart
               </button>
-              <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-base-content/50 mt-1.5 leading-relaxed">
                 Løsriver denne perioden fra de andre periodene den deler periode-nedtrekk
                 og elevhistorikk med. Kan ikke angres automatisk.
               </p>
@@ -99,7 +99,7 @@ export default function Modals({
 
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200">Avbryt</button>
             </form>
             <button className="btn btn-primary" onClick={handleSaveEditedPeriod} disabled={!editingPeriod?.name?.trim()}>Lagre</button>
           </div>
@@ -107,11 +107,11 @@ export default function Modals({
       </dialog>
 
       <dialog id="modal_new_period" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
-          <h3 className="font-bold text-slate-100 text-lg flex items-center gap-2">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
+          <h3 className="font-bold text-base-content text-lg flex items-center gap-2">
             <i className="fa-solid fa-plus text-emerald-400"></i> Ny periode
           </h3>
-          <p className="py-2 text-sm text-slate-300">
+          <p className="py-2 text-sm text-base-content/80">
             Lagrer det nåværende oppsettet som historikk og starter en ny periode. Hvor mange uker skal den nye perioden vare?
           </p>
           <div className="py-2 flex items-center gap-2">
@@ -119,16 +119,16 @@ export default function Modals({
               type="number"
               min="1"
               max="52"
-              className="input input-bordered w-24 bg-surface-field border-slate-700 text-white text-center"
+              className="input input-bordered w-24 bg-surface-field border-base-300 text-base-content text-center"
               value={newPeriodWeeks}
               onChange={(e) => setNewPeriodWeeks(e.target.value)}
               autoFocus
             />
-            <span className="text-sm text-slate-400">uker</span>
+            <span className="text-sm text-base-content/60">uker</span>
           </div>
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200">Avbryt</button>
             </form>
             <button className="btn btn-primary" onClick={() => handleStartNewPeriod(newPeriodWeeks)}>Opprett periode</button>
           </div>
@@ -136,18 +136,18 @@ export default function Modals({
       </dialog>
 
       <dialog id="modal_sync_room" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-orange-400 text-lg flex items-center gap-2">
             <i className="fa-solid fa-triangle-exclamation"></i> Hent bordoppsett fra rommet?
           </h3>
-          <p className="py-4 text-sm text-slate-300">
+          <p className="py-4 text-sm text-base-content/80">
             Dette klassekartet bruker en lagret kopi av bordoppsettet fra da det sist ble lagret.
             Å hente fra rommet nå erstatter den kopien med rommets nåværende oppsett.
             Elever plassert ved bord som ikke lenger finnes i rommet blir uplasserte.
           </p>
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200">Avbryt</button>
             </form>
             <button className="btn btn-warning" onClick={syncFromRoom}>Ja, oppdater</button>
           </div>
@@ -155,18 +155,18 @@ export default function Modals({
       </dialog>
 
       <dialog id="modal_restore_open" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-orange-400 text-lg flex items-center gap-2">
             <i className="fa-solid fa-clock-rotate-left"></i> Tilbakestill plasseringene?
           </h3>
-          <p className="py-4 text-sm text-slate-300">
+          <p className="py-4 text-sm text-base-content/80">
             Setter alle plasseringer, låste seter, skjulte plasser og makkergruppe-farger
             tilbake til slik de var da du åpnet perioden. De siste endringene forsvinner –
             men kan hentes tilbake med <strong>Gjør om</strong>.
           </p>
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200">Avbryt</button>
               <button className="btn btn-warning" onClick={restoreToOpen}>Ja, tilbakestill</button>
             </form>
           </div>

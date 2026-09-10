@@ -81,26 +81,26 @@ export default function UpdateModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-[fadeIn_0.15s_ease-out]">
       <div 
-        className="w-full max-w-2xl bg-base-200 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="w-full max-w-2xl bg-base-200 border border-base-300/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 bg-surface-raised border-b border-slate-700 flex items-center justify-between">
+        <div className="px-6 py-4 bg-surface-raised border-b border-base-300 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
               <i className="fa-solid fa-cloud-arrow-down text-lg"></i>
             </div>
             <div>
-              <h2 className="font-extrabold text-white text-lg tracking-tight flex items-center gap-2">
+              <h2 className="font-extrabold text-base-content text-lg tracking-tight flex items-center gap-2">
                 Oppdatering og endringslogg
               </h2>
-              <p className="text-xs text-slate-400">
-                Installert versjon: <span className="font-bold text-slate-200">v{currentVersion || '2.5.0'}</span>
+              <p className="text-xs text-base-content/60">
+                Installert versjon: <span className="font-bold text-base-content">v{currentVersion || '2.5.0'}</span>
               </p>
             </div>
           </div>
           <button
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-base-content/60 hover:text-base-content flex items-center justify-center transition-colors"
             onClick={onClose}
             title="Lukk"
           >
@@ -111,7 +111,7 @@ export default function UpdateModal({ isOpen, onClose }) {
         {/* Content Area */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           {/* Status Box */}
-          <div className="p-4 rounded-xl border border-slate-700/80 bg-surface-field/60 backdrop-blur flex flex-col gap-3">
+          <div className="p-4 rounded-xl border border-base-300/80 bg-surface-field/60 backdrop-blur flex flex-col gap-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
                 {checking ? (
@@ -127,7 +127,7 @@ export default function UpdateModal({ isOpen, onClose }) {
                 )}
 
                 <div>
-                  <h4 className="text-sm font-bold text-white">
+                  <h4 className="text-sm font-bold text-base-content">
                     {checking
                       ? 'Søker etter oppdateringer...'
                       : updateReady
@@ -138,7 +138,7 @@ export default function UpdateModal({ isOpen, onClose }) {
                       ? 'Kunne ikke hente oppdateringsstatus'
                       : `Du har nyeste versjon installert (v${currentVersion || '2.5.0'})`}
                   </h4>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-base-content/60">
                     {checking
                       ? 'Kobler til GitHub Releases...'
                       : updateReady
@@ -155,7 +155,7 @@ export default function UpdateModal({ isOpen, onClose }) {
               {/* Action buttons inside status box */}
               <div className="flex items-center gap-2">
                 <button
-                  className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-1.5"
+                  className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 gap-1.5"
                   onClick={() => handleCheck(true)}
                   disabled={checking || downloading}
                 >
@@ -190,11 +190,11 @@ export default function UpdateModal({ isOpen, onClose }) {
             {/* Download Progress Bar */}
             {downloading && (
               <div className="mt-2 space-y-1">
-                <div className="flex justify-between text-xs text-slate-400">
+                <div className="flex justify-between text-xs text-base-content/60">
                   <span>Laster ned installasjonsfiler...</span>
                   <span className="font-bold text-emerald-400">{downloadProgress?.percent ?? 50}%</span>
                 </div>
-                <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+                <div className="w-full bg-base-200 rounded-full h-2 overflow-hidden border border-base-300">
                   <div
                     className="bg-emerald-500 h-full transition-all duration-300"
                     style={{ width: `${downloadProgress?.percent ?? 50}%` }}
@@ -207,7 +207,7 @@ export default function UpdateModal({ isOpen, onClose }) {
           {/* Changelog Section */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+              <h3 className="text-xs font-extrabold uppercase tracking-widest text-base-content/60 flex items-center gap-2">
                 <i className="fa-solid fa-list-check text-emerald-400"></i> Hva er nytt i KlassePlass
               </h3>
             </div>
@@ -216,11 +216,11 @@ export default function UpdateModal({ isOpen, onClose }) {
               {CHANGELOG.map((rel) => (
                 <div 
                   key={rel.version}
-                  className="rounded-xl border border-slate-800 bg-surface-raised/40 p-4 transition-all hover:border-slate-700"
+                  className="rounded-xl border border-base-300 bg-surface-raised/40 p-4 transition-all hover:border-base-300"
                 >
-                  <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
+                  <div className="flex items-center justify-between mb-3 border-b border-base-300 pb-2.5">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-base font-extrabold text-white tracking-tight">
+                      <span className="text-base font-extrabold text-base-content tracking-tight">
                         Versjon {rel.version}
                       </span>
                       {rel.isLatest && (
@@ -229,7 +229,7 @@ export default function UpdateModal({ isOpen, onClose }) {
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-slate-500 font-medium">
+                    <span className="text-xs text-base-content/50 font-medium">
                       {rel.date}
                     </span>
                   </div>
@@ -249,8 +249,8 @@ export default function UpdateModal({ isOpen, onClose }) {
                           {item.type === 'feature' ? 'Nyhet' : item.type === 'fix' ? 'Feilretting' : item.type === 'stability' ? 'Stabilitet' : 'Forbedring'}
                         </span>
                         <div className="leading-relaxed">
-                          <strong className="text-slate-200">{item.title}: </strong>
-                          <span className="text-slate-400">{item.desc}</span>
+                          <strong className="text-base-content">{item.title}: </strong>
+                          <span className="text-base-content/60">{item.desc}</span>
                         </div>
                       </div>
                     ))}
@@ -262,9 +262,9 @@ export default function UpdateModal({ isOpen, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 bg-surface-raised border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
+        <div className="px-6 py-3 bg-surface-raised border-t border-base-300 flex justify-between items-center text-xs text-base-content/50">
           <span>Automatisk oppdatering aktivert via GitHub Releases</span>
-          <button className="btn btn-sm btn-ghost text-slate-300 hover:text-white" onClick={onClose}>
+          <button className="btn btn-sm btn-ghost text-base-content/80 hover:text-base-content" onClick={onClose}>
             Lukk
           </button>
         </div>

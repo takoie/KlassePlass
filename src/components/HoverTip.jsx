@@ -2,8 +2,8 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 const TIP_CLASS =
-  'pointer-events-none rounded-xl bg-slate-950/95 border border-slate-700 shadow-2xl ' +
-  'px-2.5 py-2 text-[11px] leading-relaxed text-slate-200 text-left normal-case font-normal ' +
+  'pointer-events-none rounded-xl bg-slate-950/95 border border-base-300 shadow-2xl ' +
+  'px-2.5 py-2 text-[11px] leading-relaxed text-base-content text-left normal-case font-normal ' +
   'tracking-normal whitespace-pre-line';
 
 /**
@@ -104,7 +104,7 @@ export function InfoTip({ text, className = '' }) {
     <HoverTip content={text} placement="bottom" className={`flex-shrink-0 ${className}`}>
       <i
         tabIndex={0}
-        className="fa-solid fa-circle-info text-xs text-slate-400 opacity-60 hover:opacity-100 focus:opacity-100 outline-none transition-opacity cursor-help"
+        className="fa-solid fa-circle-info text-xs text-base-content/60 opacity-60 hover:opacity-100 focus:opacity-100 outline-none transition-opacity cursor-help"
       />
     </HoverTip>
   );

@@ -79,15 +79,15 @@ export default function StationPresenter({ onBack, initialId }) {
   };
 
   if (loading) {
-    return <div className="flex h-full w-full items-center justify-center bg-base-300 text-slate-500">Laster...</div>;
+    return <div className="flex h-full w-full items-center justify-center bg-base-300 text-base-content/50">Laster...</div>;
   }
 
   if (!session) {
     return (
-      <div className="flex flex-col h-full w-full items-center justify-center bg-base-300 text-slate-500 gap-3">
+      <div className="flex flex-col h-full w-full items-center justify-center bg-base-300 text-base-content/50 gap-3">
         <i className="fa-solid fa-arrows-rotate text-5xl opacity-20"></i>
-        <h2 className="text-lg font-bold text-white">Fant ikke stasjonsøkten</h2>
-        <button className="btn btn-ghost btn-sm text-slate-400" onClick={onBack}>
+        <h2 className="text-lg font-bold text-base-content">Fant ikke stasjonsøkten</h2>
+        <button className="btn btn-ghost btn-sm text-base-content/60" onClick={onBack}>
           <i className="fa-solid fa-arrow-left"></i> Tilbake
         </button>
       </div>
@@ -101,18 +101,18 @@ export default function StationPresenter({ onBack, initialId }) {
 
   return (
     <div className="flex flex-col h-full w-full bg-base-300 overflow-hidden">
-      <div className="px-6 py-3 bg-base-200 border-b border-slate-800 flex justify-between items-center flex-shrink-0">
+      <div className="px-6 py-3 bg-base-200 border-b border-base-300 flex justify-between items-center flex-shrink-0">
         <div className="flex items-center gap-4">
-          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={onBack}>
+          <button className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content gap-1" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Avslutt
           </button>
-          <h1 className="text-lg font-bold text-white">{session.name}</h1>
-          <span className="text-xs font-bold uppercase opacity-50 text-slate-400">{session.className}</span>
-          <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1" onClick={() => setShowPrintPreview(true)}>
+          <h1 className="text-lg font-bold text-base-content">{session.name}</h1>
+          <span className="text-xs font-bold uppercase opacity-50 text-base-content/60">{session.className}</span>
+          <button className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content gap-1" onClick={() => setShowPrintPreview(true)}>
             <i className="fa-solid fa-print"></i> Skriv ut / PDF
           </button>
         </div>
-        <span className="text-sm font-bold text-slate-300">Rotasjon {rotationIndex + 1} av {session.rotationPlan.length}</span>
+        <span className="text-sm font-bold text-base-content/80">Rotasjon {rotationIndex + 1} av {session.rotationPlan.length}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -121,9 +121,9 @@ export default function StationPresenter({ onBack, initialId }) {
             const groupIdx = currentStep[stationIdx];
             const studentIds = session.groups[groupIdx] || [];
             return (
-              <div key={station.id} className={`rounded-2xl border-2 overflow-hidden ${station.isTeacher ? 'border-orange-500' : 'border-slate-800'}`}>
+              <div key={station.id} className={`rounded-2xl border-2 overflow-hidden ${station.isTeacher ? 'border-orange-500' : 'border-base-300'}`}>
                 <div className={`px-4 py-3 flex items-center justify-between ${station.isTeacher ? 'bg-orange-500/20' : 'bg-base-200'}`}>
-                  <span className="font-bold text-white flex items-center gap-2">
+                  <span className="font-bold text-base-content flex items-center gap-2">
                     {station.isTeacher && <i className="fa-solid fa-chalkboard-user text-orange-400"></i>}
                     {station.name}
                   </span>
@@ -137,14 +137,14 @@ export default function StationPresenter({ onBack, initialId }) {
                   {studentIds.map(sid => {
                     const isLeader = typeof groupIdx === 'number' && (session.groupLeaders || [])[groupIdx] === sid;
                     return (
-                      <span key={sid} className="text-sm text-slate-200 flex items-center gap-1.5">
+                      <span key={sid} className="text-sm text-base-content flex items-center gap-1.5">
                         {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
                         {studentsById[sid]?.name || sid}
                       </span>
                     );
                   })}
                   {station.note && (
-                    <p className="text-xs text-slate-500 italic mt-2 border-t border-slate-800 pt-2">{station.note}</p>
+                    <p className="text-xs text-base-content/50 italic mt-2 border-t border-base-300 pt-2">{station.note}</p>
                   )}
                 </div>
               </div>
@@ -153,25 +153,25 @@ export default function StationPresenter({ onBack, initialId }) {
         </div>
       </div>
 
-      <div className="px-6 py-4 bg-base-200 border-t border-slate-800 flex items-center justify-center gap-6 flex-shrink-0">
-        <button className="btn btn-outline border-slate-700 text-slate-300 hover:bg-slate-800" onClick={() => goToRotation(rotationIndex - 1)} disabled={rotationIndex === 0}>
+      <div className="px-6 py-4 bg-base-200 border-t border-base-300 flex items-center justify-center gap-6 flex-shrink-0">
+        <button className="btn btn-outline border-base-300 text-base-content/80 hover:bg-base-200" onClick={() => goToRotation(rotationIndex - 1)} disabled={rotationIndex === 0}>
           <i className="fa-solid fa-backward-step"></i> Forrige
         </button>
 
         {session.no_timer ? (
-          <div className="text-xs text-slate-500 italic px-6 flex items-center gap-2">
+          <div className="text-xs text-base-content/50 italic px-6 flex items-center gap-2">
             <i className="fa-regular fa-clock opacity-50"></i> Ingen tidtaker — bytt når klassen er klar
           </div>
         ) : (
           <>
-            <div className={`text-4xl font-black tabular-nums px-6 ${timeUp ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+            <div className={`text-4xl font-black tabular-nums px-6 ${timeUp ? 'text-red-500 animate-pulse' : 'text-base-content'}`}>
               {mins}:{secs}
             </div>
 
             <button className="btn btn-circle bg-emerald-500/20 text-emerald-400 border-none hover:bg-emerald-500/30" onClick={() => setIsRunning(r => !r)}>
               <i className={`fa-solid ${isRunning ? 'fa-pause' : 'fa-play'}`}></i>
             </button>
-            <button className="btn btn-ghost text-slate-400 hover:text-white" onClick={resetTimer} title="Start tiden på nytt">
+            <button className="btn btn-ghost text-base-content/60 hover:text-base-content" onClick={resetTimer} title="Start tiden på nytt">
               <i className="fa-solid fa-rotate-left"></i>
             </button>
           </>

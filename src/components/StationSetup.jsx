@@ -48,18 +48,18 @@ function DraggableStudent({ studentId, name, isLeader, isLocked, onToggleLeader,
           className="flex-shrink-0"
           title={isLeader ? 'Fjern som gruppeleder' : 'Gjør til gruppeleder'}
         >
-          <i className={`fa-solid fa-star text-[11px] ${isLeader ? 'text-amber-400' : 'text-slate-600 hover:text-amber-400/70'}`}></i>
+          <i className={`fa-solid fa-star text-[11px] ${isLeader ? 'text-amber-400' : 'text-base-content/40 hover:text-amber-400/70'}`}></i>
         </button>
-        <span className="text-xs text-slate-200 truncate">{name}</span>
+        <span className="text-xs text-base-content truncate">{name}</span>
       </div>
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
         onPointerDown={(e) => e.stopPropagation()}
-        className="flex-shrink-0 p-0.5 rounded hover:bg-slate-700/50"
+        className="flex-shrink-0 p-0.5 rounded hover:bg-base-300/50"
         title={isLocked ? 'Låst til denne stasjonen/gruppen (klikk for å låse opp)' : 'Lås elev til denne stasjonen/gruppen (påvirkes ikke av randomisering)'}
       >
-        <i className={`fa-solid text-[10px] ${isLocked ? 'fa-lock text-red-400' : 'fa-lock-open text-slate-600 hover:text-slate-400'}`}></i>
+        <i className={`fa-solid text-[10px] ${isLocked ? 'fa-lock text-red-400' : 'fa-lock-open text-base-content/40 hover:text-base-content/60'}`}></i>
       </button>
     </div>
   );
@@ -343,14 +343,14 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   };
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center text-slate-500">Laster...</div>;
+    return <div className="flex h-full items-center justify-center text-base-content/50">Laster...</div>;
   }
 
   return (
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
-      <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
+      <div className="px-4 py-2 bg-base-200 border-b border-base-300 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <button className="btn btn-ghost btn-sm text-slate-400 hover:text-white gap-1" onClick={onBack}>
+          <button className="btn btn-ghost btn-sm text-base-content/60 hover:text-base-content gap-1" onClick={onBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake
           </button>
           <input
@@ -358,7 +358,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Navn på økt..."
-            className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-orange-400 px-3 h-9 rounded text-white w-40"
+            className="input input-ghost text-sm font-bold bg-surface-field border border-base-300 focus:border-orange-400 px-3 h-9 rounded text-base-content w-40"
           />
           <Select
             size="sm"
@@ -372,7 +372,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            className="btn btn-sm btn-ghost text-slate-400 hover:text-white gap-2"
+            className="btn btn-sm btn-ghost text-base-content/60 hover:text-base-content gap-2"
             onClick={() => setShowPrintPreview(true)}
             disabled={validStations.length < 2}
             title={validStations.length < 2 ? 'Legg til minst 2 stasjoner for å skrive ut' : undefined}
@@ -393,33 +393,33 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
 
       <div className="flex-1 overflow-y-auto">
       <div className="p-6 flex flex-col gap-6 max-w-4xl mx-auto">
-        <div className="bg-base-200 border border-slate-800 rounded-2xl p-5">
-          <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-2 block">Tid per stasjon</label>
+        <div className="bg-base-200 border border-base-300 rounded-2xl p-5">
+          <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-2 block">Tid per stasjon</label>
           <div className="flex items-end gap-4 flex-wrap">
             <div className={`flex items-end gap-2 transition-opacity ${noTimer ? 'opacity-40' : ''}`}>
               <div>
-                <span className="text-[10px] text-slate-500 block mb-1">Minutter</span>
+                <span className="text-[10px] text-base-content/50 block mb-1">Minutter</span>
                 <input
                   type="number" min="0" max="60"
                   disabled={noTimer}
-                  className="input input-bordered input-sm w-20 bg-surface-field border-slate-700 text-white disabled:cursor-not-allowed"
+                  className="input input-bordered input-sm w-20 bg-surface-field border-base-300 text-base-content disabled:cursor-not-allowed"
                   value={minutesPerStation}
                   onChange={(e) => setMinutesPerStation(Math.max(0, Number(e.target.value)))}
                 />
               </div>
-              <span className="text-slate-500 pb-1.5">:</span>
+              <span className="text-base-content/50 pb-1.5">:</span>
               <div>
-                <span className="text-[10px] text-slate-500 block mb-1">Sekunder</span>
+                <span className="text-[10px] text-base-content/50 block mb-1">Sekunder</span>
                 <input
                   type="number" min="0" max="59" step="5"
                   disabled={noTimer}
-                  className="input input-bordered input-sm w-20 bg-surface-field border-slate-700 text-white disabled:cursor-not-allowed"
+                  className="input input-bordered input-sm w-20 bg-surface-field border-base-300 text-base-content disabled:cursor-not-allowed"
                   value={secondsPerStation}
                   onChange={(e) => setSecondsPerStation(Math.min(59, Math.max(0, Number(e.target.value))))}
                 />
               </div>
             </div>
-            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer pb-1.5">
+            <label className="flex items-center gap-2 text-xs text-base-content/80 cursor-pointer pb-1.5">
               <input
                 type="checkbox"
                 className="checkbox checkbox-sm"
@@ -430,7 +430,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             </label>
           </div>
           {noTimer && (
-            <p className="text-[11px] text-slate-500 italic mt-2">
+            <p className="text-[11px] text-base-content/50 italic mt-2">
               Ingen nedtelling vises under økten — du bytter stasjon i eget tempo med "Neste rotasjon".
             </p>
           )}
@@ -441,30 +441,30 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           )}
         </div>
 
-        <div className="bg-base-200 border border-slate-800 rounded-2xl p-5">
+        <div className="bg-base-200 border border-base-300 rounded-2xl p-5">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-sm text-white">Stasjoner ({stations.length})</h3>
+            <h3 className="font-bold text-sm text-base-content">Stasjoner ({stations.length})</h3>
           </div>
           <div className="flex flex-col gap-2">
             {stations.map((s, idx) => (
               <div key={s.id} className="flex items-start gap-2 bg-surface-field rounded-lg p-2.5">
-                <span className="text-xs text-slate-500 font-bold w-5 pt-2 flex-shrink-0">{idx + 1}.</span>
+                <span className="text-xs text-base-content/50 font-bold w-5 pt-2 flex-shrink-0">{idx + 1}.</span>
                 <input
                   type="text"
                   ref={(el) => { if (el) nameInputRefs.current[s.id] = el; else delete nameInputRefs.current[s.id]; }}
                   value={s.name}
                   onChange={(e) => updateStation(s.id, 'name', e.target.value)}
                   placeholder="Stasjonsnavn..."
-                  className="input input-bordered input-sm flex-1 bg-base-200 border-slate-700 text-white"
+                  className="input input-bordered input-sm flex-1 bg-base-200 border-base-300 text-base-content"
                 />
                 <input
                   type="text"
                   value={s.note}
                   onChange={(e) => updateStation(s.id, 'note', e.target.value)}
                   placeholder="Instruksjon (valgfritt)..."
-                  className="input input-bordered input-sm flex-[1.5] bg-base-200 border-slate-700 text-slate-300"
+                  className="input input-bordered input-sm flex-[1.5] bg-base-200 border-base-300 text-base-content/80"
                 />
-                <label className="flex items-center gap-1.5 text-xs text-slate-300 whitespace-nowrap pt-2 cursor-pointer">
+                <label className="flex items-center gap-1.5 text-xs text-base-content/80 whitespace-nowrap pt-2 cursor-pointer">
                   <input type="checkbox" className="checkbox checkbox-xs" checked={!!s.isTeacher} onChange={(e) => updateStation(s.id, 'isTeacher', e.target.checked)} />
                   Lærerstasjon
                 </label>
@@ -476,18 +476,18 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             <button
               type="button"
               onClick={addStation}
-              className="py-2 rounded-lg border-2 border-dashed border-slate-700 text-slate-400 text-xs font-bold hover:border-orange-400 hover:text-orange-300 transition-colors flex items-center justify-center gap-2"
+              className="py-2 rounded-lg border-2 border-dashed border-base-300 text-base-content/60 text-xs font-bold hover:border-orange-400 hover:text-orange-300 transition-colors flex items-center justify-center gap-2"
             >
               <i className="fa-solid fa-plus"></i> Ny stasjon
             </button>
           </div>
         </div>
 
-        <div className="bg-base-200 border border-slate-800 rounded-2xl p-5">
+        <div className="bg-base-200 border border-base-300 rounded-2xl p-5">
           <div className="flex justify-between items-center mb-3">
             <div>
-              <h3 className="font-bold text-sm text-white">Grupper ({groups.length})</h3>
-              <p className="text-[11px] text-slate-400">Gruppene følger automatisk antall stasjoner ({stations.length}).</p>
+              <h3 className="font-bold text-sm text-base-content">Grupper ({groups.length})</h3>
+              <p className="text-[11px] text-base-content/60">Gruppene følger automatisk antall stasjoner ({stations.length}).</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -500,7 +500,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
               </button>
             </div>
           </div>
-          {!classId && <p className="text-xs text-slate-500 italic">Velg en klasse for å fordele elever i grupper.</p>}
+          {!classId && <p className="text-xs text-base-content/50 italic">Velg en klasse for å fordele elever i grupper.</p>}
           <DndContext
             sensors={sensors}
             onDragStart={(event) => setActiveDragId(event.active.id)}
@@ -510,7 +510,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
             <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(200px, 1fr))` }}>
               {groups.map((studentIds, idx) => (
                 <DroppableGroup key={idx} groupIdx={idx}>
-                  <div className="text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                  <div className="text-xs font-bold text-base-content/80 mb-1.5 flex items-center justify-between">
                     <span>Gruppe {idx + 1} ({studentIds.length})</span>
                     {stations[idx]?.name && (
                       <span className="text-[10px] text-orange-400 truncate max-w-[100px] font-normal" title={stations[idx].name}>
@@ -542,7 +542,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
               {activeDragId ? (
                 <div className="flex items-center gap-1.5 bg-base-200 border border-orange-400 rounded px-2 py-1 shadow-lg">
                   <i className="fa-solid fa-star text-[11px] text-transparent"></i>
-                  <span className="text-xs text-slate-200">{studentsById[activeDragId]?.name}</span>
+                  <span className="text-xs text-base-content">{studentsById[activeDragId]?.name}</span>
                 </div>
               ) : null}
             </DragOverlay>
@@ -552,14 +552,14 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       </div>
 
       <dialog id="modal_new_station_session" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-md">
-          <h3 className="font-bold text-lg flex items-center gap-2 text-white">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl max-w-md">
+          <h3 className="font-bold text-lg flex items-center gap-2 text-base-content">
             <i className="fa-solid fa-arrows-rotate text-orange-400"></i> Ny stasjonsøkt
           </h3>
           
           <div className="flex flex-col gap-3 py-3">
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på økten</label>
+              <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Navn på økten</label>
               <input
                 ref={nameModalInputRef}
                 type="text"
@@ -567,13 +567,13 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
                 onChange={(e) => setNameDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && nameDraft.trim() && classDraft) handleConfirmSessionName(); }}
                 placeholder="f.eks. Norsk - stasjoner uke 12..."
-                className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
+                className="input input-bordered w-full bg-surface-field border-base-300 text-base-content"
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klasse</label>
+              <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Klasse</label>
               <Select
                 size="sm"
                 className="w-full"
@@ -589,7 +589,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           <div className="modal-action">
             <button
               type="button"
-              className="btn btn-ghost text-slate-400 mr-2"
+              className="btn btn-ghost text-base-content/60 mr-2"
               onClick={() => {
                 document.getElementById('modal_new_station_session')?.close();
                 if (initialId === 'new' && !sessionId) onBack();

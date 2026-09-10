@@ -8,14 +8,14 @@ import React from 'react';
 /** Etikett + kontroll på samme rad ("Klasse:", "Rom:", "Periode:" …). */
 export const HeaderField = ({ label, title, children }) => (
   <div className="flex items-center gap-1.5 flex-shrink-0" title={title}>
-    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">{label}</span>
+    <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 whitespace-nowrap">{label}</span>
     {children}
   </div>
 );
 
 const TONES = {
-  ghost: 'border-transparent text-slate-400 hover:text-white hover:bg-slate-800',
-  neutral: 'border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800',
+  ghost: 'border-transparent text-base-content/60 hover:text-base-content hover:bg-base-200',
+  neutral: 'border-base-300 text-base-content hover:text-base-content hover:bg-base-200',
   primary: 'border-emerald-500/40 text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/10',
   danger: 'border-rose-500/30 text-rose-300 hover:text-rose-200 hover:bg-rose-950/40',
 };
@@ -28,7 +28,7 @@ export const HeaderButton = ({ onClick, title, tone = 'neutral', icon, iconClass
     onClick={onClick}
     disabled={disabled}
     className={`h-9 inline-flex flex-shrink-0 items-center gap-2 px-3 rounded-md border text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-      active ? 'border-slate-600 bg-slate-800 text-white' : TONES[tone]
+      active ? 'border-base-300 bg-base-200 text-base-content' : TONES[tone]
     }`}
   >
     {icon && <i className={`${icon} ${iconClass}`}></i>}
@@ -59,11 +59,11 @@ export const SaveStatus = ({ saveState }) => (
  *  (flex-nowrap) – ved ekstrem smal bredde scrolles den horisontalt i stedet
  *  for å bryte over flere rader. */
 export const HeaderBarShell = ({ children }) => (
-  <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-nowrap justify-between items-center gap-x-3 z-20 flex-shrink-0 shadow-md overflow-x-auto">
+  <div className="px-4 py-2 bg-base-200 border-b border-base-300 flex flex-nowrap justify-between items-center gap-x-3 z-20 flex-shrink-0 shadow-md overflow-x-auto">
     {children}
   </div>
 );
 
 export const HeaderDivider = () => (
-  <div className="w-px h-6 bg-slate-700/70 mx-0.5 hidden sm:block" />
+  <div className="w-px h-6 bg-base-300/70 mx-0.5 hidden sm:block" />
 );

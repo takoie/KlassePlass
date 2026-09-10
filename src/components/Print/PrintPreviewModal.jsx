@@ -208,10 +208,10 @@ export default function PrintPreviewModal({
   return createPortal(
     <>
       <dialog id="modal_print_preview" ref={dialogRef} className="modal modal-open">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl w-[95vw] max-w-[95vw] h-[92vh] max-h-[92vh] overflow-y-auto flex flex-col">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl w-[95vw] max-w-[95vw] h-[92vh] max-h-[92vh] overflow-y-auto flex flex-col">
           <h3 className="font-bold text-lg mb-4">{titleText}</h3>
           <div className="flex gap-4 flex-1 min-h-0">
-            <div className="w-52 flex-shrink-0 flex flex-col gap-3 bg-base-200 border border-slate-800 rounded-xl p-3 overflow-y-auto custom-scrollbar">
+            <div className="w-52 flex-shrink-0 flex flex-col gap-3 bg-base-200 border border-base-300 rounded-xl p-3 overflow-y-auto custom-scrollbar">
               <div className="flex flex-col gap-1">
                 <SectionLabel>Visning</SectionLabel>
                 <ToggleRow
@@ -270,13 +270,13 @@ export default function PrintPreviewModal({
                 )}
               </div>
 
-              <div className="border-t border-slate-800"></div>
+              <div className="border-t border-base-300"></div>
 
               <div className="flex flex-col gap-1.5">
                 <SectionLabel>Utsnitt</SectionLabel>
-                <div className="flex justify-between text-xs font-semibold text-slate-300 px-1">
+                <div className="flex justify-between text-xs font-semibold text-base-content/80 px-1">
                   <span>Zoom</span>
-                  <span className="text-slate-500">{Math.round(roomZoom * 100)}%</span>
+                  <span className="text-base-content/50">{Math.round(roomZoom * 100)}%</span>
                 </div>
                 <input
                   type="range"
@@ -291,12 +291,12 @@ export default function PrintPreviewModal({
                     if (next <= 1) setRoomPan({ x: 0, y: 0 });
                   }}
                 />
-                <p className="text-[11px] text-slate-500 px-1 leading-snug">
+                <p className="text-[11px] text-base-content/50 px-1 leading-snug">
                   {roomZoom > 1 ? 'Dra i forhåndsvisningen for å flytte utsnittet.' : 'Zoom inn for å kunne dra i utsnittet.'}
                 </p>
                 {(roomZoom !== 1 || roomPan.x !== 0 || roomPan.y !== 0) && (
                   <button
-                    className="self-start h-7 px-2.5 rounded-md border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                    className="self-start h-7 px-2.5 rounded-md border border-base-300 text-xs font-semibold text-base-content/80 hover:bg-base-200 hover:text-base-content transition-colors"
                     onClick={resetRoomView}
                   >
                     Nullstill utsnitt
@@ -306,20 +306,20 @@ export default function PrintPreviewModal({
 
               {pages.length > 1 && (
                 <>
-                  <div className="border-t border-slate-800"></div>
-                  <p className="text-[11px] text-slate-400 px-1">
+                  <div className="border-t border-base-300"></div>
+                  <p className="text-[11px] text-base-content/60 px-1">
                     <i className="fa-solid fa-file-lines mr-1.5"></i>{pages.length} sider ved utskrift
                   </p>
                 </>
               )}
             </div>
-            <div ref={previewPaneRef} className="flex-1 min-h-0 overflow-auto bg-slate-900/60 border border-slate-800/80 rounded-xl p-2 flex flex-col items-center justify-center gap-4">
+            <div ref={previewPaneRef} className="flex-1 min-h-0 overflow-auto bg-base-300/60 border border-base-300/80 rounded-xl p-2 flex flex-col items-center justify-center gap-4">
               {pages.map((page, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
                   {pages.length > 1 && (
                     <div className="flex items-center gap-2">
                       {i > 0 && <div className="w-full border-t border-dashed border-slate-500"></div>}
-                      <span className="px-2 py-0.5 rounded-full bg-slate-700/80 border border-slate-600 text-[11px] font-bold text-slate-200 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-full bg-base-300/80 border border-base-300 text-[11px] font-bold text-base-content whitespace-nowrap">
                         Side {i + 1} av {pages.length}
                       </span>
                     </div>
@@ -335,14 +335,14 @@ export default function PrintPreviewModal({
           </div>
 
           {exportState.status === 'done' && (
-            <div className="mt-4 flex items-center justify-between bg-slate-800/80 border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-slate-200">
+            <div className="mt-4 flex items-center justify-between bg-base-200/80 border border-base-300/80 rounded-xl px-4 py-3 text-sm text-base-content">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                   <i className="fa-solid fa-circle-check text-sm"></i>
                 </div>
                 <div>
-                  <div className="font-semibold text-white text-xs">PDF lagret</div>
-                  <div className="text-[11px] text-slate-400 font-mono truncate max-w-sm" title={exportState.filePath}>
+                  <div className="font-semibold text-base-content text-xs">PDF lagret</div>
+                  <div className="text-[11px] text-base-content/60 font-mono truncate max-w-sm" title={exportState.filePath}>
                     {exportState.filePath.split(/[\\/]/).pop()}
                   </div>
                 </div>
@@ -357,7 +357,7 @@ export default function PrintPreviewModal({
                 </button>
                 <button
                   type="button"
-                  className="btn btn-xs bg-slate-700/80 hover:bg-slate-600 text-slate-200 border border-slate-600 gap-1.5 font-medium transition-all"
+                  className="btn btn-xs bg-base-300/80 hover:bg-slate-600 text-base-content border border-base-300 gap-1.5 font-medium transition-all"
                   onClick={() => window.api.showInFolder(exportState.filePath)}
                 >
                   <i className="fa-regular fa-folder-open text-[10px]"></i> Åpne mappe
@@ -373,14 +373,14 @@ export default function PrintPreviewModal({
           )}
 
           <div className="modal-action flex justify-between items-center">
-            <button className="btn btn-ghost text-slate-400 hover:text-white" onClick={onClose}>Lukk</button>
+            <button className="btn btn-ghost text-base-content/60 hover:text-base-content" onClick={onClose}>Lukk</button>
             <div className="flex items-center gap-2">
               {contentType !== 'seatingChart' && (
-                <span className="text-[11px] text-slate-500 mr-1">
+                <span className="text-[11px] text-base-content/50 mr-1">
                   PDF-eksport er foreløpig kun for klassekart — bruk «Skriv ut» → «Lagre som PDF».
                 </span>
               )}
-              <button className="btn btn-ghost border border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white gap-2" onClick={handlePrint}>
+              <button className="btn btn-ghost border border-base-300 text-base-content hover:bg-base-200 hover:text-base-content gap-2" onClick={handlePrint}>
                 <i className="fa-solid fa-print"></i> Skriv ut
               </button>
               {contentType === 'seatingChart' && (

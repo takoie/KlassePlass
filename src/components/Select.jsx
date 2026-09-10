@@ -176,12 +176,12 @@ export default function Select({
         aria-label={ariaLabel}
         onClick={() => (open ? (setOpen(false), setPos(null)) : openMenu())}
         onKeyDown={onTriggerKeyDown}
-        className={`inline-flex items-center justify-between gap-2 rounded-md border bg-surface-field border-slate-700 font-semibold text-slate-100 transition-colors hover:border-slate-600 focus:outline-none focus-visible:border-emerald-500 focus-visible:ring-1 focus-visible:ring-emerald-500/40 disabled:opacity-40 disabled:cursor-not-allowed ${SIZES[size] || SIZES.sm} ${className}`}
+        className={`inline-flex items-center justify-between gap-2 rounded-md border bg-surface-field border-base-300 font-semibold text-base-content transition-colors hover:border-base-300 focus:outline-none focus-visible:border-emerald-500 focus-visible:ring-1 focus-visible:ring-emerald-500/40 disabled:opacity-40 disabled:cursor-not-allowed ${SIZES[size] || SIZES.sm} ${className}`}
       >
-        <span className={`truncate ${selected ? '' : 'text-slate-400 font-normal'}`}>
+        <span className={`truncate ${selected ? '' : 'text-base-content/60 font-normal'}`}>
           {selected ? selected.label : placeholder}
         </span>
-        <i className={`fa-solid fa-chevron-down text-[10px] text-slate-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}></i>
+        <i className={`fa-solid fa-chevron-down text-[10px] text-base-content/60 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}></i>
       </button>
 
       {open && createPortal(
@@ -198,10 +198,10 @@ export default function Select({
             visibility: pos ? 'visible' : 'hidden',
             zIndex: 99999,
           }}
-          className="max-h-64 overflow-y-auto rounded-lg border border-slate-700 bg-base-200 shadow-2xl py-1 custom-scrollbar focus:outline-none animate-[fadeIn_0.1s_ease-out]"
+          className="max-h-64 overflow-y-auto rounded-lg border border-base-300 bg-base-200 shadow-2xl py-1 custom-scrollbar focus:outline-none animate-[fadeIn_0.1s_ease-out]"
         >
           {items.length === 0 && (
-            <li className="px-3 py-2 text-xs text-slate-500">Ingen valg</li>
+            <li className="px-3 py-2 text-xs text-base-content/50">Ingen valg</li>
           )}
           {items.map((opt, idx) => {
             const isSelected = String(opt.value) === String(value);
@@ -216,12 +216,12 @@ export default function Select({
                 onMouseDown={(e) => { e.preventDefault(); pick(idx); }}
                 className={`flex items-center justify-between gap-2 px-3 py-1.5 text-xs cursor-pointer select-none ${
                   opt.disabled
-                    ? 'text-slate-600 cursor-not-allowed'
+                    ? 'text-base-content/40 cursor-not-allowed'
                     : isActive
-                    ? 'bg-slate-800 text-white'
+                    ? 'bg-base-200 text-base-content'
                     : isSelected
                     ? 'text-emerald-300'
-                    : 'text-slate-200'
+                    : 'text-base-content'
                 }`}
               >
                 <span className="truncate">{opt.label}</span>

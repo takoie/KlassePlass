@@ -66,25 +66,25 @@ export function ExportModal({ modalId, source, suggestedName }) {
 
   return (
     <dialog id={modalId} className="modal modal-bottom sm:modal-middle">
-      <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
-        <h3 className="font-bold text-lg flex items-center gap-2 text-white">
+      <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
+        <h3 className="font-bold text-lg flex items-center gap-2 text-base-content">
           <i className="fa-solid fa-file-export text-emerald-400"></i> Eksporter
         </h3>
         <div className="flex flex-col gap-2 py-4">
           {source.class && (
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
               <input type="checkbox" className="checkbox checkbox-sm" checked={includeClass} onChange={e => setIncludeClass(e.target.checked)} />
               Klasse: <span className="font-semibold">{source.class.name}</span>
             </label>
           )}
           {source.room && (
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
               <input type="checkbox" className="checkbox checkbox-sm" checked={includeRoom} onChange={e => setIncludeRoom(e.target.checked)} />
               Rom: <span className="font-semibold">{source.room.name}</span>
             </label>
           )}
           {source.seating && (
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
               <input type="checkbox" className="checkbox checkbox-sm" checked={includeSeating} onChange={e => setIncludeSeating(e.target.checked)} />
               Klassekart: <span className="font-semibold">{source.seating.name}</span>
             </label>
@@ -92,7 +92,7 @@ export function ExportModal({ modalId, source, suggestedName }) {
         </div>
         <div className="modal-action">
           <form method="dialog">
-            <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
+            <button className="btn btn-ghost text-base-content/60 mr-2">Avbryt</button>
           </form>
           <button
             className="btn btn-primary gap-2"
@@ -231,14 +231,14 @@ export function ImportModal({ modalId, onImported }) {
 
   return (
     <dialog id={modalId} className="modal modal-bottom sm:modal-middle" onClose={reset}>
-      <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
-        <h3 className="font-bold text-lg flex items-center gap-2 text-white">
+      <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
+        <h3 className="font-bold text-lg flex items-center gap-2 text-base-content">
           <i className="fa-solid fa-file-import text-purple-400"></i> Importer
         </h3>
 
         {!picked ? (
           <div className="py-6 flex flex-col items-center gap-3">
-            <p className="text-sm text-slate-400 text-center">Velg en tidligere eksportert .klasseplass/.json-fil.</p>
+            <p className="text-sm text-base-content/60 text-center">Velg en tidligere eksportert .klasseplass/.json-fil.</p>
             <button className="btn btn-primary gap-2" onClick={handlePickFile} disabled={busy}>
               {busy ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-folder-open"></i>}
               Velg fil...
@@ -247,19 +247,19 @@ export function ImportModal({ modalId, onImported }) {
         ) : (
           <div className="flex flex-col gap-3 py-4">
             {picked.bundle.class && (
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
                 <input type="checkbox" className="checkbox checkbox-sm" checked={includeClass} onChange={e => setIncludeClass(e.target.checked)} />
                 Klasse: <span className="font-semibold">{picked.bundle.class.name}</span>
               </label>
             )}
             {picked.bundle.room && (
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
                 <input type="checkbox" className="checkbox checkbox-sm" checked={includeRoom} onChange={e => setIncludeRoom(e.target.checked)} />
                 Rom: <span className="font-semibold">{picked.bundle.room.name}</span>
               </label>
             )}
             {picked.bundle.seating && (
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
                 <input type="checkbox" className="checkbox checkbox-sm" checked={includeSeating} onChange={e => setIncludeSeating(e.target.checked)} />
                 Klassekart: <span className="font-semibold">{picked.bundle.seating.name}</span>
               </label>
@@ -267,7 +267,7 @@ export function ImportModal({ modalId, onImported }) {
 
             {needsExistingClass && (
               <div>
-                <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klassekartet trenger en klasse</label>
+                <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Klassekartet trenger en klasse</label>
                 <Select
                   size="sm"
                   className="w-full"
@@ -281,7 +281,7 @@ export function ImportModal({ modalId, onImported }) {
             )}
             {needsExistingRoom && (
               <div>
-                <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klassekartet trenger et rom</label>
+                <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Klassekartet trenger et rom</label>
                 <Select
                   size="sm"
                   className="w-full"
@@ -298,7 +298,7 @@ export function ImportModal({ modalId, onImported }) {
 
         <div className="modal-action">
           <form method="dialog">
-            <button className="btn btn-ghost text-slate-400 mr-2" onClick={reset}>Avbryt</button>
+            <button className="btn btn-ghost text-base-content/60 mr-2" onClick={reset}>Avbryt</button>
           </form>
           {picked && (
             <button className="btn btn-primary gap-2" onClick={handleImport} disabled={!canImport || busy}>

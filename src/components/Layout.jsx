@@ -43,17 +43,17 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
         <div className="titlebar flex items-center justify-end pr-3 pt-3 flex-shrink-0 bg-transparent absolute top-0 right-0 w-full z-[100] pointer-events-auto" data-tauri-drag-region style={{ WebkitAppRegion: 'drag', height: '40px' }}>
           {(currentView === 'seating' || currentView === 'rooms') && (
             <div className="absolute left-1/2 top-5 h-7 flex items-center -translate-x-1/2 select-none" data-tauri-drag-region style={{ WebkitAppRegion: 'drag' }}>
-              <span className="font-extrabold text-white text-lg tracking-wider">KLASSE<span className="text-[#f59e0b] tracking-wider drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]">PLASS</span></span>
+              <span className="font-extrabold text-base-content text-lg tracking-wider">KLASSE<span className="text-[#f59e0b] tracking-wider drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]">PLASS</span></span>
             </div>
           )}
           <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag', pointerEvents: 'auto' }}>
-            <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.minimizeWindow()} title="Minimer">
+            <button className="w-8 h-7 flex items-center justify-center rounded text-base-content/60 hover:bg-base-300/60 hover:text-base-content transition-colors" onClick={() => window.api?.minimizeWindow()} title="Minimer">
               <i className="fa-solid fa-minus text-xs"></i>
             </button>
-            <button className="w-8 h-7 flex items-center justify-center rounded text-slate-400 hover:bg-slate-700/60 hover:text-white transition-colors" onClick={() => window.api?.maximizeWindow()} title={isMaximized ? 'Gjenopprett' : 'Maksimer'}>
+            <button className="w-8 h-7 flex items-center justify-center rounded text-base-content/60 hover:bg-base-300/60 hover:text-base-content transition-colors" onClick={() => window.api?.maximizeWindow()} title={isMaximized ? 'Gjenopprett' : 'Maksimer'}>
               <i className={isMaximized ? 'fa-solid fa-window-restore text-xs' : 'fa-regular fa-square text-xs'}></i>
             </button>
-            <button className="w-9 h-7 flex items-center justify-center rounded bg-[#ef4444] text-white hover:bg-red-600 transition-colors shadow" onClick={() => window.api?.closeWindow()} title="Lukk">
+            <button className="w-9 h-7 flex items-center justify-center rounded bg-[#ef4444] text-base-content hover:bg-red-600 transition-colors shadow" onClick={() => window.api?.closeWindow()} title="Lukk">
               <i className="fa-solid fa-xmark text-sm font-bold"></i>
             </button>
           </div>
@@ -62,12 +62,12 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
 
       {/* Sidebar for Desktop */}
       {!isFullscreen && currentView !== 'seating' && currentView !== 'rooms' && currentView !== 'station-presenter' && (
-        <div className="w-56 bg-base-200 flex flex-col z-50 flex-shrink-0 rounded-2xl border border-slate-800/80 shadow-2xl p-3">
+        <div className="w-56 bg-base-200 flex flex-col z-50 flex-shrink-0 rounded-2xl border border-base-300/80 shadow-2xl p-3">
         
         {/* Logo Area - Perfekt Midtstilt */}
         <div className="h-16 flex items-center justify-center mb-3" style={{ WebkitAppRegion: 'drag' }}>
           <div className="select-none flex items-center justify-center tracking-tight text-center">
-            <span className="font-extrabold text-white text-2xl tracking-wider">KLASSE</span>
+            <span className="font-extrabold text-base-content text-2xl tracking-wider">KLASSE</span>
             <span className="font-extrabold text-[#f59e0b] text-2xl tracking-wider drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]">PLASS</span>
           </div>
         </div>
@@ -82,7 +82,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
                 className={`overblikk-nav-btn ${isActive ? 'active' : ''}`}
                 onClick={() => setCurrentView(tab.id)}
               >
-                <i className={`${tab.icon} fa-fw text-sm flex-shrink-0 ${isActive ? 'text-[oklch(var(--p))]' : 'text-slate-400'}`}></i>
+                <i className={`${tab.icon} fa-fw text-sm flex-shrink-0 ${isActive ? 'text-[oklch(var(--p))]' : 'text-base-content/60'}`}></i>
                 <span className="leading-none flex-1 text-left">{tab.label}</span>
               </button>
             );
@@ -91,13 +91,13 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
 
         {/* Versjonsnummer over skillelinjen */}
         <div className="text-center pt-2 pb-0.5 select-none mt-auto">
-          <span className="text-[10px] font-semibold text-slate-500 tracking-wider">
+          <span className="text-[10px] font-semibold text-base-content/50 tracking-wider">
             v{appVersion || '2.5.1'}
           </span>
         </div>
 
         {/* Nederst i Sidemenyen - Oppdatering, Veiledning og Innstillinger */}
-        <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-1.5">
+        <div className="pt-2 border-t border-base-300/80 flex flex-col gap-1.5">
           <button
             className={`overblikk-nav-btn overblikk-nav-btn-sub relative transition-all duration-300 ${
               hasUpdateReady
@@ -107,7 +107,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             onClick={onOpenUpdateModal}
           >
             <i className={`fa-solid fa-cloud-arrow-down fa-fw flex-shrink-0 ${
-              hasUpdateReady ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-slate-400'
+              hasUpdateReady ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-base-content/60'
             }`}></i>
             <span className="leading-none flex-1 text-left">Oppdatering</span>
             {hasUpdateReady && (
@@ -120,14 +120,14 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             className="overblikk-nav-btn overblikk-nav-btn-sub"
             onClick={onOpenOnboarding}
           >
-            <i className="fa-solid fa-compass fa-fw flex-shrink-0 text-slate-400"></i>
+            <i className="fa-solid fa-compass fa-fw flex-shrink-0 text-base-content/60"></i>
             <span className="leading-none flex-1 text-left">Veiledning</span>
           </button>
           <button
             className={`overblikk-nav-btn overblikk-nav-btn-sub ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
           >
-            <i className={`fa-solid fa-gear fa-fw flex-shrink-0 ${currentView === 'settings' ? 'text-[oklch(var(--p))]' : 'text-slate-400'}`}></i>
+            <i className={`fa-solid fa-gear fa-fw flex-shrink-0 ${currentView === 'settings' ? 'text-[oklch(var(--p))]' : 'text-base-content/60'}`}></i>
             <span className="leading-none flex-1 text-left">Innstillinger</span>
           </button>
         </div>
@@ -136,7 +136,7 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
       )}
 
       {/* Main Content Area */}
-      <div className={`flex-1 flex flex-col overflow-hidden relative module-content-bg ${isFullscreen ? 'rounded-none border-0 shadow-none' : 'rounded-2xl border border-slate-800/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]'}`}>
+      <div className={`flex-1 flex flex-col overflow-hidden relative module-content-bg ${isFullscreen ? 'rounded-none border-0 shadow-none' : 'rounded-2xl border border-base-300/80 shadow-[0_10px_35px_rgba(0,0,0,0.6)]'}`}>
         <div className={`flex-1 overflow-hidden ${isFullscreen ? 'pt-0' : 'pt-10'}`}>
           {children}
         </div>

@@ -267,15 +267,15 @@ export default function ClassManager({ onBack, initialId }) {
   return (
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
       {/* Topp-bar */}
-      <div className="px-4 py-2 bg-base-200 border-b border-slate-800 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
+      <div className="px-4 py-2 bg-base-200 border-b border-base-300 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
           {onBack && (
-            <button className="btn btn-ghost btn-sm text-slate-400 hover:text-white gap-1" onClick={onBack}>
+            <button className="btn btn-ghost btn-sm text-base-content/60 hover:text-base-content gap-1" onClick={onBack}>
               <i className="fa-solid fa-arrow-left"></i> Tilbake
             </button>
           )}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase opacity-50 text-slate-400">Klasse:</span>
+            <span className="text-xs font-bold uppercase opacity-50 text-base-content/60">Klasse:</span>
             <Select
               size="sm"
               className="min-w-40"
@@ -314,7 +314,7 @@ export default function ClassManager({ onBack, initialId }) {
                 type="text" 
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
-                className="input input-ghost text-3xl font-extrabold w-full bg-transparent border-b-2 border-transparent hover:border-slate-700 focus:bg-base-200 focus:border-[#34d399] px-2 transition-all rounded-none h-14 text-center text-white"
+                className="input input-ghost text-3xl font-extrabold w-full bg-transparent border-b-2 border-transparent hover:border-base-300 focus:bg-base-200 focus:border-[#34d399] px-2 transition-all rounded-none h-14 text-center text-base-content"
                 placeholder="Klassenavn..."
               />
               <div className="mt-1 flex items-center justify-center gap-1.5 text-xs font-semibold">
@@ -336,15 +336,15 @@ export default function ClassManager({ onBack, initialId }) {
             
             {/* Faner */}
             <div className="w-full mb-4 flex justify-center">
-              <div className="bg-base-200 border border-slate-800 p-1 rounded-xl flex gap-1">
+              <div className="bg-base-200 border border-base-300 p-1 rounded-xl flex gap-1">
                 <button 
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'students' ? 'bg-[#34d399] text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'students' ? 'bg-[#34d399] text-slate-950 shadow' : 'text-base-content/60 hover:text-base-content'}`}
                   onClick={() => setActiveTab('students')}
                 >
                   <i className="fa-solid fa-users"></i> Elever ({students.length})
                 </button>
                 <button 
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'rules' ? 'bg-[#34d399] text-slate-950 shadow' : 'text-slate-400 hover:text-white'}`}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'rules' ? 'bg-[#34d399] text-slate-950 shadow' : 'text-base-content/60 hover:text-base-content'}`}
                   onClick={() => setActiveTab('rules')}
                 >
                   <i className="fa-solid fa-shield-halved"></i> Elev-regler og tilrettelegging ({rules.length})
@@ -360,7 +360,7 @@ export default function ClassManager({ onBack, initialId }) {
                     type="text" 
                     value={newStudentName}
                     onChange={(e) => setNewStudentName(e.target.value)}
-                    className="input input-bordered input-sm flex-1 bg-base-200 border-slate-700 text-white placeholder-slate-500" 
+                    className="input input-bordered input-sm flex-1 bg-base-200 border-base-300 text-base-content placeholder-slate-500" 
                     placeholder="Skriv inn elevens navn..."
                     autoFocus
                   />
@@ -369,7 +369,7 @@ export default function ClassManager({ onBack, initialId }) {
                   </button>
                   <button 
                     type="button"
-                    className="btn btn-outline btn-sm border-slate-700 text-slate-300 hover:bg-slate-800 gap-1"
+                    className="btn btn-outline btn-sm border-base-300 text-base-content/80 hover:bg-base-200 gap-1"
                     onClick={() => document.getElementById('modal_import_students').showModal()}
                     title="Masseimport fra Excel/Word/CSV"
                   >
@@ -378,11 +378,11 @@ export default function ClassManager({ onBack, initialId }) {
                 </form>
 
                 <div
-                  className="bg-base-200 rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1 content-start"
+                  className="bg-base-200 rounded-2xl shadow-inner border border-base-300 flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1 content-start"
                   style={students.length > 0 ? { gridTemplateRows: `repeat(${Math.ceil(students.length / 2)}, minmax(0, auto))`, gridAutoFlow: 'column' } : undefined}
                 >
                   {students.length === 0 ? (
-                    <div className="col-span-full flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center h-full">
+                    <div className="col-span-full flex-1 flex flex-col items-center justify-center text-base-content/50 p-8 text-center h-full">
                       <i className="fa-solid fa-users text-4xl mb-2 opacity-30"></i>
                       <p>Ingen elever lagt til enda.</p>
                     </div>
@@ -393,12 +393,12 @@ export default function ClassManager({ onBack, initialId }) {
                       return (
                       <div key={student.id} className={`flex justify-between items-center p-2 hover:bg-surface-field rounded-xl group transition-colors ${rowIdx % 2 === 1 ? 'bg-black/15' : ''}`}>
                         <div className="flex items-center gap-3 flex-1">
-                          <span className="badge badge-sm font-mono opacity-50 w-6 border-none bg-slate-800 text-slate-300">{idx + 1}</span>
+                          <span className="badge badge-sm font-mono opacity-50 w-6 border-none bg-base-200 text-base-content/80">{idx + 1}</span>
                           <input 
                             type="text" 
                             value={student.name}
                             onChange={(e) => updateStudent(student.id, e.target.value)}
-                            className="input input-sm input-ghost flex-1 font-medium bg-transparent px-1 text-white focus:bg-base-200 focus:outline-none"
+                            className="input input-sm input-ghost flex-1 font-medium bg-transparent px-1 text-base-content focus:bg-base-200 focus:outline-none"
                           />
                         </div>
                         <button 
@@ -419,10 +419,10 @@ export default function ClassManager({ onBack, initialId }) {
             {/* Fane 2: Elev-regler og tilrettelegging */}
             {activeTab === 'rules' && (
               <div className="flex-1 overflow-hidden flex flex-col w-full">
-                <form onSubmit={handleAddRule} className="bg-base-200 p-4 rounded-2xl border border-slate-800 mb-4 flex flex-col gap-3">
+                <form onSubmit={handleAddRule} className="bg-base-200 p-4 rounded-2xl border border-base-300 mb-4 flex flex-col gap-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Regel-type</label>
+                      <label className="text-[10px] font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Regel-type</label>
                       <Select
                         size="xs"
                         className="w-full"
@@ -434,7 +434,7 @@ export default function ClassManager({ onBack, initialId }) {
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold uppercase opacity-50 text-slate-400 mb-1 block">Viktighetsgrad (prioritet)</label>
+                      <label className="text-[10px] font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Viktighetsgrad (prioritet)</label>
                       <Select
                         size="xs"
                         className="w-full"
@@ -450,16 +450,16 @@ export default function ClassManager({ onBack, initialId }) {
                     </div>
                   </div>
 
-                  <div className="text-xs opacity-60 text-slate-400">Velg elev(er) for denne regelen (du kan kombinere flere regler for samme elev):</div>
+                  <div className="text-xs opacity-60 text-base-content/60">Velg elev(er) for denne regelen (du kan kombinere flere regler for samme elev):</div>
                   
-                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-surface-field rounded-xl border border-slate-800">
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-surface-field rounded-xl border border-base-300">
                     {students.map((s) => {
                       const isSelected = selectedRuleStudentIds.includes(s.id);
                       return (
                         <button
                           key={s.id}
                           type="button"
-                          className={`btn btn-xs rounded-full ${isSelected ? 'btn-primary shadow' : 'btn-ghost border-slate-700 text-slate-300'}`}
+                          className={`btn btn-xs rounded-full ${isSelected ? 'btn-primary shadow' : 'btn-ghost border-base-300 text-base-content/80'}`}
                           onClick={() => toggleStudentForRule(s.id)}
                         >
                           {isSelected ? '✓ ' : '+ '}{s.name}
@@ -473,9 +473,9 @@ export default function ClassManager({ onBack, initialId }) {
                   </button>
                 </form>
 
-                <div className="bg-base-200 rounded-2xl shadow-inner border border-slate-800 flex-1 overflow-y-auto p-3 flex flex-col gap-2">
+                <div className="bg-base-200 rounded-2xl shadow-inner border border-base-300 flex-1 overflow-y-auto p-3 flex flex-col gap-2">
                   {rules.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 text-center h-full">
+                    <div className="flex-1 flex flex-col items-center justify-center text-base-content/50 p-8 text-center h-full">
                       <i className="fa-solid fa-shield-halved text-4xl mb-2 opacity-30"></i>
                       <p className="text-sm">Ingen spesielle regler definert.</p>
                     </div>
@@ -489,10 +489,10 @@ export default function ClassManager({ onBack, initialId }) {
                       if (r.priority === 'wish') prioBadge = <span className="badge badge-success badge-xs font-bold gap-1"><i className="fa-solid fa-circle-check"></i> Ønske</span>;
 
                       return (
-                        <div key={r.id} className="p-3 bg-surface-field rounded-xl border border-slate-800 flex justify-between items-center">
+                        <div key={r.id} className="p-3 bg-surface-field rounded-xl border border-base-300 flex justify-between items-center">
                           <div className="flex items-center gap-3 flex-wrap">
                             {prioBadge}
-                            <span className="badge badge-neutral gap-1.5 text-xs bg-slate-800 text-slate-200 border-slate-700">
+                            <span className="badge badge-neutral gap-1.5 text-xs bg-base-200 text-base-content border-base-300">
                               <i className={optionMeta?.icon}></i>
                               {optionMeta?.label.split('(')[0]}
                             </span>
@@ -513,9 +513,9 @@ export default function ClassManager({ onBack, initialId }) {
 
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
+          <div className="flex-1 flex flex-col items-center justify-center text-base-content/50">
             <i className="fa-solid fa-users text-5xl mb-4 opacity-20"></i>
-            <h2 className="text-xl font-bold text-white">Ingen klasser funnet</h2>
+            <h2 className="text-xl font-bold text-base-content">Ingen klasser funnet</h2>
             <p>Trykk på "+ Ny klasse" i toppbaren for å komme i gang.</p>
           </div>
         )}
@@ -523,19 +523,19 @@ export default function ClassManager({ onBack, initialId }) {
       
       {/* Masseimport modal */}
       <dialog id="modal_import_students" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
             <i className="fa-solid fa-file-import text-indigo-400"></i> Masseimport av elever
           </h3>
-          <p className="text-xs text-slate-400 mb-2">Lim inn navn fra Excel, Word eller CSV. Skill med linjeskift eller komma.</p>
+          <p className="text-xs text-base-content/60 mb-2">Lim inn navn fra Excel, Word eller CSV. Skill med linjeskift eller komma.</p>
           <textarea
-            className="textarea textarea-bordered w-full h-48 bg-surface-field border-slate-700 font-mono text-sm text-white"
+            className="textarea textarea-bordered w-full h-48 bg-surface-field border-base-300 font-mono text-sm text-base-content"
             placeholder="Kari Anne Nordmann&#10;Ola Nordmann&#10;Per P..."
             value={importData}
             onChange={(e) => setImportData(e.target.value)}
           ></textarea>
           <div className="flex flex-wrap items-center gap-4 mt-3">
-            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-xs text-base-content/80 cursor-pointer">
               <input
                 type="checkbox"
                 className="checkbox checkbox-xs"
@@ -544,7 +544,7 @@ export default function ClassManager({ onBack, initialId }) {
               />
               Fjern mellomnavn
             </label>
-            <label className="flex items-center gap-2 text-xs text-slate-300">
+            <label className="flex items-center gap-2 text-xs text-base-content/80">
               Etternavn
               <Select
                 size="xs"
@@ -562,7 +562,7 @@ export default function ClassManager({ onBack, initialId }) {
           </div>
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2" onClick={() => setImportData('')}>Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2" onClick={() => setImportData('')}>Avbryt</button>
               <button className="btn btn-primary" onClick={handleImportStudents}>Importer elever</button>
             </form>
           </div>
@@ -572,12 +572,12 @@ export default function ClassManager({ onBack, initialId }) {
       {/* Slette-modal */}
       {selectedClass && (
         <dialog id={`modal_delete_${selectedClass.id}`} className="modal modal-bottom sm:modal-middle">
-          <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+          <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
             <h3 className="font-bold text-lg text-red-400">Slett klasse?</h3>
-            <p className="py-4 text-sm text-slate-300">Er du helt sikker på at du vil slette <strong>{selectedClass.name}</strong>?</p>
+            <p className="py-4 text-sm text-base-content/80">Er du helt sikker på at du vil slette <strong>{selectedClass.name}</strong>?</p>
             <div className="modal-action">
               <form method="dialog">
-                <button className="btn btn-ghost text-slate-400 mr-2">Avbryt</button>
+                <button className="btn btn-ghost text-base-content/60 mr-2">Avbryt</button>
                 <button className="btn btn-error" onClick={() => handleDelete(selectedClass.id)}>Ja, slett</button>
               </form>
             </div>

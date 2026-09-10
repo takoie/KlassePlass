@@ -38,30 +38,30 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
       <div className="fixed inset-0 z-[9998]" onClick={() => setContextMenu(null)}></div>
       <div
         ref={menuRef}
-        className="fixed z-[9999] bg-base-200 border border-slate-700 shadow-2xl rounded-xl w-56 overflow-hidden flex flex-col"
+        className="fixed z-[9999] bg-base-200 border border-base-300 shadow-2xl rounded-xl w-56 overflow-hidden flex flex-col"
         style={style}
         onClick={(e) => e.stopPropagation()}
       >
         {contextMenu.student && (
-          <div className="px-3.5 py-3 bg-surface-raised border-b border-slate-700">
-            <div className="font-bold text-slate-100 text-sm truncate mb-1.5">{contextMenu.student.name}</div>
-            <div className="text-[11px] uppercase font-bold tracking-wider text-slate-400 mb-1">Sist sammen med</div>
+          <div className="px-3.5 py-3 bg-surface-raised border-b border-base-300">
+            <div className="font-bold text-base-content text-sm truncate mb-1.5">{contextMenu.student.name}</div>
+            <div className="text-[11px] uppercase font-bold tracking-wider text-base-content/60 mb-1">Sist sammen med</div>
             {recentPartners.length > 0 ? (
-              <div className="text-slate-200 text-sm font-semibold leading-snug">{recentPartners.join(', ')}</div>
+              <div className="text-base-content text-sm font-semibold leading-snug">{recentPartners.join(', ')}</div>
             ) : (
-              <div className="text-slate-400 text-sm italic">Ingen historikk funnet</div>
+              <div className="text-base-content/60 text-sm italic">Ingen historikk funnet</div>
             )}
           </div>
         )}
 
-        <div className="px-3.5 py-2 bg-base-100 border-b border-slate-700 text-xs font-bold text-slate-300 flex justify-between items-center">
+        <div className="px-3.5 py-2 bg-base-100 border-b border-base-300 text-xs font-bold text-base-content/80 flex justify-between items-center">
           Bord-valg
           {(isDeskLocked || isStudentLocked) && <i className="fa-solid fa-lock text-red-400"></i>}
         </div>
 
         {contextMenu.student && (
           <button
-            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-base-content flex items-center gap-2.5 transition-colors"
             onClick={() => {
               toggleLockStudent(contextMenu.slotKey);
               setContextMenu(null);
@@ -73,7 +73,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
         )}
 
         <button
-          className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
+          className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-base-content flex items-center gap-2.5 transition-colors"
           onClick={() => {
             toggleLockDesk(contextMenu.desk.id);
             setContextMenu(null);
@@ -85,7 +85,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
 
         {isEmptySeat && toggleSeatUnused && (
           <button
-            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-base-content flex items-center gap-2.5 transition-colors"
             onClick={() => {
               toggleSeatUnused(contextMenu.slotKey);
               setContextMenu(null);
@@ -98,7 +98,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
 
         {!contextMenu.slotKey && hiddenSeatCount > 0 && restoreDeskSeats && (
           <button
-            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-slate-200 flex items-center gap-2.5 transition-colors"
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-base-content flex items-center gap-2.5 transition-colors"
             onClick={() => {
               restoreDeskSeats(contextMenu.desk.id);
               setContextMenu(null);
@@ -111,7 +111,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
 
         {contextMenu.student && (
           <button
-            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-rose-300 flex items-center gap-2.5 transition-colors border-t border-slate-700/50"
+            className="px-3.5 py-2.5 text-left text-sm hover:bg-surface-field text-rose-300 flex items-center gap-2.5 transition-colors border-t border-base-300/50"
             onClick={() => {
               handleUnseatStudent?.(contextMenu.slotKey, contextMenu.student);
               setContextMenu(null);
@@ -122,7 +122,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
           </button>
         )}
 
-        <div className="border-t border-slate-700/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-surface-raised">
+        <div className="border-t border-base-300/50 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-base-content/50 bg-surface-raised">
           Sett makkergruppe:
         </div>
         <div className="grid grid-cols-4 gap-1 px-3 pb-3 pt-2">
@@ -137,7 +137,7 @@ export default function DeskContextMenu({ contextMenu, lockedSeats, unusedSeats,
             </button>
           ))}
           <button
-            className="col-span-4 mt-2 h-7 rounded-lg border border-slate-700 text-xs text-slate-400 hover:bg-slate-800 transition-colors"
+            className="col-span-4 mt-2 h-7 rounded-lg border border-base-300 text-xs text-base-content/60 hover:bg-base-200 transition-colors"
             onClick={() => handleSetGroupContextMenu(null)}
           >
             Fjern gruppe

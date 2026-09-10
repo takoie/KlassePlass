@@ -23,7 +23,7 @@ const hexToRgbTriplet = (hex) => {
 // Delt knappestil for de valgfrie `actions`-knappene (eksporter, dupliser,
 // skriv ut). Ligger inne i Card sitt `group` og arver `--ca-rgb`.
 export const cardActionBtnClass =
-  'grid place-items-center w-7 h-7 rounded-md text-slate-400 opacity-0 transition-colors ' +
+  'grid place-items-center w-7 h-7 rounded-md text-base-content/60 opacity-0 transition-colors ' +
   'hover:bg-[rgb(var(--ca-rgb)/0.16)] hover:text-[rgb(var(--ca-rgb))] group-hover:opacity-100 ' +
   'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--ca-rgb)/0.6)]';
 
@@ -54,7 +54,7 @@ export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, on
           <i className={`${icon} text-sm`}></i>
         </span>
         <div className="min-w-0 flex-1 pt-px">
-          <h3 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-slate-50 transition-colors group-hover:text-[rgb(var(--ca-rgb))]">
+          <h3 className="truncate text-[15px] font-semibold tracking-[-0.01em] text-base-content transition-colors group-hover:text-[rgb(var(--ca-rgb))]">
             {title}
           </h3>
           {badgeText && (
@@ -66,7 +66,7 @@ export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, on
       {infoList.length > 0 && (
         <div className="mt-3 flex flex-col gap-1.5">
           {infoList.map((info, i) => (
-            <div key={i} className="flex items-center gap-2 min-w-0 text-[12.5px] leading-tight text-slate-300">
+            <div key={i} className="flex items-center gap-2 min-w-0 text-[12.5px] leading-tight text-base-content/80">
               <i className={`${info.icon} w-4 shrink-0 text-center text-[11px] text-[rgb(var(--ca-rgb)/0.6)]`}></i>
               <span className="min-w-0 truncate">{info.text}</span>
             </div>
@@ -80,14 +80,14 @@ export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, on
         {actions}
         {onDelete && (
           <button
-            className="grid place-items-center w-7 h-7 rounded-md text-slate-400 opacity-70 transition-colors hover:bg-red-500/20 hover:text-red-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400/60"
+            className="grid place-items-center w-7 h-7 rounded-md text-base-content/60 opacity-70 transition-colors hover:bg-red-500/20 hover:text-red-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400/60"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             title="Slett"
           >
             <i className="fa-solid fa-trash-can text-[11px]"></i>
           </button>
         )}
-        <span className="grid place-items-center w-7 h-7 rounded-md ml-0.5 bg-white/[0.04] text-slate-400 transition-colors group-hover:bg-[rgb(var(--ca-rgb))] group-hover:text-[#0b0d14]">
+        <span className="grid place-items-center w-7 h-7 rounded-md ml-0.5 bg-white/[0.04] text-base-content/60 transition-colors group-hover:bg-[rgb(var(--ca-rgb))] group-hover:text-[#0b0d14]">
           <i className="fa-solid fa-arrow-right text-[11px]"></i>
         </span>
       </div>
@@ -99,16 +99,16 @@ export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCance
   if (!isOpen) return null;
   return (
     <dialog className="modal modal-open backdrop-blur-sm">
-      <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+      <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
         <h3 className="font-bold text-lg text-red-400 flex items-center gap-2">
           <i className="fa-solid fa-triangle-exclamation"></i> Slett {title}?
         </h3>
-        <p className="py-4 text-sm text-slate-300">
+        <p className="py-4 text-sm text-base-content/80">
           Er du helt sikker på at du vil slette <strong>{itemName}</strong>? 
           <span className="block mt-2 text-red-400 font-bold">Dette vil fjerne ALLE data knyttet til dette elementet. Handlingen kan ikke angres!</span>
         </p>
         <div className="modal-action">
-          <button className="btn btn-ghost text-slate-400 hover:text-slate-100" onClick={onCancel}>Avbryt</button>
+          <button className="btn btn-ghost text-base-content/60 hover:text-base-content" onClick={onCancel}>Avbryt</button>
           <button className="btn btn-error" onClick={onConfirm}>Ja, slett</button>
         </div>
       </div>
@@ -118,14 +118,14 @@ export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCance
 
 export const PageLayout = ({ title, icon, accent = 'emerald', onAdd, onImport, children }) => (
   <div className="h-full flex flex-col p-8 module-content-bg overflow-y-auto">
-    <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-slate-800">
+    <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-base-300">
       <div className="flex items-center gap-3">
         <i className={`${icon} text-2xl`} style={{ color: CARD_ACCENTS[accent] || accent }}></i>
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-extrabold text-base-content tracking-tight">{title}</h1>
       </div>
       <div className="flex items-center gap-2">
         {onImport && (
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={onImport}>
+          <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 gap-2" onClick={onImport}>
             <i className="fa-solid fa-file-import"></i> Importer
           </button>
         )}
@@ -200,7 +200,7 @@ export const ClassesOverview = ({ onEdit }) => {
       onAdd={handleOpenCreate}
       onImport={() => document.getElementById('modal_import_class')?.showModal()}
     >
-      {classes.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klasser opprettet enda.</p> : null}
+      {classes.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen klasser opprettet enda.</p> : null}
       {classes.map(cls => {
         let count = 0;
         try {
@@ -240,16 +240,16 @@ export const ClassesOverview = ({ onEdit }) => {
       />
 
       <dialog id="modal_create_class" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-lg text-emerald-400 mb-6 flex items-center gap-2">
             <i className="fa-solid fa-users"></i> Opprett ny klasse
           </h3>
 
           <div>
-            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klassenavn</label>
+            <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Klassenavn</label>
             <input
               type="text"
-              className="input input-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500"
+              className="input input-bordered w-full bg-surface-field border-base-300 focus:border-emerald-500"
               value={newClassName}
               onChange={e => setNewClassName(e.target.value)}
               placeholder="F.eks. 8A"
@@ -260,7 +260,7 @@ export const ClassesOverview = ({ onEdit }) => {
 
           <div className="modal-action mt-8">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 hover:text-slate-100">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 hover:text-base-content">Avbryt</button>
             </form>
             <button className="btn btn-primary font-bold px-8 shadow-lg shadow-emerald-900/50" onClick={handleCreate}>
               Opprett & rediger <i className="fa-solid fa-arrow-right ml-1"></i>
@@ -362,7 +362,7 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
       onAdd={onAdd}
       onImport={() => document.getElementById('modal_import_room')?.showModal()}
     >
-      {rooms.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen rom opprettet enda.</p> : null}
+      {rooms.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen rom opprettet enda.</p> : null}
       {rooms.map(rm => {
         let seatCount = 0;
         try {
@@ -411,22 +411,22 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
       />
 
       <dialog id="modal_duplicate_room" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-lg text-purple-400 mb-6 flex items-center gap-2">
             <i className="fa-solid fa-copy"></i> Dupliser rom
           </h3>
 
-          <p className="text-sm text-slate-400 mb-4">
+          <p className="text-sm text-base-content/60 mb-4">
             Lager et nytt rom med en kopi av bord- og tavleoppsettet fra
-            {' '}<strong className="text-slate-200">{duplicateTarget?.name}</strong>.
+            {' '}<strong className="text-base-content">{duplicateTarget?.name}</strong>.
             Originalrommet og klassekartene som bruker det påvirkes ikke.
           </p>
 
           <div>
-            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på det nye rommet</label>
+            <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Navn på det nye rommet</label>
             <input
               type="text"
-              className="input input-bordered w-full bg-surface-field border-slate-600 focus:border-purple-500"
+              className="input input-bordered w-full bg-surface-field border-base-300 focus:border-purple-500"
               value={dupName}
               onChange={e => setDupName(e.target.value)}
               placeholder="F.eks. Naturfagrom (kopi)"
@@ -437,10 +437,10 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
 
           <div className="modal-action mt-8">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 hover:text-slate-100" onClick={() => setDuplicateTarget(null)}>Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 hover:text-base-content" onClick={() => setDuplicateTarget(null)}>Avbryt</button>
             </form>
             <button
-              className="btn bg-purple-600 hover:bg-purple-500 text-white border-none font-bold px-8 shadow-lg shadow-purple-900/50 disabled:opacity-40"
+              className="btn bg-purple-600 hover:bg-purple-500 text-base-content border-none font-bold px-8 shadow-lg shadow-purple-900/50 disabled:opacity-40"
               onClick={handleConfirmDuplicate}
               disabled={!dupName.trim()}
             >
@@ -673,11 +673,11 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       onAdd={handleOpenCreate}
       onImport={() => document.getElementById('modal_import_seating')?.showModal()}
     >
-      {charts.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen klassekart opprettet enda.</p> : null}
+      {charts.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen klassekart opprettet enda.</p> : null}
 
       {charts.length > 0 && (
         <div className="col-span-full flex justify-end -mb-1">
-          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-400 select-none">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-base-content/60 select-none">
             <span>Grupper per klasse</span>
             <input
               type="checkbox"
@@ -701,10 +701,10 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
             return (
               <div key={cls.id} className="col-span-full collapse collapse-arrow bg-base-100/40 border border-white/10 rounded-2xl">
                 <input type="checkbox" defaultChecked />
-                <div className="collapse-title font-bold text-white flex items-center gap-2">
+                <div className="collapse-title font-bold text-base-content flex items-center gap-2">
                   <i className="fa-solid fa-users text-emerald-400"></i>
                   {cls.name}
-                  <span className="text-xs font-normal text-slate-400">({classCharts.length} klassekart)</span>
+                  <span className="text-xs font-normal text-base-content/60">({classCharts.length} klassekart)</span>
                 </div>
                 <div className="collapse-content">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-2">
@@ -732,17 +732,17 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       />
 
       <dialog id="modal_create_seating" className="modal modal-bottom sm:modal-middle backdrop-blur-sm">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-lg text-emerald-400 mb-6 flex items-center gap-2">
             <i className="fa-solid fa-map-location-dot"></i> Opprett nytt klassekart
           </h3>
           
           <div className="flex flex-col gap-4">
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på klassekartet</label>
+              <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Navn på klassekartet</label>
               <input
                 type="text"
-                className="input input-bordered w-full bg-surface-field border-slate-600 focus:border-emerald-500"
+                className="input input-bordered w-full bg-surface-field border-base-300 focus:border-emerald-500"
                 value={chartName}
                 onChange={e => setChartName(e.target.value)}
                 placeholder="Skriv inn navn på klassekart.. Eksempel: Naturfag 1ST3"
@@ -752,7 +752,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasse</label>
+                <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Velg klasse</label>
                 <Select
                   size="sm"
                   className="w-full"
@@ -765,14 +765,14 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                     : [{ value: '', label: 'Ingen klasser funnet', disabled: true }]}
                 />
                 {selectedClass && (
-                  <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                  <p className="text-[11px] text-base-content/60 mt-1 flex items-center gap-1.5">
                     <i className="fa-solid fa-users w-3 text-emerald-400"></i> {modalStudentCount} elever
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Velg klasserom</label>
+                <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Velg klasserom</label>
                 <Select
                   size="sm"
                   className="w-full"
@@ -785,7 +785,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
                     : [{ value: '', label: 'Ingen rom funnet', disabled: true }]}
                 />
                 {selectedRoom && (
-                  <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                  <p className="text-[11px] text-base-content/60 mt-1 flex items-center gap-1.5">
                     <i className="fa-solid fa-chair w-3 text-purple-400"></i> {modalSeatCount} elevplasser
                   </p>
                 )}
@@ -793,30 +793,30 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Første periode</label>
+              <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Første periode</label>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Uke</span>
+                <span className="text-xs text-base-content/60">Uke</span>
                 <input
                   type="number" min="1" max="52"
-                  className="input input-bordered w-20 bg-surface-field border-slate-600 focus:border-emerald-500 text-center"
+                  className="input input-bordered w-20 bg-surface-field border-base-300 focus:border-emerald-500 text-center"
                   value={startWeek}
                   onChange={e => setStartWeek(e.target.value)}
                 />
-                <span className="text-xs text-slate-400">i</span>
+                <span className="text-xs text-base-content/60">i</span>
                 <input
                   type="number" min="1" max="52"
-                  className="input input-bordered w-20 bg-surface-field border-slate-600 focus:border-emerald-500 text-center"
+                  className="input input-bordered w-20 bg-surface-field border-base-300 focus:border-emerald-500 text-center"
                   value={periodWeeks}
                   onChange={e => setPeriodWeeks(e.target.value)}
                 />
-                <span className="text-xs text-slate-400">uker</span>
+                <span className="text-xs text-base-content/60">uker</span>
               </div>
             </div>
           </div>
 
           <div className="modal-action mt-8">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 hover:text-slate-100">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 hover:text-base-content">Avbryt</button>
             </form>
             <button className="btn btn-primary font-bold px-8 shadow-lg shadow-emerald-900/50" onClick={handleCreate} disabled={!selectedClass || !selectedRoom}>
               Opprett & rediger <i className="fa-solid fa-arrow-right ml-1"></i>
@@ -885,7 +885,7 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
 
   return (
     <PageLayout title="Gruppearbeid" icon="fa-solid fa-people-group" accent="indigo" onAdd={() => document.getElementById('modal_create_group')?.showModal()}>
-      {assignments.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen gruppeinndelinger opprettet enda.</p> : null}
+      {assignments.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen gruppeinndelinger opprettet enda.</p> : null}
 
       {classes.map(cls => {
         const classAssignments = assignments.filter(a => a.class_id === cls.id).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));

@@ -76,17 +76,17 @@ export default function OnboardingGuide({ onClose }) {
 
   return (
     <dialog ref={dialogRef} className="modal modal-bottom sm:modal-middle">
-      <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
+      <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl max-w-lg">
         <div className="flex items-start gap-4 mb-2">
           <div className="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-400/20 flex items-center justify-center text-emerald-400 flex-shrink-0">
             <i className={`${current.icon} text-lg`}></i>
           </div>
           <div className="pt-1">
-            <h3 className="font-bold text-lg text-white">{current.title}</h3>
+            <h3 className="font-bold text-lg text-base-content">{current.title}</h3>
           </div>
         </div>
 
-        <p className="text-sm text-slate-300 leading-relaxed min-h-[4.5rem]">{current.text}</p>
+        <p className="text-sm text-base-content/80 leading-relaxed min-h-[4.5rem]">{current.text}</p>
 
         <div className="flex items-center justify-center gap-1.5 my-5">
           {STEPS.map((_, i) => (
@@ -101,11 +101,11 @@ export default function OnboardingGuide({ onClose }) {
 
         <div className="modal-action items-center justify-between mt-0">
           <form method="dialog">
-            <button className="btn btn-ghost btn-sm text-slate-400 hover:bg-slate-800">Hopp over</button>
+            <button className="btn btn-ghost btn-sm text-base-content/60 hover:bg-base-200">Hopp over</button>
           </form>
           <div className="flex gap-2">
             {!isFirst && (
-              <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 gap-2" onClick={handlePrev}>
+              <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 gap-2" onClick={handlePrev}>
                 <i className="fa-solid fa-arrow-left"></i> Forrige
               </button>
             )}

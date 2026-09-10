@@ -535,18 +535,18 @@ export default function SeatingChart({ onBack, initialId }) {
               <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsProjectorMode(false)}>
                 Avslutt prosjektorvisning
               </button>
-              <div className="fixed top-4 left-4 z-[9999] flex items-center gap-1.5 bg-base-200/95 border border-slate-700 rounded-xl shadow-2xl p-1.5" onMouseDown={(e) => e.stopPropagation()}>
-                <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Zoom ut" onClick={() => handleProjectorZoomButton(-0.25)} disabled={projectorZoom <= PROJECTOR_ZOOM_MIN}>
+              <div className="fixed top-4 left-4 z-[9999] flex items-center gap-1.5 bg-base-200/95 border border-base-300 rounded-xl shadow-2xl p-1.5" onMouseDown={(e) => e.stopPropagation()}>
+                <button className="btn btn-sm btn-square btn-ghost text-base-content/80" title="Zoom ut" onClick={() => handleProjectorZoomButton(-0.25)} disabled={projectorZoom <= PROJECTOR_ZOOM_MIN}>
                   <i className="fa-solid fa-magnifying-glass-minus"></i>
                 </button>
-                <span className="text-xs font-bold text-slate-300 w-10 text-center">{Math.round(projectorZoom * 100)}%</span>
-                <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Zoom inn" onClick={() => handleProjectorZoomButton(0.25)} disabled={projectorZoom >= PROJECTOR_ZOOM_MAX}>
+                <span className="text-xs font-bold text-base-content/80 w-10 text-center">{Math.round(projectorZoom * 100)}%</span>
+                <button className="btn btn-sm btn-square btn-ghost text-base-content/80" title="Zoom inn" onClick={() => handleProjectorZoomButton(0.25)} disabled={projectorZoom >= PROJECTOR_ZOOM_MAX}>
                   <i className="fa-solid fa-magnifying-glass-plus"></i>
                 </button>
-                <button className="btn btn-sm btn-square btn-ghost text-slate-300" title="Nullstill visning" onClick={handleProjectorZoomReset} disabled={projectorZoom === PROJECTOR_ZOOM_MIN && projectorPan.x === 0 && projectorPan.y === 0}>
+                <button className="btn btn-sm btn-square btn-ghost text-base-content/80" title="Nullstill visning" onClick={handleProjectorZoomReset} disabled={projectorZoom === PROJECTOR_ZOOM_MIN && projectorPan.x === 0 && projectorPan.y === 0}>
                   <i className="fa-solid fa-compress"></i>
                 </button>
-                <div className="w-px h-5 bg-slate-700 mx-0.5"></div>
+                <div className="w-px h-5 bg-base-300 mx-0.5"></div>
                 <button className="btn btn-sm btn-square btn-ghost text-cyan-400" title="Snu klasserommet" onClick={flipRoom}>
                   <i className="fa-solid fa-rotate"></i>
                 </button>
@@ -562,7 +562,7 @@ export default function SeatingChart({ onBack, initialId }) {
           <div ref={containerRef} className="w-full h-full relative">
             <div
               ref={canvasRef}
-              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400/70' : 'bg-base-100 border-slate-700/50'}`}
+              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasLight ? 'bg-slate-200 border-slate-400/70' : 'bg-base-100 border-base-300/50'}`}
               style={{
                 width: '1100px',
                 height: '700px',
@@ -578,7 +578,7 @@ export default function SeatingChart({ onBack, initialId }) {
                       className="absolute board-item z-20 pointer-events-none select-none"
                       style={{ left: boardObj.x, top: boardObj.y }}
                     >
-                      <div className="w-64 h-9 bg-slate-900/90 border border-[#f59e0b]/50 rounded-full shadow-xl flex items-center justify-center text-[#f59e0b] font-bold tracking-[0.5em] text-sm">
+                      <div className="w-64 h-9 bg-base-300/90 border border-[#f59e0b]/50 rounded-full shadow-xl flex items-center justify-center text-[#f59e0b] font-bold tracking-[0.5em] text-sm">
                         T A V L E
                       </div>
                     </div>
@@ -624,12 +624,12 @@ export default function SeatingChart({ onBack, initialId }) {
                           <div
                             key={d.id}
                             onContextMenu={(e) => { e.preventDefault(); handleDeskContextMenu(e, d); }}
-                            className="absolute h-[60px] rounded-xl bg-base-200/60 border-2 border-dashed border-slate-600/70 opacity-50 hover:opacity-90 flex items-center justify-center shadow-lg transition-all z-10"
+                            className="absolute h-[60px] rounded-xl bg-base-200/60 border-2 border-dashed border-base-300/70 opacity-50 hover:opacity-90 flex items-center justify-center shadow-lg transition-all z-10"
                             style={{ left: d.x - offsetX, top: d.y, width: '54px' }}
                           >
                             <HoverTip content={`${hiddenSlotCount} skjulte plasser – klikk for å vise bordet`}>
                               <button
-                                className="w-6 h-6 rounded-full bg-base-300 border-2 border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 shadow-lg flex items-center justify-center text-[10px] transition-colors"
+                                className="w-6 h-6 rounded-full bg-base-300 border-2 border-base-300 text-base-content/80 hover:text-base-content hover:border-slate-400 shadow-lg flex items-center justify-center text-[10px] transition-colors"
                                 onClick={(e) => { e.stopPropagation(); restoreDeskSeats(d.id); }}
                               >
                                 <i className="fa-solid fa-eye"></i>
@@ -656,7 +656,7 @@ export default function SeatingChart({ onBack, initialId }) {
                         <div
                           key={d.id}
                           onContextMenu={(e) => { e.preventDefault(); handleDeskContextMenu(e, d); }}
-                          className={`absolute h-[60px] rounded-xl bg-base-200 flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-slate-700/70 z-10 ${isHiddenEmptyDesk ? 'opacity-40 border-dashed' : ''}`}
+                          className={`absolute h-[60px] rounded-xl bg-base-200 flex flex-col items-center justify-between p-1 shadow-lg transition-all border border-base-300/70 z-10 ${isHiddenEmptyDesk ? 'opacity-40 border-dashed' : ''}`}
                           style={{ left: d.x - offsetX, top: d.y, width: `${visualWidth}px`, ...borderStyle }}
                         >
                           {gId && !hideGroups && showGroupNumbers && (
@@ -673,7 +673,7 @@ export default function SeatingChart({ onBack, initialId }) {
                               className="absolute top-1/2 -left-2.5 -translate-y-1/2 z-30"
                             >
                               <button
-                                className="w-5 h-5 rounded-full bg-base-300 border-2 border-slate-600 text-slate-300 hover:text-white hover:border-slate-400 shadow-lg flex items-center justify-center text-[9px] transition-colors"
+                                className="w-5 h-5 rounded-full bg-base-300 border-2 border-base-300 text-base-content/80 hover:text-base-content hover:border-slate-400 shadow-lg flex items-center justify-center text-[9px] transition-colors"
                                 onClick={(e) => { e.stopPropagation(); restoreDeskSeats(d.id); }}
                               >
                                 <i className="fa-solid fa-eye"></i>
@@ -698,10 +698,10 @@ export default function SeatingChart({ onBack, initialId }) {
 
                               const conflictColor = showHistory && studentObj ? historyConflicts[studentObj.id] : null;
                               let bgClass = conflictColor
-                                ? `${conflictColor} text-white shadow-md border-2`
+                                ? `${conflictColor} text-base-content shadow-md border-2`
                                 : isUnused
-                                ? 'bg-slate-950/60 text-slate-600 border border-dashed border-slate-700/60'
-                                : (studentObj ? 'bg-emerald-500/10 text-white shadow-md border border-emerald-500/20' : 'bg-surface-raised text-slate-500 border border-slate-700/30');
+                                ? 'bg-slate-950/60 text-base-content/40 border border-dashed border-base-300/60'
+                                : (studentObj ? 'bg-emerald-500/10 text-base-content shadow-md border border-emerald-500/20' : 'bg-surface-raised text-base-content/50 border border-base-300/30');
 
                               // Makkergruppe-farge på selve setet: lysere fyll-tone (via lightenHex)
                               // + full-metning kant, slik at borderen fortsatt er tydelig synlig mot
@@ -713,20 +713,20 @@ export default function SeatingChart({ onBack, initialId }) {
                               }
 
                               if (isHoverTarget) {
-                                bgClass = 'border-2 border-emerald-400 bg-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.9)] scale-105 z-30 animate-pulse text-white font-extrabold';
+                                bgClass = 'border-2 border-emerald-400 bg-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.9)] scale-105 z-30 animate-pulse text-base-content font-extrabold';
                                 groupFillStyle = null;
                               }
 
                               if (isGhostSeat) {
                                 bgClass = studentObj
-                                  ? 'border-2 border-amber-400 bg-amber-500/25 shadow-[0_0_18px_rgba(251,191,36,0.7)] scale-[1.03] z-30 text-white font-extrabold animate-pulse'
+                                  ? 'border-2 border-amber-400 bg-amber-500/25 shadow-[0_0_18px_rgba(251,191,36,0.7)] scale-[1.03] z-30 text-base-content font-extrabold animate-pulse'
                                   : 'border-2 border-amber-400/40 bg-amber-500/5';
                                 groupFillStyle = null;
                               }
 
                               const isSpotlit = spotlightSlotKey === slotKey;
                               if (isSpotlit) {
-                                bgClass = 'border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_25px_rgba(250,204,21,0.85)] scale-105 z-30 text-white font-extrabold';
+                                bgClass = 'border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_25px_rgba(250,204,21,0.85)] scale-105 z-30 text-base-content font-extrabold';
                                 groupFillStyle = null;
                               }
 
@@ -739,7 +739,7 @@ export default function SeatingChart({ onBack, initialId }) {
                                 >
                                   {showNumbers && seatNumbers[slotIdx] !== undefined && (
                                     <div className="absolute -top-3 -left-2 z-20 pointer-events-none">
-                                      <span className="min-w-[20px] h-5 px-1 rounded-full bg-base-300 border-2 border-slate-600 text-slate-300 font-black text-[10px] flex items-center justify-center shadow-lg whitespace-nowrap">
+                                      <span className="min-w-[20px] h-5 px-1 rounded-full bg-base-300 border-2 border-base-300 text-base-content/80 font-black text-[10px] flex items-center justify-center shadow-lg whitespace-nowrap">
                                         {seatNumbers[slotIdx]}
                                       </span>
                                     </div>
@@ -751,7 +751,7 @@ export default function SeatingChart({ onBack, initialId }) {
                                   )}
                                   {!hideSensitiveInfo && (
                                     <button 
-                                      className={`absolute top-0.5 right-0.5 text-[9px] ${isLocked ? 'text-amber-400 opacity-100 z-40' : 'opacity-0 hover:opacity-100 text-slate-400 z-40'}`}
+                                      className={`absolute top-0.5 right-0.5 text-[9px] ${isLocked ? 'text-amber-400 opacity-100 z-40' : 'opacity-0 hover:opacity-100 text-base-content/60 z-40'}`}
                                       onClick={(e) => { e.stopPropagation(); toggleLockStudent(slotKey); }}
                                       title="Lås/Lås opp elev"
                                     >
@@ -845,7 +845,7 @@ export default function SeatingChart({ onBack, initialId }) {
             }`}
             style={{ left: draggedStudent.pointerX, top: draggedStudent.pointerY, transform: 'translate(16px, 14px)' }}
           >
-            <div className={`w-full h-full rounded-lg flex items-center justify-center gap-1.5 text-white border text-sm font-bold truncate px-1 shadow-md ${
+            <div className={`w-full h-full rounded-lg flex items-center justify-center gap-1.5 text-base-content border text-sm font-bold truncate px-1 shadow-md ${
               willRemoveOnDrop ? 'bg-rose-500/20 border-rose-500/40' : 'bg-emerald-500/20 border-emerald-500/40'
             }`}>
               {willRemoveOnDrop && <i className="fa-solid fa-user-minus text-rose-300 flex-shrink-0"></i>}

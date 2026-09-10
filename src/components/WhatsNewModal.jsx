@@ -30,12 +30,12 @@ export default function WhatsNewModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-[fadeIn_0.15s_ease-out]">
       <div
-        className="w-full max-w-lg bg-base-200 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        className="w-full max-w-lg bg-base-200 border border-base-300/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 py-4 bg-surface-raised border-b border-slate-700">
-          <h2 className="font-extrabold text-white text-lg tracking-tight">Hva er nytt i v{latest.version}?</h2>
-          <p className="text-xs text-slate-400">KlassePlass er nettopp oppdatert</p>
+        <div className="px-6 py-4 bg-surface-raised border-b border-base-300">
+          <h2 className="font-extrabold text-base-content text-lg tracking-tight">Hva er nytt i v{latest.version}?</h2>
+          <p className="text-xs text-base-content/60">KlassePlass er nettopp oppdatert</p>
         </div>
 
         <div className="p-6 overflow-y-auto flex-1 divide-y divide-slate-800/70">
@@ -53,14 +53,14 @@ export default function WhatsNewModal({ isOpen, onClose }) {
                 {item.type === 'feature' ? 'Nyhet' : item.type === 'fix' ? 'Feilretting' : item.type === 'stability' ? 'Stabilitet' : 'Forbedring'}
               </span>
               <div className="w-full leading-relaxed">
-                <strong className="block text-slate-200">{item.title}:</strong>
-                <span className="text-slate-400">{item.desc}</span>
+                <strong className="block text-base-content">{item.title}:</strong>
+                <span className="text-base-content/60">{item.desc}</span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="px-6 py-3 bg-surface-raised border-t border-slate-800 flex justify-end">
+        <div className="px-6 py-3 bg-surface-raised border-t border-base-300 flex justify-end">
           <button className="btn btn-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold border-none px-6" onClick={onClose}>
             OK
           </button>

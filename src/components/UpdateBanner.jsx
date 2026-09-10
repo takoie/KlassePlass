@@ -22,8 +22,8 @@ export default function UpdateBanner() {
           <i className="fa-solid fa-arrow-up text-emerald-400 text-sm"></i>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white">Ny versjon er klar</p>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-sm font-bold text-base-content">Ny versjon er klar</p>
+          <p className="text-xs text-base-content/60 mt-0.5">
             {updateInfo.version ? `KlassePlass v${updateInfo.version} er lastet ned.` : 'En oppdatering er lastet ned.'} Restart for å installere.
           </p>
           <div className="flex gap-2 mt-3">
@@ -36,7 +36,7 @@ export default function UpdateBanner() {
               {restarting ? 'Restarter...' : 'Restart nå'}
             </button>
             <button
-              className="btn btn-xs btn-ghost text-slate-400 hover:bg-slate-800"
+              className="btn btn-xs btn-ghost text-base-content/60 hover:bg-base-200"
               onClick={() => setUpdateInfo(null)}
               disabled={restarting}
             >

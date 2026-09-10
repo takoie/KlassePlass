@@ -10,18 +10,18 @@ export const ROW_BASE =
   'w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all';
 
 export const rowStateClass = ({ disabled, active, activeTone }) => {
-  if (disabled) return 'opacity-35 cursor-not-allowed bg-transparent text-slate-500';
+  if (disabled) return 'opacity-35 cursor-not-allowed bg-transparent text-base-content/50';
   if (active) {
     return activeTone === 'rose'
       ? 'bg-rose-950/50 text-rose-200 shadow-sm'
-      : 'bg-slate-800/80 text-slate-100 shadow-sm';
+      : 'bg-base-200/80 text-base-content shadow-sm';
   }
-  return 'bg-transparent text-slate-400 hover:bg-slate-800/40 hover:text-slate-200';
+  return 'bg-transparent text-base-content/60 hover:bg-base-200/40 hover:text-base-content';
 };
 
 /** Handlingsrad – samme uttrykk som ToggleRow, men uten bryter. */
 export function ActionRow({
-  icon, iconColor = 'text-slate-400', label, onClick, disabled,
+  icon, iconColor = 'text-base-content/60', label, onClick, disabled,
   active, activeTone, badge, trailing, tip, title,
 }) {
   return (
@@ -33,13 +33,13 @@ export function ActionRow({
       title={title}
     >
       <span className="flex items-center gap-2.5 min-w-0 flex-1">
-        <i className={`${icon} fa-fw text-xs flex-shrink-0 ${disabled ? 'text-slate-600' : iconColor}`}></i>
+        <i className={`${icon} fa-fw text-xs flex-shrink-0 ${disabled ? 'text-base-content/40' : iconColor}`}></i>
         <span className="truncate text-left">{label}</span>
       </span>
       <span className="flex items-center gap-2 flex-shrink-0 ml-2">
         {tip && <InfoTip text={tip} />}
         {badge != null && (
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white">{badge}</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-base-content">{badge}</span>
         )}
         {trailing}
       </span>
@@ -62,13 +62,13 @@ export function ToggleRow({ icon, iconColor, label, checked, onChange, disabled,
     >
       <span className="flex items-center gap-2.5 min-w-0 flex-1">
         {icon && (
-          <i className={`${icon} fa-fw text-xs flex-shrink-0 ${checked ? (iconColor || 'text-emerald-400') : 'text-slate-500'}`}></i>
+          <i className={`${icon} fa-fw text-xs flex-shrink-0 ${checked ? (iconColor || 'text-emerald-400') : 'text-base-content/50'}`}></i>
         )}
         <span className="truncate text-left">{label}</span>
       </span>
       <span className="flex items-center gap-2 flex-shrink-0 ml-2">
         {tip && <InfoTip text={tip} />}
-        <span className={`w-7 h-4 rounded-full transition-colors relative flex items-center p-0.5 ${checked ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+        <span className={`w-7 h-4 rounded-full transition-colors relative flex items-center p-0.5 ${checked ? 'bg-emerald-500' : 'bg-base-300'}`}>
           <span className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 shadow-sm ${checked ? 'translate-x-3' : 'translate-x-0'}`}></span>
         </span>
       </span>
@@ -78,7 +78,7 @@ export function ToggleRow({ icon, iconColor, label, checked, onChange, disabled,
 
 /** Liten seksjonsoverskrift i et sidepanel. */
 export const SectionLabel = ({ children, className = '' }) => (
-  <div className={`text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1 mb-0.5 ${className}`}>
+  <div className={`text-[10px] font-bold text-base-content/50 uppercase tracking-widest pl-1 mb-0.5 ${className}`}>
     {children}
   </div>
 );

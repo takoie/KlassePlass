@@ -114,17 +114,17 @@ export default function CreateGroupModal({ classes, onCreated }) {
 
   return (
     <dialog id="modal_create_group" className="modal modal-bottom sm:modal-middle">
-      <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl max-w-lg">
-        <h3 className="font-bold text-lg flex items-center gap-2 text-white">
+      <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl max-w-lg">
+        <h3 className="font-bold text-lg flex items-center gap-2 text-base-content">
           <i className="fa-solid fa-people-group text-fuchsia-400"></i> Ny gruppeinndeling
         </h3>
 
         <div className="flex flex-col gap-4 py-3">
           <div>
-            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Navn på inndelingen</label>
+            <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Navn på inndelingen</label>
             <input
               type="text"
-              className="input input-bordered w-full bg-surface-field border-slate-700 text-white"
+              className="input input-bordered w-full bg-surface-field border-base-300 text-base-content"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="f.eks. Prosjektgrupper uke 12"
@@ -133,7 +133,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
           </div>
 
           <div>
-            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Klasse</label>
+            <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Klasse</label>
             <Select
               size="sm"
               className="w-full"
@@ -146,33 +146,33 @@ export default function CreateGroupModal({ classes, onCreated }) {
           </div>
 
           <div>
-            <label className="text-xs font-bold uppercase opacity-50 text-slate-400 mb-1 block">Antall grupper</label>
+            <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Antall grupper</label>
             <input
               type="number"
               min="2"
               max={Math.max(2, classStudents.length)}
-              className="input input-bordered w-24 bg-surface-field border-slate-700 text-white"
+              className="input input-bordered w-24 bg-surface-field border-base-300 text-base-content"
               value={numGroups}
               onChange={(e) => setNumGroups(Number(e.target.value))}
             />
             {selectedClass && (
-              <span className="text-xs text-slate-400 ml-2">
+              <span className="text-xs text-base-content/60 ml-2">
                 {classStudents.length} elever · ca. {Math.round(classStudents.length / Math.max(1, numGroups))} per gruppe
               </span>
             )}
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
               <input type="checkbox" className="checkbox checkbox-sm" checked={useConstraints} onChange={(e) => setUseConstraints(e.target.checked)} />
               Respekter plasserings-regler (aldri/alltid sammen)
             </label>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
               <input type="checkbox" className="checkbox checkbox-sm" checked={avoidHistory} onChange={(e) => setAvoidHistory(e.target.checked)} />
               Unngå nylige gruppekombinasjoner — siste
               <input
                 type="number" min="1" max="20"
-                className="input input-bordered input-xs w-16 bg-surface-field border-slate-700 text-white"
+                className="input input-bordered input-xs w-16 bg-surface-field border-base-300 text-base-content"
                 value={avoidLastN}
                 onChange={(e) => setAvoidLastN(Number(e.target.value))}
                 disabled={!avoidHistory}
@@ -182,7 +182,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-base-content">
               <input type="checkbox" className="checkbox checkbox-sm" checked={requireLeaders} onChange={(e) => setRequireLeaders(e.target.checked)} />
               Krev gruppeleder — én leder per gruppe
             </label>
@@ -192,7 +192,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
                   <button
                     key={s.id}
                     type="button"
-                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${leaderIds.includes(s.id) ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}
+                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${leaderIds.includes(s.id) ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'border-base-300 text-base-content/60 hover:bg-base-200'}`}
                     onClick={() => toggleLeader(s.id)}
                   >
                     {s.name}
@@ -205,7 +205,7 @@ export default function CreateGroupModal({ classes, onCreated }) {
 
         <div className="modal-action">
           <form method="dialog">
-            <button className="btn btn-ghost text-slate-400 mr-2" onClick={resetAndClose}>Avbryt</button>
+            <button className="btn btn-ghost text-base-content/60 mr-2" onClick={resetAndClose}>Avbryt</button>
           </form>
           <button
             className="btn btn-primary gap-2"

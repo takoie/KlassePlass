@@ -23,8 +23,8 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div className="h-full w-full flex flex-col items-center justify-center bg-base-300 text-center p-8 gap-4">
           <i className="fa-solid fa-triangle-exclamation text-5xl text-red-400"></i>
-          <h1 className="text-xl font-bold text-white">Noe gikk galt</h1>
-          <p className="text-sm text-slate-400 max-w-md">
+          <h1 className="text-xl font-bold text-base-content">Noe gikk galt</h1>
+          <p className="text-sm text-base-content/60 max-w-md">
             KlassePlass støtte på en uventet feil og kunne ikke fortsette å vise dette skjermbildet.
             Ingen data er nødvendigvis tapt — prøv å starte appen på nytt.
           </p>

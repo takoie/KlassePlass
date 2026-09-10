@@ -350,15 +350,15 @@ export default function GroupEditor({ onBack, initialId }) {
   };
 
   if (loading) {
-    return <div className="flex h-full items-center justify-center text-slate-500">Laster...</div>;
+    return <div className="flex h-full items-center justify-center text-base-content/50">Laster...</div>;
   }
 
   if (!assignmentId) {
     return (
-      <div className="flex flex-col h-full items-center justify-center text-slate-500 gap-3">
+      <div className="flex flex-col h-full items-center justify-center text-base-content/50 gap-3">
         <i className="fa-solid fa-people-group text-5xl opacity-20"></i>
-        <h2 className="text-lg font-bold text-white">Fant ikke gruppeinndelingen</h2>
-        <button className="btn btn-ghost btn-sm text-slate-400" onClick={onBack}>
+        <h2 className="text-lg font-bold text-base-content">Fant ikke gruppeinndelingen</h2>
+        <button className="btn btn-ghost btn-sm text-base-content/60" onClick={onBack}>
           <i className="fa-solid fa-arrow-left"></i> Tilbake
         </button>
       </div>
@@ -367,10 +367,10 @@ export default function GroupEditor({ onBack, initialId }) {
 
   return (
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
-      <div className="bg-base-200 border-b border-slate-800 z-20 flex-shrink-0">
+      <div className="bg-base-200 border-b border-base-300 z-20 flex-shrink-0">
         <div className="px-4 py-2 grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-2 min-w-0">
-            <button className="btn btn-ghost btn-xs text-slate-400 hover:text-white gap-1 flex-shrink-0" onClick={handleBack}>
+            <button className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content gap-1 flex-shrink-0" onClick={handleBack}>
               <i className="fa-solid fa-arrow-left"></i> Tilbake
             </button>
           </div>
@@ -384,13 +384,13 @@ export default function GroupEditor({ onBack, initialId }) {
                 onChange={(e) => { setName(e.target.value); setDirty(true); }}
                 onBlur={() => setEditingName(false)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }}
-                className="input input-ghost text-sm font-bold bg-surface-field border border-slate-700 focus:border-fuchsia-400 px-3 h-8 rounded text-white w-40"
+                className="input input-ghost text-sm font-bold bg-surface-field border border-base-300 focus:border-fuchsia-400 px-3 h-8 rounded text-base-content w-40"
               />
             ) : (
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-sm font-bold text-white truncate max-w-[10rem]">{name || 'Uten navn'}</span>
+                <span className="text-sm font-bold text-base-content truncate max-w-[10rem]">{name || 'Uten navn'}</span>
                 <button
-                  className="btn btn-ghost btn-xs text-slate-400 hover:text-white flex-shrink-0"
+                  className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content flex-shrink-0"
                   title="Endre navn"
                   onClick={() => setEditingName(true)}
                 >
@@ -398,11 +398,11 @@ export default function GroupEditor({ onBack, initialId }) {
                 </button>
               </div>
             )}
-            <span className="text-xs font-bold uppercase opacity-50 text-slate-400 flex-shrink-0">{className}</span>
+            <span className="text-xs font-bold uppercase opacity-50 text-base-content/60 flex-shrink-0">{className}</span>
           </div>
 
           <div className="flex items-center justify-end gap-2 flex-wrap">
-            <button className="btn btn-sm btn-ghost text-slate-400 hover:text-white gap-2" onClick={() => setShowPrintPreview(true)}>
+            <button className="btn btn-sm btn-ghost text-base-content/60 hover:text-base-content gap-2" onClick={() => setShowPrintPreview(true)}>
               <i className="fa-solid fa-print"></i> Skriv ut / PDF
             </button>
             <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={() => handleSave({ notify: true })}>
@@ -416,26 +416,26 @@ export default function GroupEditor({ onBack, initialId }) {
 
         <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
           <button
-            className={`btn btn-sm gap-2 ${useCustomNames ? 'bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30' : 'btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+            className={`btn btn-sm gap-2 ${useCustomNames ? 'bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30' : 'btn-outline border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content'}`}
             onClick={toggleCustomNames}
             title="Bytt mellom nummererte og egendefinerte gruppenavn"
           >
             <i className="fa-solid fa-pen"></i> Egendefinerte navn
           </button>
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white gap-2" onClick={addGroup}>
+          <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content gap-2" onClick={addGroup}>
             <i className="fa-solid fa-plus"></i> Legg til gruppe
           </button>
-          <button className="btn btn-sm btn-outline border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white gap-2" onClick={handleRegenerate} disabled={regenerating}>
+          <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content gap-2" onClick={handleRegenerate} disabled={regenerating}>
             <i className={`fa-solid fa-shuffle ${regenerating ? 'fa-spin' : ''}`}></i> Generer på nytt
           </button>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-700 bg-base-100/60 flex-shrink-0 whitespace-nowrap">
-            <span className="text-[10px] uppercase tracking-wide font-bold text-slate-500 pl-1 flex items-center gap-1">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-base-300 bg-base-100/60 flex-shrink-0 whitespace-nowrap">
+            <span className="text-[10px] uppercase tracking-wide font-bold text-base-content/50 pl-1 flex items-center gap-1">
               <i className="fa-solid fa-star text-amber-400"></i> Leder
             </span>
-            <button className="btn btn-xs btn-ghost text-slate-300 hover:bg-slate-800 gap-1" onClick={rotateLeaders} title="Roter lederen videre til neste elev i hver gruppe">
+            <button className="btn btn-xs btn-ghost text-base-content/80 hover:bg-base-200 gap-1" onClick={rotateLeaders} title="Roter lederen videre til neste elev i hver gruppe">
               <i className="fa-solid fa-rotate"></i> Roter
             </button>
-            <button className="btn btn-xs btn-ghost text-slate-300 hover:bg-slate-800 gap-1" onClick={randomizeLeaders} title="Velg tilfeldig leder i hver gruppe">
+            <button className="btn btn-xs btn-ghost text-base-content/80 hover:bg-base-200 gap-1" onClick={randomizeLeaders} title="Velg tilfeldig leder i hver gruppe">
               <i className="fa-solid fa-dice"></i> Tilfeldig
             </button>
           </div>
@@ -456,17 +456,17 @@ export default function GroupEditor({ onBack, initialId }) {
                         value={groupNames[idx] || ''}
                         onChange={(e) => updateGroupName(idx, e.target.value)}
                         placeholder={`Gruppe ${idx + 1}`}
-                        className="font-bold text-sm bg-transparent border-b border-transparent hover:border-slate-600 focus:border-current focus:outline-none min-w-0 flex-1"
+                        className="font-bold text-sm bg-transparent border-b border-transparent hover:border-base-300 focus:border-current focus:outline-none min-w-0 flex-1"
                         style={{ color }}
                       />
                     ) : (
                       <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
                     )}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs text-slate-400">{studentIds.length} elever</span>
+                      <span className="text-xs text-base-content/60">{studentIds.length} elever</span>
                       {studentIds.length === 0 && groups.length > 1 && (
                         <button
-                          className="text-slate-400 hover:text-red-400 transition-colors"
+                          className="text-base-content/60 hover:text-red-400 transition-colors"
                           title="Fjern tom gruppe"
                           onClick={() => removeGroup(idx)}
                         >
@@ -477,7 +477,7 @@ export default function GroupEditor({ onBack, initialId }) {
                   </div>
                   <div className="p-2 flex flex-col gap-1.5 flex-1">
                     {studentIds.length === 0 && (
-                      <p className="text-xs text-slate-500 italic text-center py-3">Ingen elever</p>
+                      <p className="text-xs text-base-content/50 italic text-center py-3">Ingen elever</p>
                     )}
                     {studentIds.filter(sid => !excludedIds.includes(sid)).map(sid => {
                       const student = studentsById[sid];
@@ -508,7 +508,7 @@ export default function GroupEditor({ onBack, initialId }) {
         </div>
         <DragOverlay>
           {activeDragId ? (
-            <div className="bg-surface-field rounded-lg px-2.5 py-1.5 shadow-2xl border border-fuchsia-400 text-sm text-slate-100 flex items-center gap-1.5">
+            <div className="bg-surface-field rounded-lg px-2.5 py-1.5 shadow-2xl border border-fuchsia-400 text-sm text-base-content flex items-center gap-1.5">
               {leaderIds.includes(activeDragId) && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
               {studentsById[activeDragId]?.name}
             </div>
@@ -550,14 +550,14 @@ export default function GroupEditor({ onBack, initialId }) {
       )}
 
       <dialog id="modal_delete_group_assignment" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box bg-surface-raised border border-slate-700 text-slate-100 rounded-2xl">
+        <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-lg text-red-400 flex items-center gap-2">
             <i className="fa-solid fa-triangle-exclamation"></i> Slett gruppeinndeling?
           </h3>
-          <p className="py-4 text-sm text-slate-300">Er du helt sikker på at du vil slette <strong>{name}</strong>? Historikken for denne inndelingen forsvinner også.</p>
+          <p className="py-4 text-sm text-base-content/80">Er du helt sikker på at du vil slette <strong>{name}</strong>? Historikken for denne inndelingen forsvinner også.</p>
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-slate-400 mr-2 hover:bg-slate-800">Avbryt</button>
+              <button className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200">Avbryt</button>
             </form>
             <button className="btn btn-error" onClick={handleDelete}>Ja, slett</button>
           </div>
@@ -578,7 +578,7 @@ function StudentCard({ sid, student, isLeader, isLocked, onContextMenu }) {
       className="flex items-center justify-between gap-2 bg-surface-field rounded-lg px-2.5 py-1.5 cursor-grab select-none touch-none"
       style={{ opacity: isDragging ? 0.4 : 1 }}
     >
-      <span className="text-sm text-slate-200 truncate flex items-center gap-1.5">
+      <span className="text-sm text-base-content truncate flex items-center gap-1.5">
         {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
         {student.name}
       </span>
@@ -592,7 +592,7 @@ function GroupPanel({ idx, color, children }) {
   return (
     <div
       ref={setNodeRef}
-      className={`bg-base-200 border rounded-2xl overflow-hidden flex flex-col transition-colors ${isOver ? 'border-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'border-slate-800'}`}
+      className={`bg-base-200 border rounded-2xl overflow-hidden flex flex-col transition-colors ${isOver ? 'border-fuchsia-400 ring-2 ring-fuchsia-400/30' : 'border-base-300'}`}
     >
       {children}
     </div>
@@ -620,24 +620,24 @@ function ExcludedZone({ studentIds, studentsById, onContextMenu, onIncludeAll })
     <div
       ref={setNodeRef}
       className={`mt-6 rounded-2xl border border-dashed transition-colors ${
-        isOver ? 'border-amber-400 bg-amber-400/10' : has ? 'border-slate-700 bg-base-200/60' : 'border-slate-800 bg-transparent'
+        isOver ? 'border-amber-400 bg-amber-400/10' : has ? 'border-base-300 bg-base-200/60' : 'border-base-300 bg-transparent'
       }`}
     >
-      <div className={`px-4 py-2.5 flex items-center justify-between gap-2 ${open ? 'border-b border-slate-800/70' : ''}`}>
+      <div className={`px-4 py-2.5 flex items-center justify-between gap-2 ${open ? 'border-b border-base-300/70' : ''}`}>
         <button
           type="button"
           onClick={toggle}
-          className="flex items-center gap-2 font-bold text-sm text-slate-300 hover:text-white transition-colors min-w-0"
+          className="flex items-center gap-2 font-bold text-sm text-base-content/80 hover:text-base-content transition-colors min-w-0"
           title={open ? 'Skjul navnene' : 'Vis navnene'}
         >
-          <i className={`fa-solid fa-chevron-right text-[10px] text-slate-500 transition-transform ${open ? 'rotate-90' : ''}`}></i>
+          <i className={`fa-solid fa-chevron-right text-[10px] text-base-content/50 transition-transform ${open ? 'rotate-90' : ''}`}></i>
           <i className="fa-solid fa-user-clock text-amber-400"></i>
           <span className="truncate">Ikke med i fordelingen</span>
-          <span className="text-xs font-normal text-slate-500">({studentIds.length})</span>
+          <span className="text-xs font-normal text-base-content/50">({studentIds.length})</span>
         </button>
         {has && (
           <button
-            className="btn btn-xs btn-ghost text-slate-400 hover:text-white gap-1 flex-shrink-0"
+            className="btn btn-xs btn-ghost text-base-content/60 hover:text-base-content gap-1 flex-shrink-0"
             onClick={onIncludeAll}
             title="Ta alle med i fordelingen igjen"
           >
@@ -665,7 +665,7 @@ function ExcludedZone({ studentIds, studentsById, onContextMenu, onIncludeAll })
               })}
             </div>
           ) : (
-            <p className="text-xs text-slate-500 italic text-center py-2">
+            <p className="text-xs text-base-content/50 italic text-center py-2">
               Dra elever hit – eller høyreklikk en elev og velg «Sett som fraværende» – for å holde dem utenfor når du genererer eller jevner ut grupper.
             </p>
           )}

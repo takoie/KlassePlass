@@ -25,7 +25,7 @@ export default function BoardContextMenu({ contextMenu, setContextMenu, centerBo
   return (
     <ul
       ref={menuRef}
-      className="menu bg-surface-raised border border-slate-700 rounded-2xl shadow-2xl fixed z-50 p-2 text-xs text-slate-200 w-56"
+      className="menu bg-surface-raised border border-base-300 rounded-2xl shadow-2xl fixed z-50 p-2 text-xs text-base-content w-56"
       style={style}
       onClick={(e) => e.stopPropagation()}
     >

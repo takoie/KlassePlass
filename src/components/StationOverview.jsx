@@ -34,7 +34,7 @@ export default function StationOverview({ onEdit, onAdd, onPrint }) {
 
   return (
     <PageLayout title="Stasjoner" icon="fa-solid fa-arrows-rotate" accent="amber" onAdd={onAdd}>
-      {sessions.length === 0 ? <p className="text-slate-400 text-sm italic col-span-full">Ingen stasjonsøkter opprettet enda.</p> : null}
+      {sessions.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen stasjonsøkter opprettet enda.</p> : null}
 
       {classes.map(cls => {
         const classSessions = sessions.filter(s => s.class_id === cls.id).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
