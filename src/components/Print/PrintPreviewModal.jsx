@@ -375,12 +375,19 @@ export default function PrintPreviewModal({
           <div className="modal-action flex justify-between items-center">
             <button className="btn btn-ghost text-slate-400 hover:text-white" onClick={onClose}>Lukk</button>
             <div className="flex items-center gap-2">
+              {contentType !== 'seatingChart' && (
+                <span className="text-[11px] text-slate-500 mr-1">
+                  PDF-eksport er foreløpig kun for klassekart — bruk «Skriv ut» → «Lagre som PDF».
+                </span>
+              )}
               <button className="btn btn-ghost border border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white gap-2" onClick={handlePrint}>
                 <i className="fa-solid fa-print"></i> Skriv ut
               </button>
-              <button className="btn btn-primary gap-2" onClick={handleExportPdf} disabled={exportState.status === 'working'}>
-                <i className="fa-solid fa-file-pdf"></i> {exportState.status === 'working' ? 'Genererer PDF…' : 'Eksporter til PDF'}
-              </button>
+              {contentType === 'seatingChart' && (
+                <button className="btn btn-primary gap-2" onClick={handleExportPdf} disabled={exportState.status === 'working'}>
+                  <i className="fa-solid fa-file-pdf"></i> {exportState.status === 'working' ? 'Genererer PDF…' : 'Eksporter til PDF'}
+                </button>
+              )}
             </div>
           </div>
         </div>
