@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { showToast } from '../../shared/utils';
+import { foldLegacyConstraints } from '../../shared/ruleConstraints.mjs';
 import Select from '../Select';
 
 const BUNDLE_VERSION = 1;
@@ -27,13 +28,11 @@ export function ExportModal({ modalId, source, suggestedName }) {
 
       if (includeClass && source.class) {
         const cls = await window.api.getClass(source.class.id);
-        const constraintsRaw = await window.api.getConstraints(source.class.id);
+        // Elevreglene ligger i `students`-blobben ({ students, rules }) og
+        // følger med automatisk. Ikke lenger et eget `constraints`-felt.
         bundle.class = {
           name: cls?.name || source.class.name,
           students: cls?.students ?? null,
-          constraints: (constraintsRaw || []).map(c => ({
-            studentA: c.student_a, studentB: c.student_b, type: c.type,
-          })),
         };
       }
 
@@ -180,13 +179,23 @@ export function ImportModal({ modalId, onImported }) {
       let createdId = null;
 
       if (includeClass && bundle.class) {
-        const saved = await window.api.saveClass({ id: null, name: bundle.class.name, students: bundle.class.students ?? '[]' });
+        // Gamle bundler (v1) kan ha et eget `constraints`-felt. Fold det inn i
+        // blobben som kritiske regler før lagring, så alt bor på ett sted.
+        let studentsPayload = bundle.class.students ?? '[]';
+        if (bundle.class.constraints?.length) {
+          try {
+            const parsed = JSON.parse(studentsPayload);
+            const blob = Array.isArray(parsed) ? { students: parsed, rules: [] } : parsed;
+            const rows = bundle.class.constraints.map(c => ({
+              student_a: c.studentA, student_b: c.studentB, type: c.type,
+            }));
+            studentsPayload = JSON.stringify(foldLegacyConstraints(blob, rows));
+          } catch (e) { /* behold rå payload ved parsefeil */ }
+        }
+        const saved = await window.api.saveClass({ id: null, name: bundle.class.name, students: studentsPayload });
         classId = saved?.lastID;
         createdKind = 'class';
         createdId = classId;
-        if (bundle.class.constraints?.length && classId) {
-          await window.api.importConstraints(classId, bundle.class.constraints);
-        }
       }
 
       if (includeRoom && bundle.room) {
