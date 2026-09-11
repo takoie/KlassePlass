@@ -568,7 +568,7 @@ export default function SeatingChart({ onBack, initialId }) {
           <div ref={containerRef} className="w-full h-full relative">
             <div
               ref={canvasRef}
-              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasIsLight ? 'bg-slate-200 border-slate-400/70' : 'bg-base-100 border-base-300/50'}`}
+              className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasIsLight ? 'bg-slate-200 border-slate-400/70' : 'bg-slate-700 border-base-300/50'}`}
               style={{
                 width: '1100px',
                 height: '700px',
