@@ -1,5 +1,8 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+// Samme åpne-forsinkelse som GlobalTooltip, se der for begrunnelse.
+const HOVER_DELAY_MS = 400;
 
 // Invertert boble (bakgrunn = tekstfargen, tekst = bakgrunnsfargen) - alltid
 // høy kontrast mot siden, i både lyst og mørkt tema.
@@ -66,14 +69,23 @@ export function TooltipBubble({ content, anchorRect, placement = 'top', maxWidth
  */
 export function HoverTip({ content, children, placement = 'top', maxWidth = 260, className = '' }) {
   const triggerRef = useRef(null);
+  const timeoutRef = useRef(null);
   const [rect, setRect] = useState(null);
+
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
   if (content == null || content === '') return children ?? null;
 
   const show = () => {
-    if (triggerRef.current) setRect(triggerRef.current.getBoundingClientRect());
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      if (triggerRef.current) setRect(triggerRef.current.getBoundingClientRect());
+    }, HOVER_DELAY_MS);
   };
-  const hide = () => setRect(null);
+  const hide = () => {
+    clearTimeout(timeoutRef.current);
+    setRect(null);
+  };
 
   return (
     <>

@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { TooltipBubble } from './HoverTip';
 
 const SELECTOR = '[data-hint], [title]';
+// Liten forsinkelse før boksen åpnes, så den ikke blinker opp ved rask
+// musbevegelse over flere elementer - kun visningen er utsatt, lukking skjer
+// fortsatt momentant.
+const HOVER_DELAY_MS = 400;
 
 /**
  * App-stylet erstatning for nettleserens native `title`-tooltip, montert én
@@ -13,8 +17,16 @@ const SELECTOR = '[data-hint], [title]';
 export default function GlobalTooltip() {
   const [tip, setTip] = useState(null); // { content, rect, container }
   const elRef = useRef(null);
+  const timeoutRef = useRef(null);
 
   useEffect(() => {
+    const clearPending = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+
     // Flytt en fersk native title inn i data-hint (skjuler nettleserboksen) og
     // gi ikon-only elementer et aria-label så skjermlesere ikke mister teksten.
     const normalize = (el) => {
@@ -35,11 +47,15 @@ export default function GlobalTooltip() {
       const content = normalize(el);
       if (!content) return;
       elRef.current = el;
-      setTip({
-        content,
-        rect: el.getBoundingClientRect(),
-        container: el.closest('dialog[open]') || undefined,
-      });
+      clearPending();
+      timeoutRef.current = setTimeout(() => {
+        timeoutRef.current = null;
+        setTip({
+          content,
+          rect: el.getBoundingClientRect(),
+          container: el.closest('dialog[open]') || undefined,
+        });
+      }, HOVER_DELAY_MS);
     };
 
     const close = (e) => {
@@ -47,6 +63,7 @@ export default function GlobalTooltip() {
       const to = e.relatedTarget;
       if (to && elRef.current.contains && elRef.current.contains(to)) return;
       elRef.current = null;
+      clearPending();
       setTip(null);
     };
 
@@ -54,6 +71,7 @@ export default function GlobalTooltip() {
     const dismiss = () => {
       if (!elRef.current) return;
       elRef.current = null;
+      clearPending();
       setTip(null);
     };
 
@@ -65,6 +83,7 @@ export default function GlobalTooltip() {
     window.addEventListener('resize', dismiss, true);
     window.addEventListener('keydown', dismiss, true);
     return () => {
+      clearPending();
       document.removeEventListener('pointerover', open, true);
       document.removeEventListener('pointerout', close, true);
       document.removeEventListener('focusin', open, true);
