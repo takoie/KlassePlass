@@ -42,6 +42,11 @@ async function foldLegacyConstraintsOnce() {
   await window.api.saveSettings({ constraintsFoldComplete: true });
 }
 
+// Oversiktssidene appen kan gjenåpne på ved neste oppstart. Redigerings-
+// visninger (classes/rooms/seating/...) restaureres bevisst IKKE - en
+// lagret editId kan peke på noe som siden er slettet.
+const RESTORABLE_VIEWS = ['classes-overview', 'rooms-overview', 'seating-overview', 'group-overview', 'station-overview'];
+
 function App() {
   const [currentView, setCurrentView] = useState('classes-overview');
   const [editId, setEditId] = useState(null);
@@ -55,6 +60,7 @@ function App() {
     window.api?.getSettings?.().then((s) => {
       applyResolvedTheme(s?.theme, s?.colorMode ?? 'system');
       if (!s?.onboardingCompleted) setShowOnboarding(true);
+      if (RESTORABLE_VIEWS.includes(s?.lastView)) setCurrentView(s.lastView);
 
       if (s?.constraintsFoldComplete !== true) {
         foldLegacyConstraintsOnce().catch((e) => console.error('constraint-fold (oppstart) feilet, prøver igjen neste gang', e));
@@ -136,7 +142,11 @@ function App() {
     <div id="app-shell" className="h-full w-full">
       <Layout
         currentView={currentView}
-        setCurrentView={(v) => { setEditId(null); setCurrentView(v); }}
+        setCurrentView={(v) => {
+          setEditId(null);
+          setCurrentView(v);
+          if (RESTORABLE_VIEWS.includes(v)) window.api?.saveSettings?.({ lastView: v }).catch(() => {});
+        }}
         onOpenOnboarding={() => setShowOnboarding(true)}
         onOpenUpdateModal={() => setShowUpdateModal(true)}
       >
