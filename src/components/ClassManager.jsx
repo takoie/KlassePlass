@@ -50,6 +50,7 @@ export default function ClassManager({ onBack, initialId }) {
   const isInitialLoadRef = useRef(true);
   const latestClassDataRef = useRef({ selectedClass, className, students, rules });
   const pendingSaveRef = useRef(false);
+  const titleInputRef = useRef(null);
 
   useEffect(() => {
     latestClassDataRef.current = { selectedClass, className, students, rules };
@@ -149,6 +150,10 @@ export default function ClassManager({ onBack, initialId }) {
       setRules([]);
       await loadClasses();
       setSaveState('saved');
+      // "Ny klasse" opprettes med det samme, uten navnedialog - fokuser og
+      // merk tittelfeltet slik at man kan skrive over med ett tastetrykk i
+      // stedet for å måtte oppdage/klikke seg inn i feltet selv.
+      setTimeout(() => { titleInputRef.current?.focus(); titleInputRef.current?.select(); }, 50);
     } catch (e) {
       showToast('Kunne ikke opprette ny klasse.', 'error');
     }
@@ -313,8 +318,9 @@ export default function ClassManager({ onBack, initialId }) {
             
             {/* Tittel */}
             <div className="w-full text-center mb-6 relative">
-              <input 
-                type="text" 
+              <input
+                ref={titleInputRef}
+                type="text"
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
                 className="input input-ghost text-3xl font-extrabold w-full bg-transparent border-b-2 border-transparent hover:border-base-300 focus:bg-base-200 focus:border-primary px-2 transition-all rounded-none h-14 text-center text-base-content"
