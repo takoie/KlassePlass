@@ -5,9 +5,55 @@
 
 export const CHANGELOG = [
   {
+    version: '3.0.0',
+    date: '11. september 2026',
+    isLatest: true,
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Lys modus',
+        desc: 'Ny Lys/Mørk/Følg systemet-bryter under Innstillinger. Alle fire fargetemaer (Klasseplass, Havbris, Solnedgang, Lavendel) finnes nå i en lys variant, og hele appen - meny, paneler, kort, knapper, modaler og selve klasseromslerretet - følger valget.'
+      },
+      {
+        type: 'feature',
+        title: 'Angre og gjør om i klassekartet',
+        desc: 'Ctrl+Z angrer og Ctrl+Shift+Z (eller Ctrl+Y) gjør om elevplasseringer og andre endringer mens klassekartet er åpent. Verktøylinja viser når det finnes noe å angre/gjøre om, og du kan hoppe rett tilbake til slik perioden var da du åpnet den.'
+      },
+      {
+        type: 'ui',
+        title: 'Ny elevliste og ny visning av elev-regler',
+        desc: '"Elever"-fanen viser nå elevene som et kortgrid i stedet for en tekstliste. "Elev-regler og tilrettelegging" viser én rad per elev med reglene deres samlet i stedet for én lang liste sortert på regeltype - trykk "+ Regel" på eleven for å legge til en ny, med et enklere to-stegs valg (Sosialt / Plassering i rommet).'
+      },
+      {
+        type: 'fix',
+        title: 'Elev-regler brukes nå riktig i gruppearbeid og eksport',
+        desc: 'Reglene du setter på en klasse ble tidligere ikke lest av gruppearbeid-modulen eller av eksport/import - de lå lagret et annet sted enn det klassekartet selv brukte. Reglene leses nå fra samme sted overalt. Eksisterende klassekart og elevlister påvirkes ikke.'
+      },
+      {
+        type: 'fix',
+        title: 'Stavekontroll endret elevnavn',
+        desc: 'Nettleserens innebygde stavekontroll/auto-korrektur er nå skrudd av i hele appen, så den ikke lenger foreslår eller endrer elevnavn den ikke kjenner igjen.'
+      },
+      {
+        type: 'ui',
+        title: 'Hover-bokser åpner litt roligere',
+        desc: 'Hjelpetekster og tooltips venter nå et lite øyeblikk før de dukker opp, så de ikke blinker forbi ved rask musbevegelse over grensesnittet.'
+      },
+      {
+        type: 'ui',
+        title: 'Flere mindre forbedringer',
+        desc: 'Advarsel når rommet har færre plasser enn elever; lim inn en hel elevliste rett i "Legg til elev"-feltet; appen husker siste oversiktsfane; "Ny klasse" fokuserer navnefeltet automatisk; bekreftelse før "Tøm hele rommet"; "Eksporter til PDF" skjules der den uansett ikke virker; riktig filnavn foreslått ved "Lagre som PDF".'
+      },
+      {
+        type: 'stability',
+        title: 'Bedre feilhåndtering og sikkerhetsherding',
+        desc: 'Autolagring og periodebytte varsler nå tydelig hvis noe feiler, i stedet for å svelge feilen stille. «Åpne fil»/«Vis i mappe» går nå kun via Tauris offisielle plugin, og appen ber om færre systemtillatelser enn før.'
+      }
+    ]
+  },
+  {
     version: '2.9.5',
     date: '9. september 2026',
-    isLatest: true,
     highlights: [
       {
         type: 'feature',
