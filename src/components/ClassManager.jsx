@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from '../shared/utils';
 import Select from './Select';
-import StudentAvatar from './ClassManager/StudentAvatar';
 import AddRuleModal from './ClassManager/AddRuleModal';
 import { findRuleType, PRIORITY_META } from './ClassManager/ruleTypes';
 
@@ -376,7 +375,6 @@ export default function ClassManager({ onBack, initialId }) {
                         const ruleCount = rules.filter(r => (r.studentIds || []).includes(student.id)).length;
                         return (
                           <div key={student.id} className="relative flex items-center gap-2.5 p-2.5 bg-surface-field hover:bg-base-200 rounded-xl border border-base-300 group transition-colors">
-                            <StudentAvatar student={student} />
                             <div className="flex-1 min-w-0">
                               <input
                                 type="text"
@@ -424,7 +422,6 @@ export default function ClassManager({ onBack, initialId }) {
                       const studentRules = rules.filter(r => (r.studentIds || []).includes(student.id));
                       return (
                         <div key={student.id} className="p-2.5 bg-surface-field rounded-xl border border-base-300 flex flex-wrap items-center gap-2.5">
-                          <StudentAvatar student={student} size="sm" />
                           <span className="font-semibold text-sm text-base-content flex-shrink-0">{student.name}</span>
 
                           <div className="flex flex-wrap gap-1.5 flex-1 min-w-[6rem]">

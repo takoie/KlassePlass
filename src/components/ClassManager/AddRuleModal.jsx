@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { RULE_CATEGORIES, RULE_TYPES, findRuleType } from './ruleTypes';
-import StudentAvatar from './StudentAvatar';
 
 const PRIORITY_OPTIONS = [
   { value: 'critical', label: 'Kritisk (må oppfylles)', cls: 'btn-error' },
@@ -69,8 +68,8 @@ export default function AddRuleModal({ isOpen, onClose, students, sourceStudentI
     <dialog ref={dialogRef} className="modal modal-bottom sm:modal-middle">
       {sourceStudent && (
         <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
-          <h3 className="font-bold text-lg mb-1 flex items-center gap-2">
-            <StudentAvatar student={sourceStudent} size="sm" /> Ny regel for {sourceStudent.name}
+          <h3 className="font-bold text-lg mb-1">
+            Ny regel for {sourceStudent.name}
           </h3>
 
           <div className="mt-4">
