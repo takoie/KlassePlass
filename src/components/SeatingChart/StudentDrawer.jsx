@@ -20,6 +20,9 @@ export default function StudentDrawer({ showStudentDrawer, setShowStudentDrawer,
           <i className="fa-solid fa-xmark"></i>
         </button>
       </div>
+      <p className="px-4 py-1.5 text-[10px] text-base-content/50 border-b border-base-300 bg-base-200 min-w-[16rem]">
+        Dra en elev fra et bord og hit for å ta dem av kartet igjen.
+      </p>
       <div className="flex-1 overflow-y-auto p-2.5 bg-surface-raised min-w-[16rem]">
         {unplacedStudents.length === 0 ? (
           <div className="text-center opacity-50 text-xs text-base-content/60 p-4 font-semibold mt-10">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
  * Delte primitiver for modul-toppbarene (klassekart + rom-bygger), så
@@ -36,24 +36,40 @@ export const HeaderButton = ({ onClick, title, tone = 'neutral', icon, iconClass
   </button>
 );
 
-/** Lagre-status i fast bredde-slot. saveState: 'saving' | 'error' | annet (= lagret). */
-export const SaveStatus = ({ saveState }) => (
-  <div className="w-[92px] flex-shrink-0 flex items-center justify-end">
-    {saveState === 'saving' ? (
-      <span className="text-warning text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
-        <i className="fa-solid fa-spinner fa-spin"></i> Lagrer…
-      </span>
-    ) : saveState === 'error' ? (
-      <span className="text-error text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
-        <i className="fa-solid fa-triangle-exclamation"></i> Ikke lagret
-      </span>
-    ) : (
-      <span className="text-success text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
-        <i className="fa-solid fa-circle-check"></i> Lagret
-      </span>
-    )}
-  </div>
-);
+/**
+ * Lagre-status i fast bredde-slot. saveState: 'saving' | 'error' | annet (= lagret).
+ * "saving" vises først etter en kort forsinkelse - autolagringen fullfører som
+ * regel raskere enn det, så uten dette blinker statusen Lagrer→Lagret på hvert
+ * tastetrykk. "saved"/"error" vises alltid med det samme.
+ */
+export const SaveStatus = ({ saveState }) => {
+  const [display, setDisplay] = useState(saveState);
+  useEffect(() => {
+    if (saveState === 'saving') {
+      const t = setTimeout(() => setDisplay('saving'), 250);
+      return () => clearTimeout(t);
+    }
+    setDisplay(saveState);
+  }, [saveState]);
+
+  return (
+    <div className="w-[92px] flex-shrink-0 flex items-center justify-end">
+      {display === 'saving' ? (
+        <span className="text-warning text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+          <i className="fa-solid fa-spinner fa-spin"></i> Lagrer…
+        </span>
+      ) : display === 'error' ? (
+        <span className="text-error text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+          <i className="fa-solid fa-triangle-exclamation"></i> Ikke lagret
+        </span>
+      ) : (
+        <span className="text-success text-xs font-semibold flex items-center gap-1.5 whitespace-nowrap">
+          <i className="fa-solid fa-circle-check"></i> Lagret
+        </span>
+      )}
+    </div>
+  );
+};
 
 /** Felles ytre skall for en modul-toppbar. Holdes alltid på ÉN linje
  *  (flex-nowrap) – ved ekstrem smal bredde scrolles den horisontalt i stedet
