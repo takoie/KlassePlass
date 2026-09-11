@@ -380,9 +380,9 @@ export default function ClassManager({ onBack, initialId }) {
                     type="button"
                     className="btn btn-outline btn-sm border-base-300 text-base-content/80 hover:bg-base-200 gap-1"
                     onClick={() => document.getElementById('modal_import_students').showModal()}
-                    title="Masseimport fra Excel/Word/CSV"
+                    title="Lim inn en elevliste fra Excel, Word eller CSV"
                   >
-                    <i className="fa-solid fa-file-import text-indigo-400"></i> Masseimport
+                    <i className="fa-solid fa-list-ul text-indigo-400"></i> Masseimport
                   </button>
                 </form>
 
@@ -534,9 +534,9 @@ export default function ClassManager({ onBack, initialId }) {
       <dialog id="modal_import_students" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <i className="fa-solid fa-file-import text-indigo-400"></i> Masseimport av elever
+            <i className="fa-solid fa-list-ul text-indigo-400"></i> Masseimport av elever
           </h3>
-          <p className="text-xs text-base-content/60 mb-2">Lim inn navn fra Excel, Word eller CSV. Skill med linjeskift eller komma.</p>
+          <p className="text-xs text-base-content/60 mb-2">Merk og kopier elevlista i Excel, Word eller et annet program, og lim den inn her under (Ctrl+V). Ett navn per linje, eller skilt med komma.</p>
           <textarea
             className="textarea textarea-bordered w-full h-48 bg-surface-field border-base-300 font-mono text-sm text-base-content"
             placeholder="Kari Anne Nordmann&#10;Ola Nordmann&#10;Per P..."
