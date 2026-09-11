@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { showToast } from '../shared/utils';
 import Select from './Select';
+import StudentAvatar from './ClassManager/StudentAvatar';
+import AddRuleModal from './ClassManager/AddRuleModal';
+import { findRuleType, PRIORITY_META } from './ClassManager/ruleTypes';
 
 const normalizeStudent = (s) => {
   if (typeof s === 'string') {
@@ -40,10 +43,8 @@ export default function ClassManager({ onBack, initialId }) {
   const [importLastNameMode, setImportLastNameMode] = useState('keep'); // 'keep' | 'initial' | 'remove'
   const [saveState, setSaveState] = useState('saved');
 
-  // Rule Form States
-  const [ruleType, setRuleType] = useState('avoid');
-  const [rulePriority, setRulePriority] = useState('critical');
-  const [selectedRuleStudentIds, setSelectedRuleStudentIds] = useState([]);
+  // Modal for å legge til en ny regel, åpnet fra en gitt elev sin rad.
+  const [ruleModalStudentId, setRuleModalStudentId] = useState(null);
   const [activeTab, setActiveTab] = useState('students');
   
   const saveTimeoutRef = useRef(null);
@@ -223,26 +224,14 @@ export default function ClassManager({ onBack, initialId }) {
     setStudents(students.map(s => s.id === id ? { ...s, name: newName } : s));
   };
 
-  const toggleStudentForRule = (sId) => {
-    if (selectedRuleStudentIds.includes(sId)) {
-      setSelectedRuleStudentIds(selectedRuleStudentIds.filter(id => id !== sId));
-    } else {
-      setSelectedRuleStudentIds([...selectedRuleStudentIds, sId]);
-    }
-  };
-
-  const handleAddRule = (e) => {
-    e.preventDefault();
-    if (selectedRuleStudentIds.length === 0) return;
-
+  const handleSaveNewRule = ({ type, priority, studentIds }) => {
     setRules([...rules, {
       id: Date.now().toString(),
-      type: ruleType,
-      priority: rulePriority,
-      studentIds: selectedRuleStudentIds
+      type,
+      priority,
+      studentIds
     }]);
-
-    setSelectedRuleStudentIds([]);
+    setRuleModalStudentId(null);
   };
 
   const removeRule = (ruleId) => {
@@ -260,17 +249,6 @@ export default function ClassManager({ onBack, initialId }) {
     setImportData('');
     document.getElementById('modal_import_students')?.close();
   };
-
-  const ruleOptions = [
-    { type: 'avoid', label: '⛔ Skal IKKE sitte sammen (2 til 5 elever)', icon: 'fa-solid fa-shield-halved text-red-400' },
-    { type: 'pair', label: '💚 God makkermatch (2 elever)', icon: 'fa-solid fa-heart text-success' },
-    { type: 'nearBoard', label: '📍 Må sitte nær tavlen (fremste rad)', icon: 'fa-solid fa-location-dot text-amber-400' },
-    { type: 'sitBack', label: '🔙 Må sitte bakerst (bakre rad)', icon: 'fa-solid fa-arrow-down text-purple-400' },
-    { type: 'sitMiddle', label: '↔️ Må sitte i midten (midterste rad)', icon: 'fa-solid fa-align-center text-cyan-400' },
-    { type: 'awayDoor', label: '🚪 Skjermet for dør-støy (unngå dør)', icon: 'fa-solid fa-door-open text-blue-400' },
-    { type: 'awayWindow', label: '🪟 Skjermet fra vindu (unngå vindu)', icon: 'fa-solid fa-sun text-yellow-400' },
-    { type: 'supportPair', label: '🎓 Faglig støttemakker (2 elever)', icon: 'fa-solid fa-graduation-cap text-indigo-400' }
-  ];
 
   return (
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
@@ -386,132 +364,104 @@ export default function ClassManager({ onBack, initialId }) {
                   </button>
                 </form>
 
-                <div
-                  className="bg-base-200 rounded-2xl shadow-inner border border-base-300 flex-1 overflow-y-auto p-2 grid grid-cols-2 gap-1 content-start"
-                  style={students.length > 0 ? { gridTemplateRows: `repeat(${Math.ceil(students.length / 2)}, minmax(0, auto))`, gridAutoFlow: 'column' } : undefined}
-                >
+                <div className="bg-base-200 rounded-2xl shadow-inner border border-base-300 flex-1 overflow-y-auto p-3">
                   {students.length === 0 ? (
-                    <div className="col-span-full flex-1 flex flex-col items-center justify-center text-base-content/50 p-8 text-center h-full">
+                    <div className="flex-1 flex flex-col items-center justify-center text-base-content/50 p-8 text-center h-full">
                       <i className="fa-solid fa-users text-4xl mb-2 opacity-30"></i>
                       <p>Ingen elever lagt til enda.</p>
                     </div>
                   ) : (
-                    students.map((student, idx) => {
-                      const rowCount = Math.ceil(students.length / 2);
-                      const rowIdx = idx % rowCount;
-                      return (
-                      <div key={student.id} className={`flex justify-between items-center p-2 hover:bg-surface-field rounded-xl group transition-colors ${rowIdx % 2 === 1 ? 'bg-black/15' : ''}`}>
-                        <div className="flex items-center gap-3 flex-1">
-                          <span className="badge badge-sm font-mono opacity-50 w-6 border-none bg-base-200 text-base-content/80">{idx + 1}</span>
-                          <input 
-                            type="text" 
-                            value={student.name}
-                            onChange={(e) => updateStudent(student.id, e.target.value)}
-                            className="input input-sm input-ghost flex-1 font-medium bg-transparent px-1 text-base-content focus:bg-base-200 focus:outline-none"
-                          />
-                        </div>
-                        <button 
-                          className="btn btn-ghost btn-xs text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeStudent(student.id)}
-                          title="Fjern elev"
-                        >
-                          <i className="fa-solid fa-xmark"></i>
-                        </button>
-                      </div>
-                      );
-                    })
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {students.map((student, idx) => {
+                        const ruleCount = rules.filter(r => (r.studentIds || []).includes(student.id)).length;
+                        return (
+                          <div key={student.id} className="relative flex items-center gap-2.5 p-2.5 bg-surface-field hover:bg-base-200 rounded-xl border border-base-300 group transition-colors">
+                            <StudentAvatar student={student} />
+                            <div className="flex-1 min-w-0">
+                              <input
+                                type="text"
+                                value={student.name}
+                                onChange={(e) => updateStudent(student.id, e.target.value)}
+                                className="input input-sm input-ghost w-full font-medium bg-transparent px-1 text-base-content focus:bg-base-200 focus:outline-none"
+                              />
+                            </div>
+                            {ruleCount > 0 && (
+                              <span
+                                className="badge badge-xs bg-base-300 border-base-300 text-base-content/70 gap-1 flex-shrink-0"
+                                title={`${ruleCount} ${ruleCount === 1 ? 'regel' : 'regler'}`}
+                              >
+                                <i className="fa-solid fa-shield-halved"></i>{ruleCount}
+                              </span>
+                            )}
+                            <button
+                              className="btn btn-ghost btn-xs btn-square text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                              onClick={() => removeStudent(student.id)}
+                              title="Fjern elev"
+                            >
+                              <i className="fa-solid fa-xmark"></i>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Fane 2: Elev-regler og tilrettelegging */}
+            {/* Fane 2: Elev-regler og tilrettelegging - gruppert per elev, ikke per regel,
+                slik at alt om én elev sees samlet uten å lete i en flat liste. */}
             {activeTab === 'rules' && (
               <div className="flex-1 overflow-hidden flex flex-col w-full">
-                <form onSubmit={handleAddRule} className="bg-base-200 p-4 rounded-2xl border border-base-300 mb-4 flex flex-col gap-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Regel-type</label>
-                      <Select
-                        size="xs"
-                        className="w-full"
-                        ariaLabel="Regel-type"
-                        value={ruleType}
-                        onChange={(v) => { setRuleType(v); setSelectedRuleStudentIds([]); }}
-                        options={ruleOptions.map(opt => ({ value: opt.type, label: opt.label }))}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Viktighetsgrad (prioritet)</label>
-                      <Select
-                        size="xs"
-                        className="w-full"
-                        ariaLabel="Viktighetsgrad"
-                        value={rulePriority}
-                        onChange={setRulePriority}
-                        options={[
-                          { value: 'critical', label: '🔴 Kritisk (Må oppfylles)' },
-                          { value: 'important', label: '🟡 Viktig (Bør oppfylles)' },
-                          { value: 'wish', label: '🟢 Ønske (Om det går)' },
-                        ]}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="text-xs opacity-60 text-base-content/60">Velg elev(er) for denne regelen (du kan kombinere flere regler for samme elev):</div>
-                  
-                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-surface-field rounded-xl border border-base-300">
-                    {students.map((s) => {
-                      const isSelected = selectedRuleStudentIds.includes(s.id);
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className={`btn btn-xs rounded-full ${isSelected ? 'btn-primary shadow' : 'btn-ghost border-base-300 text-base-content/80'}`}
-                          onClick={() => toggleStudentForRule(s.id)}
-                        >
-                          {isSelected ? '✓ ' : '+ '}{s.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <button type="submit" className="btn btn-xs btn-primary self-end" disabled={selectedRuleStudentIds.length === 0}>
-                    + Lagre regel ({selectedRuleStudentIds.length} elever valgt)
-                  </button>
-                </form>
-
                 <div className="bg-base-200 rounded-2xl shadow-inner border border-base-300 flex-1 overflow-y-auto p-3 flex flex-col gap-2">
-                  {rules.length === 0 ? (
+                  {students.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-base-content/50 p-8 text-center h-full">
                       <i className="fa-solid fa-shield-halved text-4xl mb-2 opacity-30"></i>
-                      <p className="text-sm">Ingen spesielle regler definert.</p>
+                      <p className="text-sm">Legg til elever i "Elever"-fanen først, så kan du gi dem regler her.</p>
                     </div>
                   ) : (
-                    rules.map((r) => {
-                      const optionMeta = ruleOptions.find(o => o.type === r.type);
-                      const ruleStudentNames = (r.studentIds || []).map(id => students.find(s => s.id === id)?.name || id);
-                      
-                      let prioBadge = <span className="badge badge-error badge-xs font-bold gap-1"><i className="fa-solid fa-circle-exclamation"></i> Kritisk</span>;
-                      if (r.priority === 'important') prioBadge = <span className="badge badge-warning badge-xs font-bold gap-1"><i className="fa-solid fa-triangle-exclamation"></i> Viktig</span>;
-                      if (r.priority === 'wish') prioBadge = <span className="badge badge-success badge-xs font-bold gap-1"><i className="fa-solid fa-circle-check"></i> Ønske</span>;
-
+                    students.map((student) => {
+                      const studentRules = rules.filter(r => (r.studentIds || []).includes(student.id));
                       return (
-                        <div key={r.id} className="p-3 bg-surface-field rounded-xl border border-base-300 flex justify-between items-center">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            {prioBadge}
-                            <span className="badge badge-neutral gap-1.5 text-xs bg-base-200 text-base-content border-base-300">
-                              <i className={optionMeta?.icon}></i>
-                              {optionMeta?.label.split('(')[0]}
-                            </span>
-                            <div className="flex flex-wrap gap-1 items-center">
-                              {ruleStudentNames.map((stName, i) => (
-                                <span key={i} className="badge bg-indigo-950 text-indigo-300 border-indigo-500/30 text-xs">{stName}</span>
-                              ))}
-                            </div>
+                        <div key={student.id} className="p-2.5 bg-surface-field rounded-xl border border-base-300 flex flex-wrap items-center gap-2.5">
+                          <StudentAvatar student={student} size="sm" />
+                          <span className="font-semibold text-sm text-base-content flex-shrink-0">{student.name}</span>
+
+                          <div className="flex flex-wrap gap-1.5 flex-1 min-w-[6rem]">
+                            {studentRules.length === 0 ? (
+                              <span className="text-xs text-base-content/40 italic">Ingen regler</span>
+                            ) : (
+                              studentRules.map((r) => {
+                                const meta = findRuleType(r.type);
+                                const prio = PRIORITY_META[r.priority] || PRIORITY_META.critical;
+                                const others = (r.studentIds || [])
+                                  .filter(id => id !== student.id)
+                                  .map(id => students.find(s => s.id === id)?.name)
+                                  .filter(Boolean);
+                                return (
+                                  <span
+                                    key={r.id}
+                                    className="badge gap-1.5 text-xs bg-base-200 text-base-content border-base-300 pl-1.5"
+                                    title={`${prio.label}${others.length ? ' · ' + others.join(', ') : ''}`}
+                                  >
+                                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${prio.dot}`}></span>
+                                    <i className={meta?.icon}></i>
+                                    {meta?.label}{others.length ? ` · ${others.join(', ')}` : ''}
+                                    <button onClick={() => removeRule(r.id)} className="opacity-50 hover:opacity-100" title="Fjern regel">
+                                      <i className="fa-solid fa-xmark"></i>
+                                    </button>
+                                  </span>
+                                );
+                              })
+                            )}
                           </div>
-                          <button className="btn btn-ghost btn-xs text-red-400" onClick={() => removeRule(r.id)}>✕ Fjern</button>
+
+                          <button
+                            className="btn btn-xs btn-outline border-base-300 text-base-content/70 hover:bg-base-200 gap-1 flex-shrink-0"
+                            onClick={() => setRuleModalStudentId(student.id)}
+                          >
+                            <i className="fa-solid fa-plus"></i> Regel
+                          </button>
                         </div>
                       );
                     })
@@ -530,6 +480,14 @@ export default function ClassManager({ onBack, initialId }) {
         )}
       </div>
       
+      <AddRuleModal
+        isOpen={ruleModalStudentId != null}
+        onClose={() => setRuleModalStudentId(null)}
+        students={students}
+        sourceStudentId={ruleModalStudentId}
+        onSave={handleSaveNewRule}
+      />
+
       {/* Masseimport modal */}
       <dialog id="modal_import_students" className="modal modal-bottom sm:modal-middle">
         <div className="modal-box bg-surface-raised border border-base-300 text-base-content rounded-2xl">
