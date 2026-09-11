@@ -143,6 +143,19 @@ export const PageLayout = ({ title, icon, accent = 'emerald', onAdd, onImport, c
   </div>
 );
 
+/** Tom-tilstand for en oversiktsliste - ikon, forklarende linje og en CTA rett til handlingen. */
+export const EmptyState = ({ icon, text, ctaLabel, onCta }) => (
+  <div className="col-span-full flex flex-col items-center justify-center text-center py-16 text-base-content/50">
+    <i className={`${icon} text-4xl mb-3 opacity-30`}></i>
+    <p className="text-sm mb-4">{text}</p>
+    {onCta && (
+      <button className="btn btn-sm bg-primary hover:bg-primary/90 text-slate-950 border-none font-bold gap-2" onClick={onCta}>
+        <i className="fa-solid fa-plus"></i> {ctaLabel}
+      </button>
+    )}
+  </div>
+);
+
 export const ClassesOverview = ({ onEdit }) => {
   const [classes, setClasses] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -200,7 +213,9 @@ export const ClassesOverview = ({ onEdit }) => {
       onAdd={handleOpenCreate}
       onImport={() => document.getElementById('modal_import_class')?.showModal()}
     >
-      {classes.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen klasser opprettet enda.</p> : null}
+      {classes.length === 0 && (
+        <EmptyState icon="fa-solid fa-users" text="Ingen klasser opprettet enda." ctaLabel="Ny klasse" onCta={handleOpenCreate} />
+      )}
       {classes.map(cls => {
         let count = 0;
         try {
@@ -362,7 +377,9 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
       onAdd={onAdd}
       onImport={() => document.getElementById('modal_import_room')?.showModal()}
     >
-      {rooms.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen rom opprettet enda.</p> : null}
+      {rooms.length === 0 && (
+        <EmptyState icon="fa-solid fa-school" text="Ingen rom opprettet enda." ctaLabel="Nytt rom" onCta={onAdd} />
+      )}
       {rooms.map(rm => {
         let seatCount = 0;
         try {
@@ -673,7 +690,9 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
       onAdd={handleOpenCreate}
       onImport={() => document.getElementById('modal_import_seating')?.showModal()}
     >
-      {charts.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen klassekart opprettet enda.</p> : null}
+      {charts.length === 0 && (
+        <EmptyState icon="fa-solid fa-users-rectangle" text="Ingen klassekart opprettet enda." ctaLabel="Nytt klassekart" onCta={handleOpenCreate} />
+      )}
 
       {charts.length > 0 && (
         <div className="col-span-full flex justify-end -mb-1">
@@ -792,6 +811,13 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
               </div>
             </div>
 
+            {selectedClass && selectedRoom && modalSeatCount < modalStudentCount && (
+              <p className="text-[11px] text-warning bg-warning/10 border border-warning/30 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+                Rommet har kun {modalSeatCount} plasser til {modalStudentCount} elever — {modalStudentCount - modalSeatCount} {modalStudentCount - modalSeatCount === 1 ? 'elev' : 'elever'} vil mangle plass.
+              </p>
+            )}
+
             <div>
               <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Første periode</label>
               <div className="flex items-center gap-2">
@@ -885,7 +911,14 @@ export const GroupOverview = ({ onEdit, onAdd }) => {
 
   return (
     <PageLayout title="Gruppearbeid" icon="fa-solid fa-people-group" accent="indigo" onAdd={() => document.getElementById('modal_create_group')?.showModal()}>
-      {assignments.length === 0 ? <p className="text-base-content/60 text-sm italic col-span-full">Ingen gruppeinndelinger opprettet enda.</p> : null}
+      {assignments.length === 0 && (
+        <EmptyState
+          icon="fa-solid fa-people-group"
+          text="Ingen gruppeinndelinger opprettet enda."
+          ctaLabel="Ny gruppeinndeling"
+          onCta={() => document.getElementById('modal_create_group')?.showModal()}
+        />
+      )}
 
       {classes.map(cls => {
         const classAssignments = assignments.filter(a => a.class_id === cls.id).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
