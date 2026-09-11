@@ -397,7 +397,7 @@ export default function Settings() {
                   <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-opener</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-process</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">@tauri-apps/plugin-updater</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
-                  <tr><td className="py-2.5 px-4 font-semibold">dnd kit (core, sortable, utilities)</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">dnd kit (core, utilities)</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">Font Awesome Free</td><td className="py-2.5 px-4 text-success">CC BY 4.0 / SIL OFL 1.1 / MIT</td></tr>
                 </tbody>
               </table>
@@ -414,6 +414,7 @@ export default function Settings() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
                   <tr><td className="py-2.5 px-4 font-semibold">Tauri (core) & tauri-plugin-log</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
+                  <tr><td className="py-2.5 px-4 font-semibold">tauri-plugin-dialog, -opener, -process, -updater</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">rusqlite (+ bundlet SQLite)</td><td className="py-2.5 px-4 text-success">MIT (SQLite: Public Domain)</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">printpdf</td><td className="py-2.5 px-4 text-success">MIT</td></tr>
                   <tr><td className="py-2.5 px-4 font-semibold">serde & serde_json</td><td className="py-2.5 px-4 text-success">MIT / Apache-2.0</td></tr>
