@@ -196,12 +196,15 @@ export default function ClassManager({ onBack, initialId }) {
 
   const addStudent = (e) => {
     e.preventDefault();
-    if (newStudentName.trim()) {
-      const newStu = {
-        id: `stu-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        name: newStudentName.trim()
-      };
-      setStudents([...students, newStu]);
+    // En limt liste (Excel-kolonne, flere navn adskilt av linjeskift/komma) i
+    // dette ene feltet skal gi flere elever, ikke én elev med hele listen som navn.
+    const names = newStudentName.split(/[\n,\t]+/).map(n => n.trim()).filter(Boolean);
+    if (names.length > 0) {
+      const newStudents = names.map((name, i) => ({
+        id: `stu-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 4)}`,
+        name
+      }));
+      setStudents([...students, ...newStudents]);
       setNewStudentName('');
     }
   };

@@ -176,9 +176,13 @@ export default function PrintPreviewModal({
   const filenamePrefix = isStation ? 'Stasjonsplan' : isGroupWork ? 'Gruppeinndeling' : 'Klassekart';
 
   const handlePrint = () => {
+    // Nettleserens "Skriv ut" / "Lagre som PDF" foreslår som regel document.title
+    // som filnavn - sett det til det samme saneres navnet PDF-eksporten bruker
+    // (uten .pdf-endelsen), i stedet for å blanke det til noe generisk.
     const originalTitle = document.title;
+    const suggested = buildPrintFilename({ className, chartName, chartComment, prefix: filenamePrefix });
     try {
-      document.title = '';
+      document.title = suggested.replace(/\.pdf$/i, '');
       window.print();
     } finally {
       document.title = originalTitle;
