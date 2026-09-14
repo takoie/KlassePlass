@@ -5,9 +5,60 @@
 
 export const CHANGELOG = [
   {
+    version: '3.1.0',
+    date: '14. september 2026',
+    isLatest: true,
+    highlights: [
+      {
+        type: 'feature',
+        title: 'Raskere oppsett av stasjonsøkter',
+        desc: 'Hurtigvalg-chips for vanlige stasjonsnavn, og en «Gjenbruk fra sist»-knapp som henter stasjoner og tid fra forrige økt for samme klasse. Stasjonslisten er tastatur-drevet: Enter i navnefeltet hopper til neste rad (eller oppretter en ny), Backspace i et tomt navnefelt fjerner raden, og slett-knappen er tatt ut av tab-rekkefølgen. Tidsvelgeren er nå raske chips (5/10/15/20 min, Egendefinert, Ingen tidtaker) i stedet for to tallfelt. Navn og klasse velges fortsatt i egen popup, uendret.'
+      },
+      {
+        type: 'improvement',
+        title: 'Autolagring i stasjoner og gruppearbeid',
+        desc: 'Stasjonsøkter lagres nå automatisk mens du redigerer, med «Lagre»/«Start økt» slått sammen til én knapp. Gruppearbeid hadde allerede autolagring, men viste fortsatt en «Lagre»-knapp og en toast per lagring – begge er nå erstattet med samme diskré «Lagrer …/Lagret»-indikator som stasjoner.'
+      },
+      {
+        type: 'feature',
+        title: 'Tastatursnarveier når stasjonsøkten kjøres',
+        desc: 'Space (spill av/pause tidtaker), piltaster eller N/P (neste/forrige rotasjon) — styr økten uten mus mens klassen jobber.'
+      },
+      {
+        type: 'feature',
+        title: 'Prosjektor-modus i gruppearbeid',
+        desc: 'Ny knapp skjuler sidemeny og topplinje og går til fullskjerm, akkurat som i klassekartet. Gruppekortene vokser med større tekst og mer luft, slik at gruppene er lette å lese fra bakerste pult. Esc eller en fast knapp avslutter. Dra-og-slipp, gruppeleder og «Ikke med»-sonen fungerer uendret.'
+      },
+      {
+        type: 'ui',
+        title: 'Ryddigere verktøylinjer i stasjoner og gruppearbeid',
+        desc: 'Firkantede knapper er byttet ut med avrundede chips for hurtigvalg som stasjonsnavn, tidspresets, «Legg til gruppe», «Generer på nytt» og gruppeleder-verktøyene.'
+      },
+      {
+        type: 'feature',
+        title: 'Bytt rom for en ny periode i klassekartet',
+        desc: '«Ny periode»-dialogen lar deg nå velge et annet rom enn det du bruker nå. Klassekartet fortsetter som samme kart med nytt rom-design fra den perioden — periode-nedtrekk og elevhistorikk følger fortsatt med.'
+      },
+      {
+        type: 'ui',
+        title: 'Rom viser hvor mange klassekart de brukes i',
+        desc: 'Romkortene i «Mine rom» viser nå «Brukt i N klassekart», telt per klassekart (ikke per periode).'
+      },
+      {
+        type: 'fix',
+        title: 'Rombyggeren hoppet/zoomet ved åpning',
+        desc: 'Klasserom-lerretet i rombyggeren kunne vises uskalert i øvre venstre hjørne ett øyeblikk før det hoppet til riktig, sentrert størrelse. Lerretet tilpasses nå synkront med det samme det vises, og en overflødig etterjustering som kunne overstyre riktig oppsett er fjernet.'
+      },
+      {
+        type: 'ui',
+        title: 'Flere mindre forbedringer',
+        desc: 'Ny klassekart-periode foreslår nå inneværende ukenummer i stedet for alltid uke 1. Vindusknappene (minimer/maksimer/lukk) og enkelte faresonerte knapper har fått en roligere, mer nøytral stil. «Opprett ny»/«Nytt rom»-knappene bruker nå samme standard primærfarge som resten av appen. Kortenes fargeaksent justeres nå automatisk for bedre kontrast i lys modus.'
+      }
+    ]
+  },
+  {
     version: '3.0.0',
     date: '11. september 2026',
-    isLatest: true,
     highlights: [
       {
         type: 'feature',

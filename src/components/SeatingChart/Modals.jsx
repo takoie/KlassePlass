@@ -6,6 +6,7 @@ export default function Modals({
   chartName, handleDelete, isOnlyPeriod,
   editingPeriod, setEditingPeriod, handleSaveEditedPeriod,
   newPeriodWeeks, setNewPeriodWeeks, handleStartNewPeriod,
+  rooms, selectedRoom, newPeriodRoomId, setNewPeriodRoomId,
   canSplitChart, splitToNewChart,
   syncFromRoom,
   restoreToOpen,
@@ -126,9 +127,31 @@ export default function Modals({
             />
             <span className="text-sm text-base-content/60">uker</span>
           </div>
+          <div className="py-2">
+            <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-1 block">Rom</label>
+            <select
+              className="select select-bordered w-full bg-surface-field border-base-300 text-base-content"
+              value={newPeriodRoomId || selectedRoom || ''}
+              onChange={(e) => setNewPeriodRoomId(e.target.value)}
+            >
+              {rooms.map(r => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-base-content/50 mt-1.5 leading-relaxed">
+              Du kan velge et annet rom enn det du bruker nå — klassekartet fortsetter som
+              samme kart med et nytt rom-design fra denne perioden. Periode-nedtrekk og
+              elevhistorikk følger fortsatt med.
+            </p>
+          </div>
           <div className="modal-action">
             <form method="dialog">
-              <button className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200">Avbryt</button>
+              <button
+                className="btn btn-ghost text-base-content/60 mr-2 hover:bg-base-200"
+                onClick={() => setNewPeriodRoomId('')}
+              >
+                Avbryt
+              </button>
             </form>
             <button className="btn btn-primary" onClick={() => handleStartNewPeriod(newPeriodWeeks)}>Opprett periode</button>
           </div>

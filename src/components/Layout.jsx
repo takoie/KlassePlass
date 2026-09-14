@@ -47,14 +47,14 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
             </div>
           )}
           <div className="flex items-center gap-1.5" style={{ WebkitAppRegion: 'no-drag', pointerEvents: 'auto' }}>
-            <button className="w-8 h-7 flex items-center justify-center rounded text-base-content/60 hover:bg-base-300/60 hover:text-base-content transition-colors" onClick={() => window.api?.minimizeWindow()} title="Minimer">
+            <button className="w-8 h-7 flex items-center justify-center text-base-content/60 hover:text-base-content transition-colors" onClick={() => window.api?.minimizeWindow()} title="Minimer">
               <i className="fa-solid fa-minus text-xs"></i>
             </button>
-            <button className="w-8 h-7 flex items-center justify-center rounded text-base-content/60 hover:bg-base-300/60 hover:text-base-content transition-colors" onClick={() => window.api?.maximizeWindow()} title={isMaximized ? 'Gjenopprett' : 'Maksimer'}>
+            <button className="w-8 h-7 flex items-center justify-center text-base-content/60 hover:text-base-content transition-colors" onClick={() => window.api?.maximizeWindow()} title={isMaximized ? 'Gjenopprett' : 'Maksimer'}>
               <i className={isMaximized ? 'fa-solid fa-window-restore text-xs' : 'fa-regular fa-square text-xs'}></i>
             </button>
-            <button className="w-9 h-7 flex items-center justify-center rounded bg-error text-base-content hover:bg-red-600 transition-colors shadow" onClick={() => window.api?.closeWindow()} title="Lukk">
-              <i className="fa-solid fa-xmark text-sm font-bold"></i>
+            <button className="w-8 h-7 flex items-center justify-center text-base-content/60 hover:text-error transition-colors" onClick={() => window.api?.closeWindow()} title="Lukk">
+              <i className="fa-solid fa-xmark text-sm"></i>
             </button>
           </div>
         </div>
@@ -77,14 +77,18 @@ export default function Layout({ currentView, setCurrentView, onOpenOnboarding, 
           {mainTabs.map((tab) => {
             const isActive = tab.activeIds.includes(currentView);
             return (
-              <button 
-                key={tab.id}
-                className={`overblikk-nav-btn ${isActive ? 'active' : ''}`}
-                onClick={() => setCurrentView(tab.id)}
-              >
-                <i className={`${tab.icon} fa-fw text-sm flex-shrink-0 ${isActive ? 'text-[oklch(var(--p))]' : 'text-base-content/60'}`}></i>
-                <span className="leading-none flex-1 text-left">{tab.label}</span>
-              </button>
+              <React.Fragment key={tab.id}>
+                {tab.id === 'group-overview' && (
+                  <div className="border-t border-base-300/80 my-0.5" />
+                )}
+                <button
+                  className={`overblikk-nav-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => setCurrentView(tab.id)}
+                >
+                  <i className={`${tab.icon} fa-fw text-sm flex-shrink-0 ${isActive ? 'text-[oklch(var(--p))]' : 'text-base-content/60'}`}></i>
+                  <span className="leading-none flex-1 text-left">{tab.label}</span>
+                </button>
+              </React.Fragment>
             );
           })}
         </div>

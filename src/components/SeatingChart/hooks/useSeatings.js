@@ -60,6 +60,12 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
 
   const [editingPeriod, setEditingPeriod] = useState(null);
   const [newPeriodWeeks, setNewPeriodWeeks] = useState(4);
+  // Rom valgt for NESTE periode i "Ny periode"-modalen. Tom streng = "bruk
+  // nåværende rom" (selectedRoom) - lar læreren bytte rom-design midt i et
+  // klassekart uten å påvirke tegneflaten FØR perioden faktisk er opprettet.
+  // Perioder i samme chart_group kan trygt ha ulik room_id (se save_seating_impl
+  // og filtreringen på chartGroup, ikke room_id, i historikk/nedtrekk under).
+  const [newPeriodRoomId, setNewPeriodRoomId] = useState('');
 
   const [canvasLight, setCanvasLightState] = useState(false);
 
@@ -589,7 +595,13 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
   };
 
   const handleStartNewPeriod = async (jumpWeeks) => {
-    if (!selectedClass || !selectedRoom) return;
+    // newPeriodRoomId er tom streng som standard (= behold nåværende rom).
+    // Satt eksplisitt av rom-velgeren i "Ny periode"-modalen når læreren vil
+    // bytte rom-design for kommende perioder mens klassekartet (chartGroup)
+    // fortsetter uendret - historikk og periode-nedtrekk følger med siden de
+    // filtreres på chartGroup, ikke room_id.
+    const roomIdForNewPeriod = newPeriodRoomId || selectedRoom;
+    if (!selectedClass || !roomIdForNewPeriod) return;
     const match = chartComment.match(/Uke\s+(\d+)\s*-\s*(\d+)/i);
     let nextStart = 1;
     if (match && match[2]) {
@@ -621,17 +633,19 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
         id: null,
         name: newName,
         classId: Number(selectedClass),
-        roomId: Number(selectedRoom),
+        roomId: Number(roomIdForNewPeriod),
         placements: savePayload,
         comment: newComment,
         // Ny periode av SAMME klassekart — arver gruppen så historikk/nedtrekk
-        // henger sammen. Faller tilbake til class-gruppa for eldre kart.
+        // henger sammen, UANSETT om roomId over er byttet. Faller tilbake til
+        // class-gruppa for eldre kart.
         chartGroup: chartGroup || `c${Number(selectedClass)}`
       });
 
       const newSeatings = await window.api.getSeatings();
       setSeatings(newSeatings);
       if (result?.lastID) handleSelectSeating(result.lastID, newSeatings);
+      setNewPeriodRoomId('');
       document.getElementById('modal_new_period')?.close();
     } catch (e) {
       console.error('handleStartNewPeriod feilet', e);
@@ -868,6 +882,7 @@ export function useSeatings({ initialId, desks, setDesks, boardObj, setBoardObj,
     allStudents, unplacedStudents, setUnplacedStudents,
     showHistory, setShowHistory, historyConflicts,
     editingPeriod, setEditingPeriod, newPeriodWeeks, setNewPeriodWeeks,
+    newPeriodRoomId, setNewPeriodRoomId,
     getStudentByIdOrName, getRecentPartners,
     handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
     flipRoom, syncFromRoom,

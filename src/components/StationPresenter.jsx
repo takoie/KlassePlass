@@ -78,6 +78,27 @@ export default function StationPresenter({ onBack, initialId }) {
     resetTimer();
   };
 
+  useEffect(() => {
+    if (!session) return;
+    const onKeyDown = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === ' ') {
+        if (session.no_timer) return;
+        e.preventDefault();
+        setIsRunning(r => !r);
+      } else if (key === 'arrowright' || key === 'n') {
+        e.preventDefault();
+        goToRotation(rotationIndex + 1);
+      } else if (key === 'arrowleft' || key === 'p') {
+        e.preventDefault();
+        goToRotation(rotationIndex - 1);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [session, rotationIndex]);
+
   if (loading) {
     return <div className="flex h-full w-full items-center justify-center bg-base-300 text-base-content/50">Laster...</div>;
   }
@@ -180,6 +201,11 @@ export default function StationPresenter({ onBack, initialId }) {
         <button className="btn btn-primary" onClick={() => goToRotation(rotationIndex + 1)} disabled={isLastRotation}>
           Neste rotasjon <i className="fa-solid fa-forward-step"></i>
         </button>
+      </div>
+      <div className="pb-3 flex items-center justify-center gap-4 flex-wrap text-[11px] text-base-content/40 flex-shrink-0">
+        {!session.no_timer && <span><kbd className="kbd kbd-xs">Space</kbd> play/pause</span>}
+        <span><kbd className="kbd kbd-xs">&larr;</kbd> / <kbd className="kbd kbd-xs">P</kbd> forrige</span>
+        <span><kbd className="kbd kbd-xs">&rarr;</kbd> / <kbd className="kbd kbd-xs">N</kbd> neste</span>
       </div>
 
       {showPrintPreview && (

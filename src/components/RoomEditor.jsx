@@ -174,7 +174,7 @@ export default function RoomEditor({ onBack, initialId }) {
               >
                 <div
                   ref={canvasRef}
-                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 ${canvasIsLight ? 'bg-slate-200 border-slate-400' : 'bg-base-100 border-base-300'}`}
+                  className={`absolute rounded-2xl shadow-2xl origin-top-left border-2 transition-transform duration-300 ease-in-out ${canvasIsLight ? 'bg-slate-200 border-slate-400' : 'bg-base-100 border-base-300'}`}
                   style={{
                     width: '1100px',
                     height: '700px',
@@ -238,7 +238,7 @@ export default function RoomEditor({ onBack, initialId }) {
             <h2 className="text-lg font-bold text-base-content">Ingen rom funnet</h2>
             <p className="text-sm mb-4">Opprett ditt første klasserom for å komme i gang.</p>
             <button
-              className="btn btn-sm bg-primary hover:bg-primary/90 text-slate-950 border-none font-bold gap-2"
+              className="btn btn-sm btn-primary gap-2"
               onClick={handleOpenNewModal}
             >
               <i className="fa-solid fa-plus"></i> Nytt rom

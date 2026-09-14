@@ -31,12 +31,40 @@ export default function GroupEditor({ onBack, initialId }) {
   const [groupNames, setGroupNames] = useState([]);
   const [useCustomNames, setUseCustomNames] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [saveState, setSaveState] = useState('idle');
   const [regenerating, setRegenerating] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const nameInputRef = useRef(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [isProjectorMode, setIsProjectorMode] = useState(false);
 
   useEffect(() => { loadAssignment(); }, [initialId]);
+
+  // Speiler isProjectorMode mot native OS-fullskjerm. Samme mønster som
+  // SeatingChart.jsx (ikke som cleanup+body-par, for å unngå to overlappende
+  // setFullscreen-kall til WebView2 - se docs/plans/2026-08-20-fullskjerm-avslutt-fiks.md).
+  useEffect(() => {
+    window.api?.setFullscreen?.(isProjectorMode)
+      .catch((err) => console.error('setFullscreen feilet:', err));
+    window.dispatchEvent(new CustomEvent('toggle-projector', { detail: isProjectorMode }));
+  }, [isProjectorMode]);
+
+  // Sikkerhetsnett: går ut av native fullskjerm hvis komponenten unmountes
+  // mens prosjektorvisning er aktiv. Tom dep-array = kun ved ekte unmount.
+  useEffect(() => {
+    return () => {
+      window.api?.setFullscreen?.(false)
+        .catch((err) => console.error('setFullscreen cleanup feilet:', err));
+      window.dispatchEvent(new CustomEvent('toggle-projector', { detail: false }));
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isProjectorMode) return;
+    const handler = (e) => { if (e.key === 'Escape') setIsProjectorMode(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isProjectorMode]);
 
   useEffect(() => {
     if (editingName) focusAfterRender(nameInputRef.current);
@@ -301,12 +329,13 @@ export default function GroupEditor({ onBack, initialId }) {
     };
   }, []);
 
-  // `notify` bekrefter en vellykket lagring med én toast. Autolagringen og det
-  // manuelle "Lagre"-trykket deler samme toast-key, så det blir ÉN "Lagret."-
-  // toast som friskes opp – ikke en stabel med bokser i hjørnet ved hver lille
-  // endring. "Gå tilbake" lagrer stille. Feil vises alltid.
-  const handleSave = async ({ notify = false } = {}) => {
+  // Autolagring er alltid på (se useEffect under) — denne funksjonen gjør selve
+  // lagringen og driver "Lagrer …/Lagret"-indikatoren i toppbaren. Feil vises
+  // alltid som toast; vellykket lagring vises kun i indikatoren, ikke som toast,
+  // så det ikke dukker opp en boks i hjørnet ved hver lille endring.
+  const handleSave = async () => {
     if (!assignmentId) return;
+    setSaveState('saving');
     try {
       const groupsPayload = groups.map((studentIds, i) => ({
         groupNumber: i + 1, studentIds,
@@ -320,8 +349,9 @@ export default function GroupEditor({ onBack, initialId }) {
       const pairs = buildGroupPairs(groups, studentsById);
       await window.api.saveGroupHistory({ classId, assignmentId, pairs });
       setDirty(false);
-      if (notify) showToast('Lagret.', 'success', { key: 'group-save' });
+      setSaveState('saved');
     } catch (e) {
+      setSaveState('idle');
       showToast('Kunne ikke lagre.', 'error', { key: 'group-save' });
     }
   };
@@ -329,7 +359,7 @@ export default function GroupEditor({ onBack, initialId }) {
   // Autolagring: lagre et lite øyeblikk etter siste endring, i stedet for å kreve manuelt trykk.
   useEffect(() => {
     if (!dirty || !assignmentId || loading) return;
-    const timer = setTimeout(() => { handleSave({ notify: true }); }, 1200);
+    const timer = setTimeout(() => { handleSave(); }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dirty, name, groups, groupNames, useCustomNames, leaderIds, lockedIds, excludedIds, useConstraints, avoidLastN, requireLeaders]);
@@ -366,7 +396,8 @@ export default function GroupEditor({ onBack, initialId }) {
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden relative">
+      {!isProjectorMode && (
       <div className="bg-base-200 border-b border-base-300 z-20 flex-shrink-0">
         <div className="px-4 py-2 grid grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -405,8 +436,13 @@ export default function GroupEditor({ onBack, initialId }) {
             <button className="btn btn-sm btn-ghost text-base-content/60 hover:text-base-content gap-2" onClick={() => setShowPrintPreview(true)}>
               <i className="fa-solid fa-print"></i> Skriv ut / PDF
             </button>
-            <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={() => handleSave({ notify: true })}>
-              <i className="fa-solid fa-floppy-disk"></i> Lagre
+            {(saveState === 'saving' || saveState === 'saved') && (
+              <span className="text-[11px] text-base-content/40 flex items-center gap-1.5 px-1" aria-live="polite">
+                {saveState === 'saving' ? (<><i className="fa-solid fa-spinner fa-spin"></i> Lagrer …</>) : (<><i className="fa-solid fa-check text-success"></i> Lagret</>)}
+              </span>
+            )}
+            <button className="btn btn-sm bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30 gap-2" onClick={() => setIsProjectorMode(true)}>
+              <i className="fa-solid fa-expand"></i> Prosjektor-modus
             </button>
             <button className="btn btn-ghost text-red-400 hover:bg-red-950/40 btn-xs" onClick={() => document.getElementById('modal_delete_group_assignment')?.showModal()}>
               <i className="fa-solid fa-trash"></i>
@@ -414,57 +450,70 @@ export default function GroupEditor({ onBack, initialId }) {
           </div>
         </div>
 
-        <div className="px-4 pb-2 flex items-center gap-2 flex-wrap">
+        <div className="px-4 pb-2 flex items-center gap-1.5 flex-wrap">
           <button
-            className={`btn btn-sm gap-2 ${useCustomNames ? 'bg-fuchsia-500/20 text-fuchsia-300 border-none hover:bg-fuchsia-500/30' : 'btn-outline border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content'}`}
+            className={`btn btn-xs rounded-full font-bold gap-1.5 ${useCustomNames ? 'bg-fuchsia-500 border-fuchsia-500 text-white hover:bg-fuchsia-500' : 'btn-ghost border border-base-300 text-base-content/70'}`}
             onClick={toggleCustomNames}
             title="Bytt mellom nummererte og egendefinerte gruppenavn"
           >
-            <i className="fa-solid fa-pen"></i> Egendefinerte navn
+            <i className="fa-solid fa-pen text-[10px]"></i> Egendefinerte navn
           </button>
-          <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content gap-2" onClick={addGroup}>
-            <i className="fa-solid fa-plus"></i> Legg til gruppe
+          <button className="btn btn-xs rounded-full font-bold gap-1.5 btn-ghost border border-base-300 text-base-content/70 hover:border-fuchsia-400 hover:text-fuchsia-300" onClick={addGroup}>
+            <i className="fa-solid fa-plus text-[10px]"></i> Legg til gruppe
           </button>
-          <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 hover:text-base-content gap-2" onClick={handleRegenerate} disabled={regenerating}>
-            <i className={`fa-solid fa-shuffle ${regenerating ? 'fa-spin' : ''}`}></i> Generer på nytt
+          <button className="btn btn-xs rounded-full font-bold gap-1.5 btn-ghost border border-base-300 text-base-content/70 hover:border-fuchsia-400 hover:text-fuchsia-300" onClick={handleRegenerate} disabled={regenerating}>
+            <i className={`fa-solid fa-shuffle text-[10px] ${regenerating ? 'fa-spin' : ''}`}></i> Generer på nytt
           </button>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-base-300 bg-base-100/60 flex-shrink-0 whitespace-nowrap">
+          <div className="flex items-center gap-1 pl-2 pr-1 py-1 rounded-full border border-base-300 bg-base-100/60 flex-shrink-0 whitespace-nowrap">
             <span className="text-[10px] uppercase tracking-wide font-bold text-base-content/50 pl-1 flex items-center gap-1">
               <i className="fa-solid fa-star text-amber-400"></i> Leder
             </span>
-            <button className="btn btn-xs btn-ghost text-base-content/80 hover:bg-base-200 gap-1" onClick={rotateLeaders} title="Roter lederen videre til neste elev i hver gruppe">
-              <i className="fa-solid fa-rotate"></i> Roter
+            <button className="btn btn-xs rounded-full btn-ghost text-base-content/80 hover:bg-base-200 gap-1" onClick={rotateLeaders} title="Roter lederen videre til neste elev i hver gruppe">
+              <i className="fa-solid fa-rotate text-[10px]"></i> Roter
             </button>
-            <button className="btn btn-xs btn-ghost text-base-content/80 hover:bg-base-200 gap-1" onClick={randomizeLeaders} title="Velg tilfeldig leder i hver gruppe">
-              <i className="fa-solid fa-dice"></i> Tilfeldig
+            <button className="btn btn-xs rounded-full btn-ghost text-base-content/80 hover:bg-base-200 gap-1" onClick={randomizeLeaders} title="Velg tilfeldig leder i hver gruppe">
+              <i className="fa-solid fa-dice text-[10px]"></i> Tilfeldig
             </button>
           </div>
         </div>
       </div>
+      )}
+
+      {isProjectorMode && (
+        <>
+          <div className="fixed top-4 left-4 z-[9999] flex items-center gap-2 bg-base-200/95 border border-base-300 rounded-xl shadow-2xl px-3.5 py-2.5">
+            <span className="text-sm font-bold text-base-content">{name || 'Uten navn'}</span>
+            <span className="text-[10px] font-bold uppercase opacity-50 text-base-content/60">{className}</span>
+          </div>
+          <button className="fixed top-4 right-4 z-[9999] btn btn-error shadow-2xl animate-pulse" onClick={() => setIsProjectorMode(false)}>
+            Avslutt prosjektorvisning
+          </button>
+        </>
+      )}
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(220px, 1fr))` }}>
+        <div className={`flex-1 overflow-y-auto ${isProjectorMode ? 'p-10' : 'p-6'}`}>
+          <div className="grid" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${isProjectorMode ? 280 : 220}px, 1fr))`, gap: isProjectorMode ? '1.5rem' : '1rem' }}>
             {groups.map((studentIds, idx) => {
               const color = GROUP_COLORS[idx % GROUP_COLORS.length];
               return (
                 <GroupPanel key={idx} idx={idx} color={color}>
-                  <div className="px-4 py-2.5 flex items-center justify-between gap-2" style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
+                  <div className={`flex items-center justify-between gap-2 ${isProjectorMode ? 'px-5 py-4' : 'px-4 py-2.5'}`} style={{ backgroundColor: `${color}22`, borderBottom: `2px solid ${color}` }}>
                     {useCustomNames ? (
                       <input
                         type="text"
                         value={groupNames[idx] || ''}
                         onChange={(e) => updateGroupName(idx, e.target.value)}
                         placeholder={`Gruppe ${idx + 1}`}
-                        className="font-bold text-sm bg-transparent border-b border-transparent hover:border-base-300 focus:border-current focus:outline-none min-w-0 flex-1"
+                        className={`font-bold bg-transparent border-b border-transparent hover:border-base-300 focus:border-current focus:outline-none min-w-0 flex-1 ${isProjectorMode ? 'text-xl' : 'text-sm'}`}
                         style={{ color }}
                       />
                     ) : (
-                      <span className="font-bold text-sm" style={{ color }}>Gruppe {idx + 1}</span>
+                      <span className={`font-bold ${isProjectorMode ? 'text-xl' : 'text-sm'}`} style={{ color }}>Gruppe {idx + 1}</span>
                     )}
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs text-base-content/60">{studentIds.length} elever</span>
-                      {studentIds.length === 0 && groups.length > 1 && (
+                      <span className={`text-base-content/60 ${isProjectorMode ? 'text-sm' : 'text-xs'}`}>{studentIds.length} elever</span>
+                      {!isProjectorMode && studentIds.length === 0 && groups.length > 1 && (
                         <button
                           className="text-base-content/60 hover:text-red-400 transition-colors"
                           title="Fjern tom gruppe"
@@ -475,7 +524,7 @@ export default function GroupEditor({ onBack, initialId }) {
                       )}
                     </div>
                   </div>
-                  <div className="p-2 flex flex-col gap-1.5 flex-1">
+                  <div className={`flex flex-col flex-1 ${isProjectorMode ? 'p-3 gap-2.5' : 'p-2 gap-1.5'}`}>
                     {studentIds.length === 0 && (
                       <p className="text-xs text-base-content/50 italic text-center py-3">Ingen elever</p>
                     )}
@@ -489,6 +538,7 @@ export default function GroupEditor({ onBack, initialId }) {
                           student={student}
                           isLeader={leaderIds.includes(sid)}
                           isLocked={lockedIds.includes(sid)}
+                          large={isProjectorMode}
                           onContextMenu={(e) => handleStudentContextMenu(e, sid, idx)}
                         />
                       );
@@ -499,12 +549,14 @@ export default function GroupEditor({ onBack, initialId }) {
             })}
           </div>
 
-          <ExcludedZone
-            studentIds={excludedIds}
-            studentsById={studentsById}
-            onContextMenu={(e, sid) => handleStudentContextMenu(e, sid, null)}
-            onIncludeAll={() => excludedIds.forEach(id => includeStudent(id))}
-          />
+          {!isProjectorMode && (
+            <ExcludedZone
+              studentIds={excludedIds}
+              studentsById={studentsById}
+              onContextMenu={(e, sid) => handleStudentContextMenu(e, sid, null)}
+              onIncludeAll={() => excludedIds.forEach(id => includeStudent(id))}
+            />
+          )}
         </div>
         <DragOverlay>
           {activeDragId ? (
@@ -567,7 +619,7 @@ export default function GroupEditor({ onBack, initialId }) {
   );
 }
 
-function StudentCard({ sid, student, isLeader, isLocked, onContextMenu }) {
+function StudentCard({ sid, student, isLeader, isLocked, large, onContextMenu }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: sid });
   return (
     <div
@@ -575,14 +627,14 @@ function StudentCard({ sid, student, isLeader, isLocked, onContextMenu }) {
       {...listeners}
       {...attributes}
       onContextMenu={onContextMenu}
-      className="flex items-center justify-between gap-2 bg-surface-field rounded-lg px-2.5 py-1.5 cursor-grab select-none touch-none"
+      className={`flex items-center justify-between gap-2 bg-surface-field rounded-lg cursor-grab select-none touch-none ${large ? 'px-4 py-3' : 'px-2.5 py-1.5'}`}
       style={{ opacity: isDragging ? 0.4 : 1 }}
     >
-      <span className="text-sm text-base-content truncate flex items-center gap-1.5">
-        {isLeader && <i className="fa-solid fa-star text-amber-400 text-[10px]"></i>}
+      <span className={`text-base-content truncate flex items-center gap-1.5 ${large ? 'text-lg' : 'text-sm'}`}>
+        {isLeader && <i className={`fa-solid fa-star text-amber-400 ${large ? 'text-xs' : 'text-[10px]'}`}></i>}
         {student.name}
       </span>
-      {isLocked && <i className="fa-solid fa-lock text-red-400 text-[10px]" title="Låst"></i>}
+      {isLocked && <i className={`fa-solid fa-lock text-red-400 ${large ? 'text-xs' : 'text-[10px]'}`} title="Låst (høyreklikk for å låse opp)"></i>}
     </div>
   );
 }

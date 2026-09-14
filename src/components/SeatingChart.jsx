@@ -123,6 +123,7 @@ export default function SeatingChart({ onBack, initialId }) {
     allStudents, unplacedStudents, setUnplacedStudents,
     showHistory, setShowHistory, historyConflicts,
     editingPeriod, setEditingPeriod, newPeriodWeeks, setNewPeriodWeeks,
+    newPeriodRoomId, setNewPeriodRoomId,
     getStudentByIdOrName, getRecentPartners,
     handleSelectSeating, handleStartNewPeriod, handleSaveEditedPeriod, handleDelete,
     flipRoom, syncFromRoom,
@@ -875,6 +876,8 @@ export default function SeatingChart({ onBack, initialId }) {
         setEditingPeriod={setEditingPeriod}
         handleSaveEditedPeriod={handleSaveEditedPeriod}
         newPeriodWeeks={newPeriodWeeks} setNewPeriodWeeks={setNewPeriodWeeks} handleStartNewPeriod={handleStartNewPeriod}
+        rooms={rooms} selectedRoom={selectedRoom}
+        newPeriodRoomId={newPeriodRoomId} setNewPeriodRoomId={setNewPeriodRoomId}
         canSplitChart={chartPeriodCount > 1} splitToNewChart={splitToNewChart}
         syncFromRoom={syncFromRoom}
         restoreToOpen={restoreToOpen}

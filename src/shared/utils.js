@@ -2,6 +2,16 @@
  * Generelle hjelpefunksjoner.
  */
 
+/** Returnerer inneværende ISO 8601-ukenummer (1-53) for dagens dato. */
+export function getCurrentIsoWeek() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const firstThursday = new Date(d.getFullYear(), 0, 4);
+  firstThursday.setDate(firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7));
+  return 1 + Math.round((d - firstThursday) / (7 * 24 * 60 * 60 * 1000));
+}
+
 /** Generer en enkel UUID (ikke kryptografisk sikker, men god nok for desk IDs) */
 export function uid() {
   return crypto.randomUUID

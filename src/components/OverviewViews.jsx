@@ -1,18 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import CreateGroupModal from './GroupWork/CreateGroupModal';
 import { ExportModal, ImportModal } from './DataTransfer/ExportImportModal';
-import { showToast } from '../shared/utils';
+import { showToast, getCurrentIsoWeek } from '../shared/utils';
+import { useIsLightTheme } from '../shared/theme';
 import Select from './Select';
 
 // Navngitte aksentfarger per modul. Kortet får identitet fra denne ene fargen
 // (ikonflis, hover-kant, pil-fyll, info-ikoner) i stedet for at alt tegnes i
-// temaets primærfarge. Rå hex godtas også.
+// temaets primærfarge. Rå hex godtas også. Verdiene under er valgt for mørk
+// bunnfarge (base-100/200 er nesten svart i de mørke temaene).
 const CARD_ACCENTS = {
   emerald: '#34d399',
   violet: '#a78bfa',
   sky: '#38bdf8',
   indigo: '#818cf8',
   amber: '#fbbf24',
+};
+
+// Overstyring for lyse temaer (base-100/200 er hvit/nesten-hvit der) - kun for
+// aksenter som faktisk trenger det. "sky" i mørk-modus-fargen leser nesten som
+// hvitt på hvit bunn (kontrast ~1.9:1); #0369a1 gir ~5.9:1 og beholder samme
+// blå identitet.
+const CARD_ACCENTS_LIGHT = {
+  sky: '#0369a1',
+};
+
+const useAccentColor = (accent) => {
+  const isLight = useIsLightTheme();
+  return (isLight && CARD_ACCENTS_LIGHT[accent]) || CARD_ACCENTS[accent] || accent;
 };
 
 const hexToRgbTriplet = (hex) => {
@@ -28,7 +43,7 @@ export const cardActionBtnClass =
   'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[rgb(var(--ca-rgb)/0.6)]';
 
 export const Card = ({ title, badgeText, accent = 'sky', infoList = [], icon, onClick, onDelete, actions }) => {
-  const accentColor = CARD_ACCENTS[accent] || accent;
+  const accentColor = useAccentColor(accent);
   const handleKeyDown = (e) => {
     if (onClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick(); }
   };
@@ -116,32 +131,35 @@ export const ConfirmDeleteModal = ({ isOpen, title, itemName, onConfirm, onCance
   );
 };
 
-export const PageLayout = ({ title, icon, accent = 'emerald', onAdd, onImport, children }) => (
-  <div className="h-full flex flex-col p-8 module-content-bg overflow-y-auto">
-    <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-base-300">
-      <div className="flex items-center gap-3">
-        <i className={`${icon} text-2xl`} style={{ color: CARD_ACCENTS[accent] || accent }}></i>
-        <h1 className="text-3xl font-extrabold text-base-content tracking-tight">{title}</h1>
-      </div>
-      <div className="flex items-center gap-2">
-        {onImport && (
-          <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 gap-2" onClick={onImport}>
-            <i className="fa-solid fa-file-import"></i> Importer
+export const PageLayout = ({ title, icon, accent = 'emerald', onAdd, onImport, children }) => {
+  const accentColor = useAccentColor(accent);
+  return (
+    <div className="h-full flex flex-col p-8 module-content-bg overflow-y-auto">
+      <div className="max-w-6xl mx-auto w-full flex justify-between items-center mb-8 pb-4 border-b border-base-300">
+        <div className="flex items-center gap-3">
+          <i className={`${icon} text-2xl`} style={{ color: accentColor }}></i>
+          <h1 className="text-3xl font-extrabold text-base-content tracking-tight">{title}</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          {onImport && (
+            <button className="btn btn-sm btn-outline border-base-300 text-base-content/80 hover:bg-base-200 gap-2" onClick={onImport}>
+              <i className="fa-solid fa-file-import"></i> Importer
+            </button>
+          )}
+          <button className="btn btn-sm btn-primary gap-2" onClick={onAdd}>
+            <i className="fa-solid fa-plus"></i> Opprett ny
           </button>
-        )}
-        <button className="btn btn-sm bg-primary hover:bg-primary/90 text-slate-950 border-none font-bold gap-2 shadow-lg shadow-emerald-950/40" onClick={onAdd}>
-          <i className="fa-solid fa-plus"></i> Opprett ny
-        </button>
+        </div>
       </div>
-    </div>
 
-    <div className="max-w-6xl mx-auto w-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {children}
+      <div className="max-w-6xl mx-auto w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /** Tom-tilstand for en oversiktsliste - ikon, forklarende linje og en CTA rett til handlingen. */
 export const EmptyState = ({ icon, text, ctaLabel, onCta }) => (
@@ -149,7 +167,7 @@ export const EmptyState = ({ icon, text, ctaLabel, onCta }) => (
     <i className={`${icon} text-4xl mb-3 opacity-30`}></i>
     <p className="text-sm mb-4">{text}</p>
     {onCta && (
-      <button className="btn btn-sm bg-primary hover:bg-primary/90 text-slate-950 border-none font-bold gap-2" onClick={onCta}>
+      <button className="btn btn-sm btn-primary gap-2" onClick={onCta}>
         <i className="fa-solid fa-plus"></i> {ctaLabel}
       </button>
     )}
@@ -310,6 +328,7 @@ const suggestCopyName = (base, existing) => {
 
 export const RoomsOverview = ({ onEdit, onAdd }) => {
   const [rooms, setRooms] = useState([]);
+  const [seatings, setSeatings] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [exportTarget, setExportTarget] = useState(null); // { id, name } | null
   const [duplicateTarget, setDuplicateTarget] = useState(null); // rom som skal dupliseres
@@ -326,13 +345,33 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
     document.getElementById('modal_duplicate_room')?.showModal();
   };
 
-  useEffect(() => { loadRooms(); }, []);
+  useEffect(() => { loadRooms(); loadSeatings(); }, []);
 
   const loadRooms = async () => {
     try { setRooms(await window.api.getRooms()); } catch (e) {
       showToast('Kunne ikke hente rommene.', 'error');
     }
   };
+
+  const loadSeatings = async () => {
+    // Stille feil - romkortene viser bare uten brukstall dersom dette feiler.
+    try { setSeatings(await window.api.getSeatings()); } catch (e) {}
+  };
+
+  // Antall klassekart (ikke periode-rader) som bruker hvert rom. Et klassekart
+  // med flere perioder i samme rom skal kun telle som én bruk av det rommet -
+  // derfor grupperes periode-radene til klassekart (buildCharts) først, og
+  // rommene et klassekart har brukt telles unikt per klassekart.
+  const roomUsageCounts = React.useMemo(() => {
+    const counts = new Map();
+    for (const chart of buildCharts(seatings)) {
+      const roomIdsUsed = new Set(chart.periods.map(p => p.room_id).filter(id => id != null));
+      for (const roomId of roomIdsUsed) {
+        counts.set(roomId, (counts.get(roomId) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [seatings]);
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -386,13 +425,15 @@ export const RoomsOverview = ({ onEdit, onAdd }) => {
           const desks = JSON.parse(rm.layout_data || '{}').desks || [];
           seatCount = desks.reduce((sum, d) => sum + (d.capacity || 1), 0);
         } catch(e){}
+        const usageCount = roomUsageCounts.get(rm.id) || 0;
         return (
           <Card
             key={rm.id}
             title={rm.name}
             accent="violet"
             infoList={[
-              { icon: 'fa-solid fa-chair', text: `${seatCount} ${seatCount === 1 ? 'plass' : 'plasser'}` }
+              { icon: 'fa-solid fa-chair', text: `${seatCount} ${seatCount === 1 ? 'plass' : 'plasser'}` },
+              { icon: 'fa-solid fa-users-rectangle', text: `Brukt i ${usageCount} klassekart` }
             ]}
             icon="fa-solid fa-school"
             onClick={() => onEdit(rm.id)}
@@ -534,7 +575,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedRoom, setSelectedRoom] = useState('');
   const [chartName, setChartName] = useState('');
-  const [startWeek, setStartWeek] = useState(1);
+  const [startWeek, setStartWeek] = useState(getCurrentIsoWeek);
   const [periodWeeks, setPeriodWeeks] = useState(4);
 
   useEffect(() => {
@@ -583,7 +624,7 @@ export const SeatingOverview = ({ onEdit, onAdd }) => {
 
   const handleOpenCreate = () => {
     setChartName('');
-    setStartWeek(1);
+    setStartWeek(getCurrentIsoWeek());
     setPeriodWeeks(4);
     const modal = document.getElementById('modal_create_seating');
     if (modal) modal.showModal();

@@ -17,7 +17,7 @@ const TONES = {
   ghost: 'border-transparent text-base-content/60 hover:text-base-content hover:bg-base-300',
   neutral: 'border-base-300 text-base-content hover:text-base-content hover:bg-base-300',
   primary: 'border-primary/40 text-primary hover:bg-primary/10',
-  danger: 'border-error/40 text-error hover:bg-error/10',
+  danger: 'border-transparent text-error/70 hover:text-error hover:bg-error/10',
 };
 
 /** Ensartet header-knapp: samme boks-høyde som nedtrekksmenyene, litt mindre tekst. */

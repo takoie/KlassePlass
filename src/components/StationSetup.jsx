@@ -6,6 +6,9 @@ import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDragg
 import PrintPreviewModal from './Print/PrintPreviewModal';
 import { GROUP_COLORS } from './StationPresenter';
 
+const QUICK_STATION_NAMES = ['Lesing', 'Skriving', 'Spill', 'Lærerstasjon'];
+const TIME_PRESETS = [5, 10, 15, 20];
+
 /** Enkel round-robin rotasjonsplan: steps[rotasjon][stasjon] = gruppeindeks. */
 function buildRotationPlan(numGroups, numStations) {
   const steps = [];
@@ -92,6 +95,11 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const [classDraft, setClassDraft] = useState('');
   const nameModalInputRef = useRef(null);
   const hasAutoOpenedNameModalRef = useRef(false);
+  const [timerMode, setTimerMode] = useState('preset');
+  const [previousSession, setPreviousSession] = useState(null);
+  const newStationInputRef = useRef(null);
+  const [pendingFocusNew, setPendingFocusNew] = useState(false);
+  const [newStationDraft, setNewStationDraft] = useState('');
 
   useEffect(() => { loadInitial(); }, [initialId]);
 
@@ -101,6 +109,14 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     if (el) el.focus();
     setPendingFocusId(null);
   }, [stations, pendingFocusId]);
+
+  useEffect(() => {
+    if (!pendingFocusNew) return;
+    newStationInputRef.current?.focus();
+    setPendingFocusNew(false);
+  }, [stations, pendingFocusNew]);
+
+  const skipNextAutosaveRef = useRef(true);
 
   const distributeStudentsIntoGroups = (
     studentsList = allStudents,
@@ -152,6 +168,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
 
   const loadInitial = async () => {
     setLoading(true);
+    skipNextAutosaveRef.current = true;
     try {
       const cls = await window.api.getClasses();
       setClasses(cls || []);
@@ -162,9 +179,12 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           setSessionId(s.id);
           setName(s.name);
           setClassId(s.class_id);
-          setMinutesPerStation(s.minutes_per_station ?? 10);
-          setSecondsPerStation(s.seconds_per_station ?? 0);
+          const mins = s.minutes_per_station ?? 10;
+          const secs = s.seconds_per_station ?? 0;
+          setMinutesPerStation(mins);
+          setSecondsPerStation(secs);
           setNoTimer(!!s.no_timer);
+          setTimerMode(TIME_PRESETS.includes(mins) && secs === 0 ? 'preset' : 'custom');
           let parsedStations = [];
           try { parsedStations = JSON.parse(s.stations || '[]'); setStations(parsedStations); } catch (e) {}
           let parsedGroups = [];
@@ -206,6 +226,50 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     if (loadedStudents && loadedStudents.length > 0) {
       distributeStudentsIntoGroups(loadedStudents, stations.length, [], []);
     }
+    loadPreviousSessionForClass(cid);
+  };
+
+  const loadPreviousSessionForClass = async (cid) => {
+    if (!cid) { setPreviousSession(null); return; }
+    try {
+      const all = await window.api.getStationSessions();
+      const forClass = (all || [])
+        .filter(s => s.class_id === cid && s.id !== sessionId)
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setPreviousSession(forClass[0] || null);
+    } catch (e) {
+      setPreviousSession(null);
+    }
+  };
+
+  const applyPreviousSession = () => {
+    if (!previousSession) return;
+    let prevStations = [], prevMinutes = 10, prevSeconds = 0, prevNoTimer = false;
+    try { prevStations = JSON.parse(previousSession.stations || '[]'); } catch (e) {}
+    prevMinutes = previousSession.minutes_per_station ?? 10;
+    prevSeconds = previousSession.seconds_per_station ?? 0;
+    prevNoTimer = !!previousSession.no_timer;
+    if (prevStations.length === 0) return;
+
+    const nextStations = prevStations.map(s => ({
+      id: newStationId(),
+      name: s.name || '',
+      note: s.note || '',
+      isTeacher: !!s.isTeacher,
+    }));
+    setStations(nextStations);
+    setMinutesPerStation(prevMinutes);
+    setSecondsPerStation(prevSeconds);
+    setNoTimer(prevNoTimer);
+    setTimerMode(TIME_PRESETS.includes(prevMinutes) && prevSeconds === 0 ? 'preset' : 'custom');
+    setLockedIds([]);
+    if (allStudents.length > 0) {
+      distributeStudentsIntoGroups(allStudents, nextStations.length, [], []);
+    } else {
+      setGroups(Array.from({ length: nextStations.length }, () => []));
+      setGroupLeaders(Array.from({ length: nextStations.length }, () => null));
+    }
+    setPreviousSession(null);
   };
 
   const loadStudentsForClass = async (cid) => {
@@ -234,13 +298,14 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       setGroups(Array.from({ length: stations.length }, () => []));
       setGroupLeaders(Array.from({ length: stations.length }, () => null));
     }
+    if (!sessionId) loadPreviousSessionForClass(numericCid);
   };
 
-  const addStation = () => {
-    const st = { id: newStationId(), name: '', isTeacher: false, note: '' };
+  const addStation = (name = '') => {
+    const st = { id: newStationId(), name, isTeacher: false, note: '' };
     const nextStations = [...stations, st];
     setStations(nextStations);
-    setPendingFocusId(st.id);
+    if (name) setPendingFocusNew(true); else setPendingFocusId(st.id);
     if (allStudents.length > 0) {
       distributeStudentsIntoGroups(allStudents, nextStations.length, lockedIds, groups);
     } else {
@@ -265,6 +330,40 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     if (s.id !== id) return field === 'isTeacher' && value ? { ...s, isTeacher: false } : s;
     return { ...s, [field]: value };
   }));
+
+  const handleStationNameKeyDown = (e, idx, id) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const next = stations[idx + 1];
+      if (next) {
+        nameInputRefs.current[next.id]?.focus();
+      } else {
+        newStationInputRef.current?.focus();
+      }
+    } else if (e.key === 'Backspace' && e.currentTarget.value === '' && idx > 0 && stations.length > 2) {
+      e.preventDefault();
+      const prev = stations[idx - 1];
+      removeStation(id);
+      if (prev) setPendingFocusId(prev.id);
+    }
+  };
+
+  const handleNewStationKeyDown = (e) => {
+    if (e.key === 'Enter' && newStationDraft.trim()) {
+      e.preventDefault();
+      addStation(newStationDraft.trim());
+      setNewStationDraft('');
+    }
+  };
+
+  const selectTimerPreset = (mins) => {
+    setNoTimer(false);
+    setTimerMode('preset');
+    setMinutesPerStation(mins);
+    setSecondsPerStation(0);
+  };
+  const selectCustomTimer = () => { setNoTimer(false); setTimerMode('custom'); };
+  const selectNoTimer = () => { setNoTimer(true); setTimerMode('preset'); };
 
   const handleRandomize = () => {
     if (allStudents.length === 0) return;
@@ -318,29 +417,64 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
   const validStations = stations.filter(s => s.name.trim());
   const canSave = name.trim() && classId && validStations.length >= 2 && (noTimer || minutesPerStation * 60 + secondsPerStation > 0);
 
+  const performSave = async () => {
+    const rotationPlan = buildRotationPlan(groups.length, validStations.length);
+    const result = await window.api.saveStationSession({
+      id: sessionId,
+      name: name.trim(),
+      classId,
+      stations: validStations,
+      groups,
+      groupLeaders,
+      rotationPlan,
+      minutesPerStation,
+      secondsPerStation,
+      noTimer,
+    });
+    const id = sessionId || result?.lastID || null;
+    if (!sessionId && result?.lastID) setSessionId(result.lastID);
+    return id;
+  };
+
   const handleSave = async () => {
     if (!canSave) return;
     setSaveState('saving');
     try {
-      const rotationPlan = buildRotationPlan(groups.length, validStations.length);
-      const result = await window.api.saveStationSession({
-        id: sessionId,
-        name: name.trim(),
-        classId,
-        stations: validStations,
-        groups,
-        groupLeaders,
-        rotationPlan,
-        minutesPerStation,
-        secondsPerStation,
-        noTimer,
-      });
-      if (!sessionId && result?.lastID) setSessionId(result.lastID);
+      await performSave();
       setSaveState('saved');
     } catch (e) {
       setSaveState('idle');
     }
   };
+
+  const handleStartSession = async () => {
+    if (!canSave) return;
+    setSaveState('saving');
+    try {
+      const id = await performSave();
+      setSaveState('saved');
+      if (id) onStartPresenting(id);
+    } catch (e) {
+      setSaveState('idle');
+    }
+  };
+
+  const handleBack = async () => {
+    if (canSave) await handleSave();
+    onBack();
+  };
+
+  const autosaveKey = JSON.stringify({ name, classId, stations, groups, groupLeaders, minutesPerStation, secondsPerStation, noTimer });
+
+  useEffect(() => {
+    if (loading) return;
+    if (skipNextAutosaveRef.current) { skipNextAutosaveRef.current = false; return; }
+    if (!canSave) return;
+    setSaveState('saving');
+    const t = setTimeout(() => { handleSave(); }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosaveKey, loading]);
 
   if (loading) {
     return <div className="flex h-full items-center justify-center text-base-content/50">Laster...</div>;
@@ -350,7 +484,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
     <div className="flex flex-col h-full w-full bg-base-100 overflow-hidden">
       <div className="px-4 py-2 bg-base-200 border-b border-base-300 flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10 flex-shrink-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <button className="btn btn-ghost btn-sm text-base-content/60 hover:text-base-content gap-1" onClick={onBack}>
+          <button className="btn btn-ghost btn-sm text-base-content/60 hover:text-base-content gap-1" onClick={handleBack}>
             <i className="fa-solid fa-arrow-left"></i> Tilbake
           </button>
           <input
@@ -379,14 +513,13 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           >
             <i className="fa-solid fa-print"></i> Skriv ut / PDF
           </button>
-          {sessionId && (
-            <button className="btn btn-sm bg-orange-500/20 text-orange-300 border-none hover:bg-orange-500/30 gap-2" onClick={() => onStartPresenting(sessionId)}>
-              <i className="fa-solid fa-play"></i> Start økt
-            </button>
+          {(saveState === 'saving' || (saveState === 'saved' && sessionId)) && (
+            <span className="text-[11px] text-base-content/40 flex items-center gap-1.5 px-1" aria-live="polite">
+              {saveState === 'saving' ? (<><i className="fa-solid fa-spinner fa-spin"></i> Lagrer …</>) : (<><i className="fa-solid fa-check text-success"></i> Lagret</>)}
+            </span>
           )}
-          <button className="btn btn-sm bg-primary/20 text-primary border-none hover:bg-primary/30 gap-2" onClick={handleSave} disabled={!canSave || saveState === 'saving'}>
-            {saveState === 'saving' ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-floppy-disk"></i>}
-            Lagre
+          <button className="btn btn-sm bg-orange-500/20 text-orange-300 border-none hover:bg-orange-500/30 gap-2" onClick={handleStartSession} disabled={!canSave || saveState === 'saving'}>
+            <i className="fa-solid fa-play"></i> Start økt
           </button>
         </div>
       </div>
@@ -395,39 +528,58 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
       <div className="p-6 flex flex-col gap-6 max-w-4xl mx-auto">
         <div className="bg-base-200 border border-base-300 rounded-2xl p-5">
           <label className="text-xs font-bold uppercase opacity-50 text-base-content/60 mb-2 block">Tid per stasjon</label>
-          <div className="flex items-end gap-4 flex-wrap">
-            <div className={`flex items-end gap-2 transition-opacity ${noTimer ? 'opacity-40' : ''}`}>
-              <div>
-                <span className="text-[10px] text-base-content/50 block mb-1">Minutter</span>
-                <input
-                  type="number" min="0" max="60"
-                  disabled={noTimer}
-                  className="input input-bordered input-sm w-20 bg-surface-field border-base-300 text-base-content disabled:cursor-not-allowed"
-                  value={minutesPerStation}
-                  onChange={(e) => setMinutesPerStation(Math.max(0, Number(e.target.value)))}
-                />
+          <div className="flex items-center gap-2 flex-wrap">
+            {TIME_PRESETS.map(m => {
+              const active = !noTimer && timerMode === 'preset' && minutesPerStation === m && secondsPerStation === 0;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => selectTimerPreset(m)}
+                  className={`btn btn-xs rounded-full font-bold ${active ? 'bg-orange-500 border-orange-500 text-white hover:bg-orange-500' : 'btn-ghost border border-base-300 text-base-content/70'}`}
+                >
+                  {m} min
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={selectCustomTimer}
+              className={`btn btn-xs rounded-full font-bold ${!noTimer && timerMode === 'custom' ? 'bg-orange-500 border-orange-500 text-white hover:bg-orange-500' : 'btn-ghost border border-base-300 text-base-content/70'}`}
+            >
+              Egendefinert
+            </button>
+            <button
+              type="button"
+              onClick={selectNoTimer}
+              className={`btn btn-xs rounded-full font-bold ${noTimer ? 'bg-orange-500 border-orange-500 text-white hover:bg-orange-500' : 'btn-ghost border border-base-300 text-base-content/70'}`}
+            >
+              Ingen tidtaker
+            </button>
+
+            {!noTimer && timerMode === 'custom' && (
+              <div className="flex items-end gap-2 ml-2">
+                <div>
+                  <span className="text-[10px] text-base-content/50 block mb-1">Minutter</span>
+                  <input
+                    type="number" min="0" max="60"
+                    className="input input-bordered input-sm w-20 bg-surface-field border-base-300 text-base-content"
+                    value={minutesPerStation}
+                    onChange={(e) => setMinutesPerStation(Math.max(0, Number(e.target.value)))}
+                  />
+                </div>
+                <span className="text-base-content/50 pb-1.5">:</span>
+                <div>
+                  <span className="text-[10px] text-base-content/50 block mb-1">Sekunder</span>
+                  <input
+                    type="number" min="0" max="59" step="5"
+                    className="input input-bordered input-sm w-20 bg-surface-field border-base-300 text-base-content"
+                    value={secondsPerStation}
+                    onChange={(e) => setSecondsPerStation(Math.min(59, Math.max(0, Number(e.target.value))))}
+                  />
+                </div>
               </div>
-              <span className="text-base-content/50 pb-1.5">:</span>
-              <div>
-                <span className="text-[10px] text-base-content/50 block mb-1">Sekunder</span>
-                <input
-                  type="number" min="0" max="59" step="5"
-                  disabled={noTimer}
-                  className="input input-bordered input-sm w-20 bg-surface-field border-base-300 text-base-content disabled:cursor-not-allowed"
-                  value={secondsPerStation}
-                  onChange={(e) => setSecondsPerStation(Math.min(59, Math.max(0, Number(e.target.value))))}
-                />
-              </div>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-base-content/80 cursor-pointer pb-1.5">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm"
-                checked={noTimer}
-                onChange={(e) => setNoTimer(e.target.checked)}
-              />
-              Ingen tidtaker (styr rotasjon manuelt)
-            </label>
+            )}
           </div>
           {noTimer && (
             <p className="text-[11px] text-base-content/50 italic mt-2">
@@ -436,14 +588,40 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
           )}
           {!noTimer && minutesPerStation * 60 + secondsPerStation === 0 && (
             <p className="text-[11px] text-amber-300 italic mt-2">
-              Sett en tid over 0, eller kryss av for "Ingen tidtaker".
+              Sett en tid over 0, eller velg "Ingen tidtaker".
             </p>
           )}
         </div>
 
+        {previousSession && !sessionId && (
+          <div className="flex items-center gap-3 flex-wrap bg-orange-500/10 border border-dashed border-orange-400/60 rounded-xl px-4 py-3 text-xs">
+            <i className="fa-solid fa-rotate text-orange-400"></i>
+            <span><b className="font-bold">Gjenbruk fra sist:</b> «{previousSession.name}»</span>
+            <button type="button" onClick={applyPreviousSession} className="btn btn-ghost btn-xs ml-auto border border-base-300 font-bold">
+              Bruk dette oppsettet
+            </button>
+          </div>
+        )}
+
         <div className="bg-base-200 border border-base-300 rounded-2xl p-5">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-bold text-sm text-base-content">Stasjoner ({stations.length})</h3>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {QUICK_STATION_NAMES.map(qn => {
+              const exists = stations.some(s => s.name.trim() === qn);
+              return (
+                <button
+                  key={qn}
+                  type="button"
+                  disabled={exists}
+                  onClick={() => addStation(qn)}
+                  className={`btn btn-xs rounded-full font-bold ${exists ? 'btn-ghost border border-base-300 text-base-content/30 line-through' : 'btn-ghost border border-base-300 text-base-content/70 hover:border-orange-400 hover:text-orange-300'}`}
+                >
+                  {exists ? '✓ ' : '+ '}{qn}
+                </button>
+              );
+            })}
           </div>
           <div className="flex flex-col gap-2">
             {stations.map((s, idx) => (
@@ -454,6 +632,7 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
                   ref={(el) => { if (el) nameInputRefs.current[s.id] = el; else delete nameInputRefs.current[s.id]; }}
                   value={s.name}
                   onChange={(e) => updateStation(s.id, 'name', e.target.value)}
+                  onKeyDown={(e) => handleStationNameKeyDown(e, idx, s.id)}
                   placeholder="Stasjonsnavn..."
                   className="input input-bordered input-sm flex-1 bg-base-200 border-base-300 text-base-content"
                 />
@@ -468,18 +647,23 @@ export default function StationSetup({ onBack, onStartPresenting, initialId }) {
                   <input type="checkbox" className="checkbox checkbox-xs" checked={!!s.isTeacher} onChange={(e) => updateStation(s.id, 'isTeacher', e.target.checked)} />
                   Lærerstasjon
                 </label>
-                <button className="btn btn-ghost btn-xs text-red-400 flex-shrink-0" onClick={() => removeStation(s.id)} disabled={stations.length <= 2}>
+                <button className="btn btn-ghost btn-xs text-red-400 flex-shrink-0" tabIndex={-1} onClick={() => removeStation(s.id)} disabled={stations.length <= 2}>
                   <i className="fa-solid fa-trash"></i>
                 </button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addStation}
-              className="py-2 rounded-lg border-2 border-dashed border-base-300 text-base-content/60 text-xs font-bold hover:border-orange-400 hover:text-orange-300 transition-colors flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-plus"></i> Ny stasjon
-            </button>
+            <div className="flex items-start gap-2 rounded-lg p-2.5 border-2 border-dashed border-base-300">
+              <span className="text-xs text-base-content/30 font-bold w-5 pt-2 flex-shrink-0">{stations.length + 1}.</span>
+              <input
+                type="text"
+                ref={newStationInputRef}
+                value={newStationDraft}
+                onChange={(e) => setNewStationDraft(e.target.value)}
+                onKeyDown={handleNewStationKeyDown}
+                placeholder="Ny stasjon — skriv navn og trykk Enter…"
+                className="input input-bordered input-sm flex-1 bg-transparent border-transparent focus:border-orange-400 focus:bg-base-200 text-base-content placeholder:text-base-content/40"
+              />
+            </div>
           </div>
         </div>
 

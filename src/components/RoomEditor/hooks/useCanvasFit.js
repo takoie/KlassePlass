@@ -40,6 +40,16 @@ export function useCanvasFit(showToolsDrawer) {
     containerNodeRef.current = node;
     if (!node) return;
 
+    // Mål og tilpass synkront med det samme noden monteres, i stedet for å
+    // vente på ResizeObserver sitt første (asynkrone) kall. Uten dette vises
+    // canvaset ett frame med start-verdiene (scale 1, offset 0,0) — dvs.
+    // uskalert og låst i øvre venstre hjørne — før det hopper til riktig
+    // sentrert størrelse, noe som ser ut som et "zoom ut fra venstre".
+    const { width, height } = node.getBoundingClientRect();
+    if (width > 0 && height > 0) {
+      fitCanvasToContainer(width, height);
+    }
+
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         fitCanvasToContainer(entry.contentRect.width, entry.contentRect.height);
@@ -56,7 +66,18 @@ export function useCanvasFit(showToolsDrawer) {
   // det observerte elementet) — tving derfor et re-fit rett etter at
   // åpne/lukke-transisjonen (300ms, se sidebar-wrapperens `duration-300`) er
   // ferdig, slik at klasserommet alltid havner sentrert i den nye bredden.
+  // Denne effekten kjører (som alle effekter) også ved første mount, selv om
+  // sidebaren da IKKE har byttet tilstand og det ikke finnes noen transisjon
+  // å vente på — det forsinkede re-fitet 320ms etter at rommet åpnes kunne da
+  // overstyre det allerede korrekte startoppsettet med et litt annet mål
+  // (f.eks. pga. skrifter/ikonfonter som laster inn og forskyver layout),
+  // synlig som et brått hopp/"zoom". Hopp derfor over selve mount-kjøringen.
+  const isFirstDrawerRun = useRef(true);
   useEffect(() => {
+    if (isFirstDrawerRun.current) {
+      isFirstDrawerRun.current = false;
+      return;
+    }
     const timeout = setTimeout(() => {
       if (!containerNodeRef.current) return;
       const { width, height } = containerNodeRef.current.getBoundingClientRect();
